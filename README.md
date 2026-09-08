@@ -45,8 +45,8 @@ flowchart TB
     MASTER ==>|"Replication"| HN
     MASTER ==>|"Replication"| DN
 
-    HCM -.->|"Linked Server · CHỈ báo cáo"| HN
-    HCM -.->|"Linked Server · CHỈ báo cáo"| DN
+    HCM -.->|"Linked Server · báo cáo"| HN
+    HCM -.->|"Linked Server · báo cáo"| DN
     HCM <-.->|"MS DTC · 2PC chuyển cơ sở"| HN
 ```
 
@@ -98,7 +98,7 @@ Benchmark **B5** đo cả hai trên cùng một nghiệp vụ để chứng minh
 | **Phân mảnh ngang dẫn xuất** | `DangKyHocPhan` (bậc 1, `⋉ LopHocPhan`) · `Diem` (bậc 2) |
 | **Nhân bản một chiều** | Danh mục dùng chung + **danh bạ định vị** `DanhBaNguoiDung` |
 | **Giao dịch phân tán (2PC / MS DTC)** | **Chuyển cơ sở sinh viên** — nguyên tử trên 3 CSDL |
-| **Linked Server** | Chỉ cho thống kê toàn hệ thống — `OPENQUERY` / `EXEC … AT` |
+| **Linked Server** | Hai công dụng: **báo cáo tổng hợp** (chỉ đọc, `OPENQUERY`) và **giao dịch phân tán chuyển cơ sở** (có ghi, login riêng) |
 | **Tối ưu truy vấn phân tán** | Aggregate pushdown / semi-join, có benchmark đo bằng số liệu |
 | **Xử lý tương tranh** | `UPDATE … WHERE SoLuongDaDangKy < SoLuongToiDa` + 4 lớp ràng buộc |
 | **Saga + Outbox** | Đăng ký liên cơ sở — nơi 2PC sẽ giữ lock qua mạng và làm sụp thông lượng |
@@ -115,11 +115,11 @@ Benchmark **B5** đo cả hai trên cùng một nghiệp vụ để chứng minh
 | 1 | Người dùng → API | **HTTPS 443** | Mọi nghiệp vụ của SV/GV/Admin |
 | 2 | API → CSDL | **JDBC/TDS 1433** qua VPN | Đọc/ghi nghiệp vụ, saga, duyệt catalog site khác |
 | 3 | Master → Subscriber | **Replication** qua VPN | Đồng bộ danh mục + danh bạ |
-| 4 | Reporting Node → site | **Linked Server** qua VPN | **Chỉ** báo cáo của Admin |
+| 4 | Reporting Node → site | **Linked Server** qua VPN | Báo cáo của Admin (đọc) **và** giao dịch phân tán chuyển cơ sở (ghi, login riêng) |
 | 5 | Site ↔ Site | **MS DTC — TCP 135 + RPC động 49152–65535** | **Giao dịch phân tán** (chuyển cơ sở) |
 
 ⚠️ Loại 5 **không đi qua cổng 1433** — đây là hạ tầng riêng và là chỗ dễ quên nhất khi mở firewall.
-⚠️ **Linked Server không phục vụ đăng nhập, đăng ký hay xem điểm.** Nó chỉ dành cho báo cáo của Admin.
+⚠️ **Linked Server không bao giờ phục vụ đăng nhập, đăng ký hay xem điểm.** Nó có đúng hai công dụng: báo cáo tổng hợp (chỉ đọc) và giao dịch phân tán chuyển cơ sở (có ghi, bằng một login riêng chỉ có quyền trên 2 bảng).
 
 ### 1. Mở API ra Internet hoạt động thế nào
 
@@ -561,7 +561,7 @@ Sinh viên (bất kỳ đâu)  ──HTTPS──►  Tầng API  ──VPN──
 | Người dùng → API | HTTPS 443 | Mọi nghiệp vụ |
 | API → CSDL | JDBC/TDS 1433 qua VPN | Đọc/ghi nghiệp vụ |
 | Master → Subscriber | Replication qua VPN | Đồng bộ danh mục + danh bạ |
-| Reporting Node → site | Linked Server qua VPN | **Chỉ** báo cáo Admin |
+| Reporting Node → site | Linked Server qua VPN | Báo cáo Admin (đọc) + chuyển cơ sở (ghi) |
 | Site ↔ Site | **MS DTC — TCP 135 + RPC động** | **Giao dịch phân tán** (chuyển cơ sở) |
 
 ⚠️ **Thiết bị người dùng không tham gia VPN.** Chỉ máy chủ nối VPN với nhau; người dùng chỉ thấy một URL HTTPS.

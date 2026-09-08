@@ -588,6 +588,38 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 
 > `MaCoSoNhaSV` và `HoTenSinhVien` được **cố ý phi chuẩn hóa** vào `DangKyHocPhan`. Nếu không, site Host phải bắn một truy vấn chéo site cho **từng sinh viên khách** chỉ để in danh sách lớp — vừa chậm, vừa gãy khi site kia offline. Hai cột copy rẻ hơn nhiều so với một phụ thuộc chéo site.
 
+### Nhóm 3b — Schema học vụ còn thiếu ở bản trước
+
+| Bảng | Cột chính | Vì sao cần |
+|---|---|---|
+| `CTDT_MonHoc` **[R]** | `MaCTDT` FK · `MaMonHoc` FK · `HocKyGoiY` · `BatBuoc` · PK kép | **Chưa có ở bản trước.** Không có bảng nối này thì không biết một chương trình đào tạo gồm những môn nào → không xét được tiến độ, không gợi ý được môn, không tính được điều kiện tốt nghiệp |
+| `LichHoc` **[F]** | `MaLopHP` FK · `Thu` (2–8) · `TietBatDau` · `SoTiet` · `PhongHoc` · `TuanBatDau` · `TuanKetThuc` | **Thay cho cột `ThoiGianHoc` dạng chuỗi.** Một lớp có thể học nhiều buổi/tuần, và kiểm trùng lịch cần so sánh có cấu trúc chứ không so chuỗi |
+
+`LichHoc` phân mảnh dẫn xuất theo `LopHocPhan`, cùng site với lớp.
+
+**Kiểm trùng lịch** trở thành một phép so khoảng có thể viết bằng SQL:
+
+```sql
+-- Trùng khi: cùng thứ, khoảng tiết giao nhau, và khoảng tuần giao nhau
+WHERE a.Thu = b.Thu
+  AND a.TietBatDau < b.TietBatDau + b.SoTiet
+  AND b.TietBatDau < a.TietBatDau + a.SoTiet
+  AND a.TuanBatDau <= b.TuanKetThuc
+  AND b.TuanBatDau <= a.TuanKetThuc
+```
+
+### Quy tắc học vụ — phải chốt trước khi viết code
+
+| Quy tắc | Giá trị đề xuất 🔶 |
+|---|---|
+| Công thức điểm tổng kết | `0.1 × ChuyenCan + 0.3 × GiuaKy + 0.6 × CuoiKy`, làm tròn 1 chữ số |
+| Ngưỡng đạt | `DiemTongKet >= 4.0` |
+| Điều kiện học lại | Chỉ cho đăng ký lại môn đã có `DiemTongKet < 4.0`; lần học lại **không xoá** bản ghi cũ, điểm cao nhất được tính |
+| Trần tín chỉ mỗi kỳ | 24 tín chỉ *(học kỳ chính)* — dùng cho bộ đếm ở D4 |
+| Điều kiện tiên quyết | Phải **đạt** môn tiên quyết, không chỉ đã học |
+
+> 🔶 Đây là **giả định**. Nhóm phải đối chiếu quy chế thật của trường và ghi rõ nguồn trong báo cáo — đây là loại chi tiết giám khảo hay hỏi vì nó thuộc nghiệp vụ, không thuộc kỹ thuật.
+
 ### Nhóm 4 — Cơ chế liên cơ sở ➕
 
 | Bảng | Cột chính | Ghi chú |
@@ -666,6 +698,18 @@ Chia làm ba giai đoạn, và **chỉ giai đoạn 2 nằm trong giao dịch ph
 > ⚠️ **Giữ giao dịch phân tán càng ngắn càng tốt** — đúng 5 câu lệnh. Nhét cả bước dựng lại projection vào trong đó là giữ lock trên ba site lâu không cần thiết.
 
 Chi tiết thủ tục, mã T-SQL và cấu hình MS DTC: **mục D8**.
+
+### ⚠️ Ba vấn đề định tuyến SAU khi chuyển cơ sở
+
+Giao dịch phân tán chỉ lo phần dữ liệu. Ba chỗ dưới đây nằm ngoài nó và phải xử lý riêng:
+
+| # | Vấn đề | Cách xử lý |
+|---|---|---|
+| 1 | **JWT cũ vẫn mang `homeCampus` cũ** — sinh viên đang đăng nhập sẽ tiếp tục bị định tuyến về site cũ, nơi tài khoản đã bị xoá | Thêm cột `PhienBanTaiKhoan` vào danh bạ; JWT mang theo giá trị này và **mỗi request đối chiếu**. Thủ tục chuyển cơ sở tăng số phiên bản → mọi JWT cũ lập tức vô hiệu, buộc đăng nhập lại. Rẻ hơn nhiều so với danh sách thu hồi token |
+| 2 | **Replica danh bạ ở site khác chưa kịp cập nhật** — đăng nhập có thể vẫn được chỉ về site cũ trong vài giây | Quy tắc dự phòng khi đăng nhập: *nếu danh bạ chỉ tới site X mà tài khoản **không tồn tại** ở X → tra thẳng `UIS_MASTER` rồi định tuyến lại.* Cùng cơ chế đã dùng cho trường hợp danh bạ chưa nhân bản kịp |
+| 3 | **`DangKyHocPhan.MaCoSoNhaSV` ở Host vẫn ghi cơ sở cũ** | ✅ **Đây là đúng, không phải lỗi.** Cột này là **bản chụp tại thời điểm đăng ký**, không phải con trỏ sống. Sinh viên *đã* thuộc cơ sở cũ khi học môn đó — giữ nguyên mới đúng lịch sử. Chỉ các đăng ký **mới** dùng cơ sở mới. Phải ghi rõ ngữ nghĩa này vào từ điển dữ liệu, nếu không người sau sẽ tưởng là dữ liệu rác |
+
+**Ràng buộc vận hành:** chỉ cho chuyển cơ sở **ngoài đợt đăng ký** — thêm vào tiền điều kiện của thủ tục. Chuyển ngay giữa đợt đăng ký làm cả ba vấn đề trên xảy ra cùng lúc với hàng nghìn request đang chạy.
 
 > Nếu trước đó chọn phân mảnh `DangKyHocPhan` theo `SinhVien`, chuyển cơ sở sẽ phải **di trú cả lịch sử đăng ký và điểm** — khối lượng lớn nhất trong hệ thống, và còn phá vỡ ngữ nghĩa "điểm thuộc về nơi dạy". Với vị từ theo `LopHocPhan`, phạm vi giao dịch phân tán **thu về đúng ba bảng nhỏ**. Đây là điều làm cho 2PC ở đây trở nên khả thi và rẻ — đáng nêu trong báo cáo như hệ quả tích cực của quyết định ở C3.
 
@@ -811,9 +855,11 @@ Ký hiệu:
      • 4 máy (Master riêng)    → SRV-MASTER giữ Linked Server tới CẢ BA site
                                   ✅ ba site vận hành đối xứng hoàn toàn
 
-  Trong cả hai trường hợp: CHỈ dùng cho thống kê toàn hệ thống,
-  KHÔNG dùng cho nghiệp vụ hằng ngày.
-  (Các site vận hành không cần Linked Server tới nhau.)
+  Linked Server có ĐÚNG HAI công dụng:
+    (1) Báo cáo tổng hợp — CHỈ ĐỌC, login uis_report
+    (2) Giao dịch phân tán chuyển cơ sở (D8) — CÓ GHI,
+        chỉ trên 2 bảng, chỉ bởi login uis_chuyencoso
+  KHÔNG bao giờ phục vụ đăng nhập, đăng ký hay xem điểm.
 ```
 
 > Sơ đồ trên vẽ theo **phương án 3 máy**. Với 4 máy, mũi tên Linked Server chuyển từ `UIS_HCM` sang `SRV-MASTER` — **không có gì khác thay đổi**.
@@ -1330,6 +1376,47 @@ IF @dem < @SoLuongToiDa
 
 ⚠️ **Thứ tự khóa cố định để tránh deadlock:** luôn `LopHocPhan` trước, `DangKyHocPhan` sau — ở **mọi** luồng, kể cả luồng hủy đăng ký. Đảo thứ tự ở một luồng là đủ sinh deadlock ngẫu nhiên rất khó tái hiện.
 
+### ⚠️ Trần tín chỉ cũng có race — và bản trước bỏ sót
+
+Chống vượt sĩ số **không** đồng nghĩa chống vượt trần tín chỉ. Đó là hai bộ đếm ở **hai nơi khác nhau**:
+
+```
+Sinh viên đang có 17 tín chỉ, trần 20.
+Bấm đăng ký HAI môn 3 tín chỉ gần như cùng lúc.
+
+Luồng A: SELECT → thấy 17 → 17+3=20 ≤ 20  ✅ cho qua
+Luồng B: SELECT → thấy 17 → 17+3=20 ≤ 20  ✅ cho qua
+                                    → thực tế thành 23 tín chỉ  ❌
+```
+
+Đây **cùng một lớp lỗi** với overbooking, chỉ khác chỗ: sức chứa được bảo vệ tại **Host**, còn trần tín chỉ phải được bảo vệ tại **Home**. Cách chữa cũng giống hệt — một bộ đếm và một `UPDATE` có điều kiện:
+
+```sql
+-- Tại HOME, trong cùng giao dịch cục bộ với việc ghi nhận đăng ký
+UPDATE SinhVien
+   SET SoTinChiDangKyKy = SoTinChiDangKyKy + @SoTinChi
+ WHERE MaSinhVien       = @MaSinhVien
+   AND SoTinChiDangKyKy + @SoTinChi <= @TranTinChiMoiKy;
+
+IF @@ROWCOUNT = 0
+BEGIN
+    ROLLBACK;
+    THROW 50002, N'Vượt trần tín chỉ của học kỳ', 1;
+END
+```
+
+Câu `UPDATE` này lấy exclusive lock trên **dòng sinh viên**, nên hai request của cùng một sinh viên bị tuần tự hoá — đúng chỗ cần tuần tự hoá, và không ảnh hưởng sinh viên khác.
+
+**Ba quy tắc kèm theo:**
+
+| | |
+|---|---|
+| Cộng tín chỉ **ngay khi tạo yêu cầu** liên cơ sở (`CHO_DUYET`), không đợi Host duyệt | Nếu không, sinh viên mở 5 yêu cầu cùng lúc sẽ vượt trần mà không bộ đếm nào biết |
+| **Trả lại tín chỉ** khi Host từ chối, khi hủy đăng ký, hoặc khi yêu cầu quá hạn | Cùng một `UPDATE` với dấu trừ, trong giao dịch cục bộ tại Home |
+| `CHECK (SoTinChiDangKyKy BETWEEN 0 AND @TranTinChiMoiKy)` | Bất biến do DBMS bảo vệ, giống lớp 4 của bộ đếm sức chứa |
+
+> Bộ đếm này cũng cần **truy vấn đối soát** riêng, giống bộ đếm sức chứa — xem dưới.
+
 ### Truy vấn đối soát bất biến
 
 Bộ đếm phi chuẩn hóa có thể lệch với số dòng thật nếu có bug. Chạy sau mỗi lần test tải:
@@ -1390,28 +1477,37 @@ BEGIN
     ---- GIAI ĐOẠN 2 — GIAO DỊCH PHÂN TÁN (nguyên tử trên 3 CSDL) ----------
     BEGIN DISTRIBUTED TRANSACTION;
 
-        -- (a) đọc hồ sơ ở cơ sở cũ
-        DECLARE @HoTen NVARCHAR(100), @NgaySinh DATE, @MaCTDT VARCHAR(20);
-        SELECT @HoTen = HoTen, @NgaySinh = NgaySinh, @MaCTDT = MaCTDT
-          FROM UIS_HCM.dbo.SinhVien WHERE MaSinhVien = @MaSinhVien;
+        -- (a) chèn sang cơ sở MỚI trước  (qua Linked Server)
+        SET @sql = N'
+            INSERT INTO ' + @SrvMoi + N'.dbo.SinhVien
+                   (MaSinhVien, HoTen, NgaySinh, MaCoSoNha, MaCTDT, TrangThai)
+            SELECT MaSinhVien, HoTen, NgaySinh, @moi, MaCTDT, ''HOAT_DONG''
+              FROM ' + @SrvCu + N'.dbo.SinhVien
+             WHERE MaSinhVien = @sv;
 
-        -- (b) chèn sang cơ sở mới  (QUA LINKED SERVER)
-        INSERT INTO SRV_HN.UIS_HN.dbo.SinhVien
-               (MaSinhVien, HoTen, NgaySinh, MaCoSoNha, MaCTDT, TrangThai)
-        VALUES (@MaSinhVien, @HoTen, @NgaySinh, @CoSoMoi, @MaCTDT, 'HOAT_DONG');
+            INSERT INTO ' + @SrvMoi + N'.dbo.TaiKhoan
+                   (TenDangNhap, MatKhauHash, VaiTro, MaThucThe, MaCoSo)
+            SELECT TenDangNhap, MatKhauHash, VaiTro, MaThucThe, @moi
+              FROM ' + @SrvCu + N'.dbo.TaiKhoan
+             WHERE MaThucThe = @sv;
 
-        INSERT INTO SRV_HN.UIS_HN.dbo.TaiKhoan
-        SELECT TenDangNhap, MatKhauHash, VaiTro, MaThucThe, @CoSoMoi
-          FROM UIS_HCM.dbo.TaiKhoan WHERE MaThucThe = @MaSinhVien;
+        -- (b) xoá khỏi cơ sở CŨ
+            DELETE FROM ' + @SrvCu + N'.dbo.TaiKhoan WHERE MaThucThe  = @sv;
+            DELETE FROM ' + @SrvCu + N'.dbo.SinhVien WHERE MaSinhVien = @sv;';
 
-        -- (c) xoá khỏi cơ sở cũ
-        DELETE FROM UIS_HCM.dbo.TaiKhoan  WHERE MaThucThe  = @MaSinhVien;
-        DELETE FROM UIS_HCM.dbo.SinhVien  WHERE MaSinhVien = @MaSinhVien;
+        EXEC sp_executesql @sql,
+             N'@sv VARCHAR(20), @moi VARCHAR(10)', @MaSinhVien, @CoSoMoi;
 
-        -- (d) cập nhật danh bạ định vị tại Master
+        -- (c) cập nhật danh bạ định vị tại Master
+        --     ⚠️ đúng tên cột của DanhBaNguoiDung: MaCoSo và MaThucThe
         UPDATE UIS_MASTER.dbo.DanhBaNguoiDung
-           SET MaCoSoNha = @CoSoMoi, NgayCapNhat = SYSUTCDATETIME()
-         WHERE MaSinhVien = @MaSinhVien;
+           SET MaCoSo      = @CoSoMoi,
+               NgayCapNhat = SYSUTCDATETIME()
+         WHERE MaThucThe   = @MaSinhVien
+           AND LoaiNguoiDung = 'SINH_VIEN';
+
+        IF @@ROWCOUNT <> 1
+            THROW 51003, N'Không tìm thấy đúng một dòng danh bạ', 1;
 
     COMMIT TRANSACTION;
     ---- GIAI ĐOẠN 3 — HẬU XỬ LÝ chạy riêng, idempotent --------------------
@@ -1419,13 +1515,37 @@ BEGIN
 END
 ```
 
-**Ba điểm bắt buộc trong đoạn mã trên:**
+Phần khai báo và kiểm tra tham số ở đầu thủ tục:
+
+```sql
+    @MaSinhVien VARCHAR(20),
+    @CoSoCu     VARCHAR(10),      -- ⚠️ phải nhận CẢ hai đầu, không hardcode
+    @CoSoMoi    VARCHAR(10)
+...
+    -- Chỉ chấp nhận mã cơ sở CÓ THẬT trong bảng CoSo → chặn SQL injection
+    DECLARE @SrvCu SYSNAME, @SrvMoi SYSNAME, @sql NVARCHAR(MAX);
+
+    SELECT @SrvCu  = TenLinkedServer + N'.' + TenDatabase
+      FROM UIS_MASTER.dbo.CoSo WHERE MaCoSo = @CoSoCu;
+    SELECT @SrvMoi = TenLinkedServer + N'.' + TenDatabase
+      FROM UIS_MASTER.dbo.CoSo WHERE MaCoSo = @CoSoMoi;
+
+    IF @SrvCu IS NULL OR @SrvMoi IS NULL
+        THROW 51004, N'Mã cơ sở không hợp lệ', 1;
+    IF @CoSoCu = @CoSoMoi
+        THROW 51005, N'Cơ sở cũ và mới trùng nhau', 1;
+```
+
+> ⚠️ Bảng `CoSo` phải có thêm hai cột `TenLinkedServer` và `TenDatabase` để thủ tục dựng được tên bốn phần. Vì tên chỉ lấy từ bảng `CoSo` (danh sách trắng), dynamic SQL ở đây **không có đường injection**.
+
+**Bốn điểm bắt buộc trong đoạn mã trên:**
 
 | | |
 |---|---|
 | `SET XACT_ABORT ON` | ⚠️ Không có nó, một lỗi ở site xa có thể **không** làm rollback toàn bộ → dữ liệu hỏng âm thầm. Với `BEGIN DISTRIBUTED TRANSACTION` đây là bắt buộc |
 | Chèn **trước**, xoá **sau** | Nếu site đích lỗi thì đã rollback trước khi đụng tới dữ liệu gốc |
 | Cập nhật danh bạ **trong** giao dịch | Danh bạ chỉ được đổi khi hồ sơ đã sang tới nơi. Sau đó replication tự đẩy thay đổi ra mọi site |
+| **Không hardcode cặp cơ sở** | Thủ tục phải chạy được cho **mọi** cặp (HCM→HN, HN→ĐN, ĐN→HCM…). Tên server/database lấy từ bảng `CoSo` |
 
 ### ⚠️ Cấu hình MS DTC — việc mới phải làm ở Phần F
 
@@ -1514,7 +1634,8 @@ DENY INSERT, UPDATE, DELETE ON MonHoc TO r_AdminCoSo, r_AdminMaster;
 
 | # | Kịch bản | Hành vi mong muốn | Điều kiện để đúng |
 |---|---|---|---|
-| **KB0** ⭐ | **Nút Master chết** | **Cả ba cơ sở vận hành đầy đủ:** đăng nhập được (danh bạ đã nhân bản cục bộ), xem lịch học, **đăng ký học phần bình thường**. Chỉ mất: sửa danh mục · nhân bản thay đổi mới · báo cáo toàn hệ thống | Mọi đường đọc danh mục phải trỏ vào **replica cục bộ**, không bao giờ trỏ vào `DS_MASTER`. Đây chính là kiểm chứng Replication Transparency |
+| **KB0** ⭐ | **Chỉ dừng DATABASE `UIS_MASTER`** (không tắt máy) | **Cả ba cơ sở vận hành đầy đủ:** đăng nhập được, xem lịch học, **đăng ký học phần bình thường**. Chỉ mất: sửa danh mục · nhân bản thay đổi mới · báo cáo toàn hệ thống | Mọi đường đọc danh mục phải trỏ vào **replica cục bộ**, không bao giờ trỏ vào `DS_MASTER`. Đây chính là kiểm chứng Replication Transparency |
+| **KB0b** | ⚠️ **Tắt cả MÁY SRV-HCM** (phương án 3 máy) | ❌ **Toàn bộ website ngừng** — vì backend cũng nằm trên máy đó. Đây **không** phải phép thử của Replication Transparency mà là phép thử SPOF của tầng ứng dụng | Muốn diễn KB0 cho sạch: hoặc dùng phương án 4 máy (D15), hoặc chỉ dừng service của riêng database `UIS_MASTER` |
 | **KB1** | HN chết, SV HCM làm việc bình thường | Hoạt động đầy đủ | `initializationFailTimeout = -1` để ứng dụng vẫn khởi động được khi một site chết; không đường code cục bộ nào chạm DataSource của HN |
 | **KB2** | HN chết, SV HCM đăng ký lớp HN | Yêu cầu ở trạng thái `CHO_DUYET`, hiện "đang chờ cơ sở HN xác nhận", có nút thử lại. Retry idempotent | ⭐ Đây là chỗ saga trả cổ tức — nếu dùng 2PC thì kịch bản này là **lock treo** |
 | **KB3** | HN chết, SV HCM xem lịch học có môn ở HN | **Vẫn hiện đủ**, kèm "Dữ liệu cơ sở HN tính đến 14:32" | Nhờ read model cục bộ (C10) |
@@ -1759,7 +1880,27 @@ EXEC sp_addlinkedsrvlogin @rmtsrvname = 'SRV_HN', @useself = 'false',
 EXEC sp_serveroption 'SRV_HN', 'rpc out', 'true';   -- cần cho EXEC … AT
 ```
 
-⚠️ **Không để credential dùng chung cho mọi local login.** Bước 1 đặt ánh xạ mặc định thành "không kết nối được", bước 2 chỉ mở cho đúng login chạy báo cáo. Tài khoản đầu xa `uis_link_ro` **chỉ cần quyền `SELECT`** trên các bảng phục vụ báo cáo — nguyên tắc đặc quyền tối thiểu, và là một mục đáng nêu trong phần phân quyền.
+⚠️ **Không để credential dùng chung cho mọi local login.** Bước 1 đặt ánh xạ mặc định thành "không kết nối được", bước 2 chỉ mở cho đúng login chạy báo cáo. Tài khoản đầu xa `uis_link_ro` **chỉ cần quyền `SELECT`** — nguyên tắc đặc quyền tối thiểu.
+
+### ⚠️ Đường thứ hai: quyền GHI cho chuyển cơ sở
+
+Thủ tục ở **D8** phải `INSERT` và `DELETE` tại site xa, nên **`uis_link_ro` chỉ đọc là không đủ**. Cần một ánh xạ thứ hai, tách bạch:
+
+```sql
+-- 3) Đường GHI — CHỈ dành cho login chạy thủ tục chuyển cơ sở
+EXEC sp_addlinkedsrvlogin @rmtsrvname = 'SRV_HN', @useself = 'false',
+                          @locallogin = 'uis_chuyencoso',
+                          @rmtuser = 'uis_link_rw', @rmtpassword = '***';
+```
+
+| Login cục bộ | Ánh xạ tới | Quyền ở site xa | Dùng cho |
+|---|---|---|---|
+| *(mọi login khác)* | — | **không kết nối được** | — |
+| `uis_report` | `uis_link_ro` | `SELECT` trên bảng báo cáo | Thống kê toàn hệ thống |
+| `uis_chuyencoso` | `uis_link_rw` | `INSERT`/`DELETE` **chỉ trên** `SinhVien`, `TaiKhoan` | **Chỉ** thủ tục D8 |
+
+> ⚠️ **Đính chính một tuyên bố lặp lại nhiều lần trong tài liệu này.** Câu *"Linked Server chỉ dùng cho báo cáo"* **không còn đúng tuyệt đối** sau khi thêm yêu cầu bắt buộc số 3. Phát biểu chính xác là:
+> **Linked Server có đúng hai công dụng — (1) báo cáo tổng hợp, chỉ đọc; (2) giao dịch phân tán chuyển cơ sở, có ghi nhưng chỉ trên hai bảng và chỉ bởi một login riêng.** Nó vẫn tuyệt đối không phục vụ đăng nhập, đăng ký hay xem điểm.
 
 Kiểm tra: `SELECT TOP 1 * FROM OPENQUERY(SRV_HN, 'SELECT 1 AS ok');`
 
@@ -1771,7 +1912,7 @@ Theo **tài liệu hướng dẫn của giảng viên**, dùng **wizard SSMS** (
 |---|---|
 | Publisher | Database **`UIS_MASTER`** — **không phải** `UIS_HCM` |
 | Distributor | **Local**, cùng instance với Publisher (SRV-HCM hoặc SRV-MASTER tùy D15) |
-| ⚠️ **Retention — phải chỉnh CẢ HAI** | **(a) Distribution retention** (mặc định 72 giờ): thời gian lệnh được giữ trong distribution database. **(b) Publication retention / subscription expiration** (mặc định 336 giờ = 14 ngày): sau bấy lâu không đồng bộ thì subscription **hết hạn** và phải khởi tạo lại snapshot. **Nâng (a) lên 14 ngày và (b) lên 30 ngày.** Với laptop sinh viên (nghỉ lễ, mang máy về quê) đây là sự cố rất dễ xảy ra và ngốn nửa ngày |
+| ⚠️ **Retention — chỉnh CẢ HAI, và ĐẶT BẰNG NHAU** | **(a)** Distribution retention `@max_distretention` (mặc định 72 giờ) — thời gian lệnh được **giữ**. **(b)** Subscription expiration `@retention` (mặc định 336 giờ) — thời gian subscription **hết hạn**. **Đặt cả hai = 720 giờ (30 ngày).** ⚠️ Thời gian tắt máy tối đa = **min(a, b)** — đặt lệch nhau thì con số nhỏ hơn mới là giới hạn thật |
 | ⚠️ **Snapshot folder** | **Bắt buộc là UNC share** — **KHÔNG** để mặc định `C:\Program Files\...\ReplData`, vì máy Subscriber không thể với tới. **Đây là lỗi số một giết các nhóm.** Share phải nằm trên **máy chạy Distributor**, không phải máy chạy Publisher (trùng nhau ở đây, nhưng nhớ nguyên tắc): 3 máy → `\\SRV-HCM\repldata` · 4 máy → `\\SRV-MASTER\repldata` |
 | Quyền trên share | Tài khoản Windows chung ở F4 phải có quyền đọc/ghi |
 | Loại publication | **Transactional** |
@@ -2031,12 +2172,18 @@ Ngoài hai lúc đó, máy tắt hoàn toàn cũng không sao.
 
 Transactional Replication được thiết kế cho **kết nối không liên tục**. Khi Subscriber offline, lệnh dồn lại trong distribution database và chảy về khi máy bật lại — không mất dữ liệu, không cần can thiệp. Ràng buộc duy nhất là retention, chính là thứ F6c đã chỉnh:
 
-| | Mặc định | Đã nâng | Nghĩa là |
+| | Mặc định | Đặt thành | Nghĩa là |
 |---|---|---|---|
-| Distribution retention | 72 giờ | **14 ngày** | Lệnh được giữ 14 ngày |
-| Subscription expiration | 336 giờ | **30 ngày** | **Máy tắt tới 30 ngày vẫn bắt kịp** |
+| Distribution retention (`@max_distretention`) | 72 giờ | **720 giờ = 30 ngày** | Lệnh được **giữ** trong distribution database 30 ngày |
+| Subscription expiration (`@retention`) | 336 giờ | **720 giờ = 30 ngày** | Subscription **hết hạn** sau 30 ngày không đồng bộ |
 
-30 ngày trên tổng 8 tuần dự án → một máy có thể tắt suốt kỳ nghỉ lễ mà vẫn an toàn.
+> ⚠️ **Hai tham số này phải bằng nhau — nếu không, con số nhỏ hơn mới là giới hạn thật.**
+>
+> **Thời gian tắt máy tối đa = min(distribution retention, subscription expiration).**
+>
+> Bản trước của tài liệu đặt distribution retention 14 ngày nhưng lại tuyên bố "tắt 30 ngày vẫn bắt kịp" — **sai**. Nếu subscriber offline quá 14 ngày thì lệnh đã bị dọn khỏi distribution database, và dù subscription *chưa* hết hạn, nó vẫn **không còn gì để bắt kịp** → buộc phải khởi tạo lại snapshot.
+
+Với 7 bảng tham chiếu nhỏ và ~15 lượt ghi/ngày, giữ 30 ngày tốn không đáng kể dung lượng.
 
 ### Bốn phương án, xếp theo khuyến nghị
 
@@ -2114,7 +2261,7 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 | Snapshot folder để mặc định | Rất cao | Cao | F6 — dùng UNC share ngay từ đầu |
 | Agent không xác thực ra share | Cao | Cao | F4 — tài khoản Windows trùng tên/mật khẩu mọi máy |
 | Máy chủ site không bật được đúng buổi hẹn | Cao | Trung bình | Lịch buổi làm việc cố định (I2b) · giảm số máy · ưu tiên máy để bàn · backup `.bak` hằng tuần |
-| ⚠️ **Subscription hết hạn** vì một site tắt quá retention (mặc định **72 giờ**) → phải khởi tạo lại snapshot | Trung bình | Cao | **Nâng retention lên 14 ngày ngay lúc cấu hình Distributor** (F6) · giám sát bằng Replication Monitor hằng tuần |
+| ⚠️ **Subscription hết hạn** vì một site tắt quá retention (mặc định **72 giờ**) → phải khởi tạo lại snapshot | Trung bình | Cao | **Đặt CẢ HAI retention = 720 giờ** ngay lúc cấu hình Distributor (F6c) · giới hạn thật là **min** của hai tham số · giám sát bằng Replication Monitor hằng tuần |
 | Thêm máy thứ tư (D15) → xác suất đủ mặt giảm | Trung bình | Trung bình | Chỉ chọn 4 máy khi có người sẵn sàng giữ máy thứ tư (lý tưởng: máy để bàn) |
 | Screenshot thiếu, phải dựng lại | Cao | Cao | Chụp ngay khi làm, từ tuần 1 |
 | Tài liệu dồn vào tuần cuối | Cao | Rất cao | Một người làm tài liệu toàn thời gian |
@@ -2148,7 +2295,7 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 | F5 | Tạo Linked Server | Chặn ánh xạ mặc định **trước**, rồi chỉ mở cho login chạy báo cáo. Tài khoản đầu xa chỉ cần `SELECT` | ☐ | ☐ |
 | F6a | Publication trên `UIS_MASTER` | Publisher là `UIS_MASTER`, **không phải** `UIS_HCM`. Distributor local | ☐ | ☐ |
 | F6b | Snapshot folder | ⚠️ **Lỗi số một giết các nhóm:** bắt buộc **UNC share**, không để mặc định `C:\Program Files\…\ReplData`. Share nằm trên máy chạy **Distributor** | ☐ | ☐ |
-| F6c | Retention (**cả hai**) | Distribution 72h → **14 ngày**. Subscription expiration 336h → **30 ngày** | ☐ | ☐ |
+| F6c | Retention (**cả hai, BẰNG NHAU**) | `@max_distretention` 72h → **720h**. `@retention` 336h → **720h**. ⚠️ Giới hạn tắt máy = **min** của hai số | ☐ | ☐ |
 | F6d | Subscription cục bộ (`UIS_HCM`) | **Làm trước** — cùng instance, không qua VPN. Tách *"publication có đúng không"* khỏi *"mạng có thông không"* | ☐ | ☐ |
 | F6e | Subscription qua VPN (`UIS_HN`, `UIS_DN`) | Push subscription. Kiểm tra bằng Replication Monitor | ☐ | ☐ |
 | F7a | Nhập dữ liệu | Thêm SV · Mở lớp · Đăng ký · Nhập điểm. Chụp trước/sau | ☐ | ☐ |
