@@ -6,13 +6,10 @@
    CHẠY Ở ĐÂU : CHỈ trên máy Master, sau khi 30-distributor.sql đã xong
                   .\run.ps1 -Script replication\31-publication.sql -On MASTER
 
-   ⚠️ PHẦN KHAI BÁO ARTICLE CHƯA LÀM ĐƯỢC.
-      sp_addarticle gắn trực tiếp vào đối tượng nguồn, nên nó phụ thuộc
-      schema. Schema nghiệp vụ chỉ chốt được sau khi đối chiếu file Excel
-      phân công đề tài của giảng viên.
+   ĐIỀU KIỆN TRƯỚC KHI CHẠY: db/master/01..03 đã chạy xong, vì
+   sp_addarticle tham chiếu trực tiếp tới bảng nguồn.
 
-      Mục 3 dưới đây để sẵn khung và danh sách bảng dự kiến, đang bị
-      comment. Bỏ comment sau khi có schema.
+   Script tự kiểm từng bảng có tồn tại chưa trước khi khai báo article.
 
    CHẠY LẠI ĐƯỢC: có.
 
@@ -122,54 +119,86 @@ ELSE
 GO
 
 /* =====================================================================
-   3. ⚠️ KHAI BÁO ARTICLE — CHỜ SCHEMA
+   3. KHAI BÁO ARTICLE — TÁM bảng tham chiếu
 
-   sp_addarticle tham chiếu trực tiếp tới bảng nguồn, nên phần này KHÔNG
-   viết trước được. Chỉ bỏ comment sau khi:
-     (a) Đã đối chiếu file Excel phân công đề tài của giảng viên
-     (b) db/master/01-schema-thamchieu.sql đã chạy xong
-
-   TÁM bảng dự kiến (mục C1, nhóm 1 — tên có thể đổi theo đề tài):
-
-       CoSo                  cấu hình topology, có TenLinkedServer + TenDatabase
-       Khoa
-       ChuongTrinhDaoTao
-       CTDT_MonHoc           ⭐ chương trình đào tạo gồm những môn nào.
-                                Không có bảng này thì không xét được tiến độ
-                                học tập, không kiểm được điều kiện tốt nghiệp
-       MonHoc                bảng bị đọc nhiều nhất hệ thống
-       MonHocTienQuyet
-       HocKy                 ⚠️ CHỈ lịch chung toàn trường.
-                                DotDangKy là bảng CỤC BỘ, KHÔNG nhân bản
-       DanhBaNguoiDung       danh bạ định vị — nền tảng Location Transparency
-
-   ⚠️ TaiKhoanMaster KHÔNG nhân bản: nó chỉ tồn tại ở Master.
-
-   Khuôn mẫu cho mỗi bảng:
-   ---------------------------------------------------------------------
-   EXEC sp_addarticle
-        @publication      = N'$(PublicationName)',
-        @article          = N'<TenBang>',
-        @source_owner     = N'dbo',
-        @source_object    = N'<TenBang>',
-        @type             = N'logbased',
-        @schema_option    = 0x000000000803509F,
-        @ins_cmd          = N'CALL sp_MSins_dbo<TenBang>',
-        @upd_cmd          = N'SCALL sp_MSupd_dbo<TenBang>',
-        @del_cmd          = N'CALL sp_MSdel_dbo<TenBang>',
-        @force_invalidate_snapshot = 1;
-   ---------------------------------------------------------------------
-
-   ⚠️ HAI ĐIỀU PHẢI NHỚ KHI BỎ COMMENT:
-
-   1. Thứ tự article phải tôn trọng khoá ngoại. Bảng cha trước bảng con:
+   ⚠️ THỨ TỰ TÔN TRỌNG KHOÁ NGOẠI, bảng cha trước bảng con:
         CoSo → Khoa → ChuongTrinhDaoTao → MonHoc → CTDT_MonHoc
-             → MonHocTienQuyet → HocKy → DanhBaNguoiDung
+             → MonHocTienQuyet → HocKy → KhungGioTiet → DanhBaNguoiDung
 
-   2. Trigger ở Subscriber PHẢI khai báo NOT FOR REPLICATION, nếu không
-      nó sẽ chặn chính Distribution Agent và replication chết với triệu
-      chứng nhìn không liên quan gì tới trigger. Xem db/site/13-trigger.sql.
+   ⚠️ TaiKhoanMaster KHÔNG có trong danh sách này — mật khẩu quản trị
+      không có lý do gì để nằm trên ba máy. Đừng thêm vào.
+
+   ⚠️ DotDangKy cũng KHÔNG nhân bản — nó là bảng CỤC BỘ của từng cơ sở.
+      Nếu nhân bản, Subscriber chỉ đọc nên mỗi cơ sở sẽ không tự mở được
+      lịch đăng ký của mình.
+
+   @schema_option 0x000000000803509F: tạo schema bảng, khai báo khoá chính,
+   kèm ràng buộc và chỉ mục ở Subscriber.
    ===================================================================== */
+USE [$(DbMaster)];
+GO
+
+DECLARE @bang TABLE (ThuTu INT, Ten SYSNAME);
+INSERT INTO @bang (ThuTu, Ten) VALUES
+    (1, N'CoSo'),
+    (2, N'Khoa'),
+    (3, N'ChuongTrinhDaoTao'),
+    (4, N'MonHoc'),
+    (5, N'CTDT_MonHoc'),
+    (6, N'MonHocTienQuyet'),
+    (7, N'HocKy'),
+    (8, N'KhungGioTiet'),
+    (9, N'DanhBaNguoiDung');
+
+DECLARE @ten SYSNAME;
+DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
+    SELECT Ten FROM @bang ORDER BY ThuTu;
+
+OPEN cur;
+FETCH NEXT FROM cur INTO @ten;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF OBJECT_ID(N'dbo.' + QUOTENAME(@ten), N'U') IS NULL
+        RAISERROR(N'Chua co bang %s. Chay master\01..03 truoc.', 16, 1, @ten);
+    ELSE IF NOT EXISTS (SELECT 1 FROM sysarticles WHERE name = @ten)
+    BEGIN
+        EXEC sp_addarticle
+             @publication   = N'$(PublicationName)',
+             @article       = @ten,
+             @source_owner  = N'dbo',
+             @source_object = @ten,
+             @type          = N'logbased',
+             @schema_option = 0x000000000803509F,
+             @force_invalidate_snapshot = 1;
+        PRINT '  [+] article ' + @ten;
+    END
+    ELSE
+        PRINT '  [=] article ' + @ten;
+
+    FETCH NEXT FROM cur INTO @ten;
+END
+CLOSE cur;
+DEALLOCATE cur;
+GO
+
+/* ---------------------------------------------------------------------
+   Sinh snapshot ban đầu.
+   ⚠️ Job này ghi vào $(SnapshotFolder). Nếu tài khoản chạy SQL Server
+      Agent không ghi được vào share đó, job sẽ thất bại ở đây — xem
+      db/replication/README.md muc 1.
+   --------------------------------------------------------------------- */
+DECLARE @job SYSNAME;
+SELECT TOP 1 @job = name FROM msdb.dbo.sysjobs
+ WHERE name LIKE N'%$(PublicationName)%Snapshot%';
+
+IF @job IS NOT NULL
+BEGIN
+    EXEC msdb.dbo.sp_start_job @job_name = @job;
+    PRINT '  [>] Da khoi dong Snapshot Agent: ' + @job;
+    PRINT '      Theo doi trong Replication Monitor cho toi khi xong.';
+END
+ELSE
+    PRINT '  [!] Khong tim thay Snapshot Agent job';
 GO
 
 /* ---------------------------------------------------------------------

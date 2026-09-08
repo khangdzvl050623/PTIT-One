@@ -608,14 +608,15 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 
 | Bảng | Cột chính |
 |---|---|
-| `CoSo` | `MaCoSo` PK · `TenCoSo` · `ThanhPho` · `LaMaster` · `DiaChi` |
+| `CoSo` | `MaCoSo` PK · `TenCoSo` · `ThanhPho` · `DiaChi` · **`TenLinkedServer`** · **`TenDatabase`** · `DangHoatDong` — ⚠️ **bỏ cột `LaMaster`**: `MASTER` không phải một cơ sở, topology triển khai nằm ở `db/config.ps1`. Hai cột tên server/database có ở đây vì `sp_ChuyenCoSoSinhVien` (D8) dùng chúng làm **danh sách trắng** khi dựng tên bốn phần |
 | `Khoa` | `MaKhoa` PK · `TenKhoa` |
 | `ChuongTrinhDaoTao` | `MaCTDT` PK · `TenCTDT` · `MaKhoa` FK · `TongTinChi` |
 | `MonHoc` | `MaMonHoc` PK · `TenMonHoc` · `SoTinChi` · `MaKhoa` FK |
-| `MonHocTienQuyet` | `MaMonHoc` FK · `MaMonTienQuyet` FK · PK kép |
+| `CTDT_MonHoc` | `MaCTDT` FK · `MaMonHoc` FK · `HocKyGoiY` · `BatBuoc` · PK kép — chương trình đào tạo gồm những môn nào. Thiếu nó thì không xét được tiến độ, không gợi ý được môn, không tính được điều kiện tốt nghiệp |
+| `MonHocTienQuyet` | `MaMonHoc` FK · `MaMonTienQuyet` FK · PK kép · `CHECK` chặn môn tự làm tiên quyết của chính nó |
 | `HocKy` | `MaHocKy` PK · `TenHocKy` · `NamHoc` · `NgayBatDau` · `NgayKetThuc` |
 | `KhungGioTiet` | `SoTiet` PK · `GioBatDau` · `GioKetThuc` | ⚠️ **Phải dùng chung mọi cơ sở.** Nếu mỗi nơi tự quy ước khung giờ hoặc cách đánh số tuần thì phép so `Thu`/`Tiet`/`Tuan` giữa hai site là vô nghĩa. Số tuần suy ra từ `HocKy.NgayBatDau` |
-| `DanhBaNguoiDung` | `TenDangNhap` PK · `MaCoSo` FK **NULL được** *(chỉ nhận mã cơ sở CÓ THẬT; `NULL` cho `ADMIN_MASTER` — ⚠️ **`MASTER` KHÔNG phải một mã cơ sở**, nó là vai trò triển khai)* · `LoaiNguoiDung` *(SINH_VIEN / GIANG_VIEN / ADMIN_CO_SO / ADMIN_MASTER)* · `MaThucThe` UQ *(MaSinhVien hoặc MaGiangVien)* · `TrangThai` · `NgayCapNhat` |
+| `DanhBaNguoiDung` | `TenDangNhap` PK · `MaCoSo` FK **NULL được** *(chỉ nhận mã cơ sở CÓ THẬT; `NULL` cho `ADMIN_MASTER` — ⚠️ **`MASTER` KHÔNG phải một mã cơ sở**, nó là vai trò triển khai)* · `LoaiNguoiDung` *(SINH_VIEN / GIANG_VIEN / ADMIN_CO_SO / ADMIN_MASTER)* · `MaThucThe` **UQ filtered** *(MaSinhVien hoặc MaGiangVien; `NULL` với tài khoản quản trị nên phải filtered)* · `TrangThai` *(CHO_KICH_HOAT / HOAT_DONG / DANG_CHUYEN / NGUNG)* · **`PhienBanTaiKhoan`** *(vô hiệu JWT cũ sau khi chuyển cơ sở)* · `NgayCapNhat` |
 | `TaiKhoanMaster` | `TenDangNhap` PK · `MatKhauHash` · `VaiTro` — **chỉ tồn tại trong `PTITONE_MASTER`**, dành cho Admin Master. Không nhân bản |
 
 > `CoSo` được nhân bản chứ không hardcode — đây là điều làm cho thiết kế đúng cho **N cơ sở**. Thêm một cơ sở = thêm một dòng + một subscription, không sửa code.
@@ -653,7 +654,6 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 
 | Bảng | Cột chính | Vì sao cần |
 |---|---|---|
-| `CTDT_MonHoc` **[R]** | `MaCTDT` FK · `MaMonHoc` FK · `HocKyGoiY` · `BatBuoc` · PK kép | **Chưa có ở bản trước.** Không có bảng nối này thì không biết một chương trình đào tạo gồm những môn nào → không xét được tiến độ, không gợi ý được môn, không tính được điều kiện tốt nghiệp |
 | `LichHoc` **[F]** | `MaLopHP` FK · `Thu` (2–8) · `TietBatDau` · `SoTiet` · `PhongHoc` · `TuanBatDau` · `TuanKetThuc` | **Thay cho cột `ThoiGianHoc` dạng chuỗi.** Một lớp có thể học nhiều buổi/tuần, và kiểm trùng lịch cần so sánh có cấu trúc chứ không so chuỗi |
 | `SinhVienHocKy` **[F]** | `MaSinhVien`+`MaHocKy` PK · `SoTinChiDaDangKy` · `SoTinChiDangGiuCho` · `TranTinChi` | ⭐ **Thay cho bộ đếm phẳng trên `SinhVien`.** Một bộ đếm duy nhất không phân biệt được nhiều học kỳ (học kỳ hè, sang kỳ mới). Tách "đã đăng ký" khỏi "đang giữ chỗ" đúng bằng thứ saga cần |
 | `LichHocMirror` **[F]** | `MaSinhVien` · `MaHocKy` · `MaMonHoc` *(→ `DangKyMonHoc`)* · `Thu` · `TietBatDau` · `SoTiet` · `PhongHoc` · `TuanBatDau` · `TuanKetThuc` · `PhienBanLich` | ⭐ **Tại Home, CHỈ cho lớp liên cơ sở.** Mỗi dòng là **một buổi học**. Lưu **ngay khi ghi nhận yêu cầu**, không đợi Host duyệt — nếu không, hai yêu cầu `DANG_XU_LY` cùng khung giờ sẽ cùng lọt |

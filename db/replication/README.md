@@ -82,14 +82,18 @@ Mọi lệnh chạy từ thư mục `db/`, dùng runner để bơm cấu hình t
 # --- Bước 1: Distributor, chỉ trên Master ---
 .\run.ps1 -Script replication\30-distributor.sql -On MASTER
 
-# --- Bước 2: Publication, chỉ trên Master ---
+# --- Bước 2: Schema tham chiếu, chỉ trên Master ---
+#     BẮT BUỘC trước 31-publication.sql: sp_addarticle tham chiếu trực
+#     tiếp tới bảng nguồn, nên bảng phải tồn tại trước.
+.\run.ps1 -Script master\01-schema-thamchieu.sql -On MASTER
+.\run.ps1 -Script master\02-danhba-nguoidung.sql -On MASTER
+.\run.ps1 -Script master\03-taikhoan-master.sql  -On MASTER
+.\run.ps1 -Script master\04-seed-danhmuc.sql     -On MASTER
+
+# --- Bước 3: Publication + 9 article, chỉ trên Master ---
 .\run.ps1 -Script replication\31-publication.sql -On MASTER
 
-#   ⚠️ DỪNG Ở ĐÂY nếu chưa có schema.
-#      Article phải khai báo sau khi có db/master/01-schema-thamchieu.sql.
-#      Xem mục 3 trong 31-publication.sql.
-
-# --- Bước 3: Subscription, chạy TỪ Master ---
+# --- Bước 4: Subscription, chạy TỪ Master ---
 .\run.ps1 -Script replication\32-subscription.sql -On MASTER
 ```
 
@@ -222,12 +226,14 @@ dung lượng — nên vẫn là lựa chọn hợp lý, chỉ cần phát biể
 | File | Trạng thái |
 |---|---|
 | `30-distributor.sql` | ✅ Xong — không phụ thuộc schema. ⚠️ **Chưa chạy thật trên SQL Server**, mới kiểm `-WhatIf` và biến SQLCMD |
-| `31-publication.sql` | ⚠️ **Khung xong, thiếu article.** `sp_addarticle` gắn trực tiếp vào bảng nguồn nên phải chờ schema |
-| `32-subscription.sql` | ⏳ Chưa viết — chỉ cần sau khi có article |
+| `31-publication.sql` | ✅ **Xong** — 9 article theo đúng thứ tự khoá ngoại, tự kiểm bảng tồn tại trước khi khai báo |
+| `32-subscription.sql` | ⏳ Chưa viết — làm tiếp được ngay vì article đã có |
+| `db/master/01..04` | ✅ **Xong** — 8 bảng tham chiếu + danh bạ + tài khoản Master + seed |
 | `39-go-*.sql` | ⏳ Chưa viết — script gỡ để chạy lại từ đầu |
 
-**Đang chặn:** file Excel phân công đề tài của giảng viên. Có nó rồi mới chốt
-được tên thực thể, rồi mới khai báo được article.
+**Đang chặn:** không còn gì chặn phần hạ tầng. File Excel phân công đề tài vẫn
+cần để xác nhận phạm vi, nhưng tên thực thể đã đủ ổn định để đi tiếp — nếu đề
+tài lệch, khung phân mảnh giữ nguyên và chỉ đổi tên bảng.
 
 📖 Ngữ cảnh đầy đủ: mục **D1** (nhân bản), **F6** (các bước wizard),
 **I5** (checklist tick nhanh) trong `docs/PTIT-One-Thiet-Ke.md`.
