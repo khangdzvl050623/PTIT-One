@@ -23,6 +23,7 @@
 | Làm phần X-Ray | **0.2** và **Phần E** |
 | Đo đạc, benchmark, test | **Phần G** |
 | Xem lịch, phân vai | **Phần H** |
+| **Bắt đầu viết code — thứ này nằm ở đâu?** | **Phần J** khung mã nguồn |
 | Tra nhanh một bảng nào đó | **I6** danh sách bảng |
 | Biết còn gì chưa chốt | **I4** việc còn treo |
 | Lo về máy móc, chi phí, uptime | **I2b** vận hành máy chủ |
@@ -40,6 +41,7 @@
 | **F** — Cài đặt vật lý | F1 VPN · F2 link mạng · F3 SQL Server · F4 Agent · **F4b ⭐ MS DTC** · F5 Linked Server · F6 Publication · F7 thử giao tác |
 | **G** — Kiểm thử & đo đạc | G1 seed · G2 benchmark · G3 tương tranh · G4 sự cố · G5 2PC vs saga · G6 phân mảnh dọc · G7 deadlock |
 | **H** — Lộ trình | 8 tuần + phân vai 5 người |
+| **J** — Khung mã nguồn ➕ | J1 backend Hexagonal · J2 frontend Feature-Sliced · J3 CSDL `db/` · J4 thứ tự dựng |
 | **I** — Phụ lục | I1 repo · I2 plan B · I2b vận hành máy chủ · I3 rủi ro · I4 việc còn treo · **I5 checklist tick nhanh** · **I6 danh sách bảng** · I7 nguồn tham khảo |
 
 ---
@@ -2112,6 +2114,252 @@ TUẦN 8  ── Hoàn thiện
 | **Ứng dụng & Demo** | `apps/api`, `apps/web`, X-Ray · kịch bản demo · quản lý kho screenshot | ~10% |
 
 ⚠️ **Phải có một người làm tài liệu toàn thời gian.** Với barem ~75% nằm ở tài liệu và screenshot, để tài liệu cho người rảnh viết vào tuần cuối là cách hỏng bài phổ biến nhất.
+
+---
+
+# PHẦN J — KHUNG MÃ NGUỒN ➕
+
+> Đây là **khung sườn**, không phải mã cài đặt. Nó trả lời câu *"thứ này nằm ở đâu"* và *"chỗ này dùng mẫu thiết kế gì"*, để 5 người viết code không giẫm lên nhau.
+> ➕ Không thuộc phần báo cáo bắt buộc (mục 2–3 đề bài).
+
+**Nguyên tắc xuyên suốt:** chỉ đặt tên những mẫu thiết kế **thật sự được dùng**. Thêm mẫu cho oai chính là chỗ "professional" biến thành "over-engineering".
+
+---
+
+## J1. Backend — `apps/api`
+
+### Kiến trúc: Ports & Adapters (Hexagonal), modular monolith
+
+Bốn tầng, **phụ thuộc chỉ đi vào trong**:
+
+```
+interfaces  ──►  application  ──►  domain
+                      ▲
+infrastructure  ──────┘   (cài đặt các PORT do application định nghĩa)
+```
+
+`domain` **không import** Spring, JDBC, hay bất cứ thứ gì của hạ tầng. Đó là điều kiện để quy tắc nghiệp vụ kiểm thử được mà không cần CSDL.
+
+### Cây thư mục
+
+```
+apps/api/src/main/java/vn/ptit/uis/
+│
+├── UisApplication.java
+│
+├── shared/                      ── hạ tầng dùng chung, không thuộc nghiệp vụ nào
+│   ├── site/
+│   │   ├── SiteContext              ThreadLocal + runAt(site, action)
+│   │   ├── SiteRoutingDataSource    AbstractRoutingDataSource
+│   │   ├── SiteRegistry             đọc bảng CoSo — KHÔNG hardcode danh sách site
+│   │   └── MaCoSo                   value object
+│   ├── xray/
+│   │   ├── XRayTrace                gom bước theo request scope
+│   │   ├── XRayFilter               mở/đóng trace, gắn vào response
+│   │   └── TracingDataSourceProxy   bọc DataSource, ghi (site, sql, rows, ms)
+│   ├── outbox/
+│   │   ├── OutboxEvent · OutboxRepository
+│   │   └── OutboxWorker             @Scheduled — upsert TRƯỚC, đánh SENT SAU
+│   └── error/
+│       ├── DomainException · MaLoi
+│       └── GlobalExceptionHandler
+│
+├── domain/                      ── quy tắc thuần, không phụ thuộc hạ tầng
+│   ├── sinhvien/                    SinhVien · TrangThaiSinhVien
+│   ├── hocphan/                     LopHocPhan · SucChua · DangKyHocPhan
+│   ├── diem/                        Diem · CongThucDiem · NguongDat
+│   ├── liencoso/                    YeuCauLienCoSo · TrangThaiYeuCau
+│   └── policy/                      TranTinChi · TienQuyet · TrungLich
+│
+├── application/                 ── use case + PORT
+│   ├── port/
+│   │   ├── CrossSiteQuery           đọc chéo site theo người dùng
+│   │   ├── GlobalReport             tổng hợp toàn hệ thống
+│   │   └── CatalogHealth            lastSyncedAt / isStale
+│   ├── dangky/
+│   │   ├── DangKyHocPhanService     luồng cùng cơ sở — 1 giao dịch cục bộ
+│   │   └── DangKyLienCoSoSaga       ⭐ điều phối saga
+│   ├── diem/                        NhapDiemService · DongBoDiemService
+│   ├── chuyencoso/                  ChuyenCoSoService — CHỈ gọi stored proc 2PC
+│   ├── danhmuc/                     QuanLyDanhMucService (ghi vào DS_MASTER)
+│   └── baocao/                      BaoCaoTongHopService
+│
+├── infrastructure/              ── ADAPTER cài đặt các PORT
+│   ├── persistence/                 *JdbcRepository theo từng aggregate
+│   ├── crosssite/                   FanOutCrossSiteQuery
+│   ├── report/
+│   │   ├── LinkedServerGlobalReport     ← dùng cho môn học (OPENQUERY)
+│   │   └── BackendMergeGlobalReport     ← đối chứng benchmark B3
+│   ├── health/                      TracerTokenCatalogHealth
+│   ├── security/                    JwtService · SiteContextFilter
+│   └── config/                      DataSourceConfig · SecurityConfig · FlywayConfig
+│
+└── interfaces/rest/             ── Controller + DTO + mapper
+```
+
+### Mẫu thiết kế — và chỗ dùng
+
+| Mẫu | Ở đâu | Giải quyết gì |
+|---|---|---|
+| **Ports & Adapters** | `application/port` ↔ `infrastructure` | Cô lập công nghệ bắt buộc của môn học |
+| **Repository** | `infrastructure/persistence`, một lớp mỗi aggregate | Gom SQL về một chỗ, dễ trỏ vào lúc bảo vệ |
+| **Saga (điều phối)** | `DangKyLienCoSoSaga` | Nhất quán nhiều site không cần 2PC |
+| **Idempotent Receiver** | `KetQuaXuLyYeuCau` ở Host | Retry tất định, lưu **cả** kết quả từ chối |
+| **Transactional Outbox** | `shared/outbox` | Chống mất sự kiện khi ghi hai nơi |
+| **Read Model / Projection** | `BangDiemMirror`, snapshot lớp | Tách đường đọc khỏi nguồn sự thật |
+| **Routing DataSource + Context Object** | `shared/site` | Location Transparency |
+| **Strategy** | `GlobalReport` có **2** cài đặt | Đổi chiến lược truy vấn phân tán để đo B3 |
+| **Proxy / Decorator** | `TracingDataSourceProxy` | Thu thập X-Ray mà không sửa repository |
+| **Template Method** *(nhẹ)* | `OutboxWorker` | Cùng vòng lặp cho mọi loại sự kiện |
+
+⚠️ **Không dùng:** Factory chồng Factory · Abstract Factory · Visitor · `DatabaseProvider` · `RepositoryFactory` · plugin system. Không có nhu cầu thật nào trong dự án gọi chúng ra.
+
+### Ba ranh giới không được vượt
+
+| # | Ranh giới | Vi phạm thì sao |
+|---|---|---|
+| 1 | `domain` không import Spring/JDBC | Mất khả năng test quy tắc nghiệp vụ không cần CSDL |
+| 2 | Một `@Transactional` = **một site** | Ghi nhầm site hoặc mất nguyên tử, **không ném lỗi** |
+| 3 | `interfaces` không gọi thẳng `infrastructure` | Controller lệ thuộc SQL, hết đường thay adapter |
+
+---
+
+## J2. Frontend — `apps/web`
+
+### Kiến trúc: Feature-Sliced (rút gọn)
+
+Ba tầng, phụ thuộc **một chiều**: `app → features → shared`.
+**Feature không import lẫn nhau. `shared` không import feature.**
+
+```
+apps/web/src/
+│
+├── app/                     router · providers · layout · guard theo vai trò
+│
+├── shared/
+│   ├── ui/                  design system: Button · Table · Field · Dialog · Badge
+│   ├── api/                 client fetch · gắn JWT · map lỗi · BÓC _xray
+│   ├── hooks/               useAuth · useSite · useAsync
+│   └── lib/                 format ngày · tiết học · điểm
+│
+├── features/
+│   ├── auth/                đăng nhập · giữ JWT
+│   ├── lich-hoc/            thời khoá biểu hợp nhất
+│   ├── dang-ky/             tìm lớp · đăng ký · trạng thái chỗ trống
+│   ├── lien-co-so/          duyệt lớp site khác · gửi yêu cầu · theo dõi CHO_DUYET
+│   ├── bang-diem/           điểm local + BangDiemMirror, có nhãn LastSyncedAt
+│   ├── nhap-diem/           màn hình giảng viên
+│   ├── danh-muc/            admin Master
+│   ├── bao-cao/             thống kê toàn hệ thống
+│   └── xray/                ⭐ panel + phòng điều khiển + so sánh chiến lược
+│
+└── styles/                  design token · theme sáng/tối
+```
+
+### Mẫu và quy ước
+
+| Mẫu | Ở đâu |
+|---|---|
+| **Feature-Sliced Design** | toàn bộ `src/` |
+| **Design tokens** | `styles/` — màu, khoảng cách, chữ khai báo một chỗ |
+| **API client là adapter duy nhất** | `shared/api` — không component nào gọi `fetch` trực tiếp |
+| **Overlay xuyên suốt** | `features/xray` đọc `_xray` từ **mọi** response, không component khác cần biết |
+| **Error boundary theo feature** | một feature hỏng không làm trắng cả trang |
+
+**Về UI/UX:** đây là phần được đầu tư, không phải làm cho có. Dùng skill đã cài (`ui-ux-pro-max`, `taste-skill`) thay vì tự chế lại design system. Thiết kế và dựng màn hình tĩnh **bắt đầu được từ tuần 1** — không phụ thuộc schema hay API.
+
+---
+
+## J3. CSDL — `db/`
+
+### Nguyên tắc: script phải **chạy lại được**
+
+Dựng lại toàn bộ môi trường từ số 0 chỉ bằng cách chạy lại thư mục này. Điều đó **sẽ cần đến** ở tuần 3.
+
+- `CREATE OR ALTER PROCEDURE` · `IF NOT EXISTS` trước mỗi `CREATE TABLE`
+- Không script nào phụ thuộc trạng thái do script khác để lại, ngoài thứ tự số
+- Mọi thay đổi schema đi qua **Flyway**, không sửa tay trên CSDL
+
+### Cây thư mục và nơi chạy
+
+```
+db/
+├── 00-create-databases.sql       → chạy MỘT LẦN trên mỗi máy chủ
+│
+├── master/                       → CHỈ chạy trên UIS_MASTER
+│   ├── 01-schema-thamchieu.sql       7 bảng + CoSo(TenLinkedServer, TenDatabase)
+│   ├── 02-danhba-nguoidung.sql       danh bạ định vị
+│   ├── 03-taikhoan-master.sql        tài khoản Admin Master
+│   └── 04-seed-danhmuc.sql
+│
+├── site/                         → chạy trên MỌI UIS_<site>
+│   ├── 10-schema-vanhanh.sql
+│   ├── 11-rangbuoc.sql               UNIQUE · CHECK sức chứa · CHECK tín chỉ
+│   ├── 12-chimuc.sql                 theo kế hoạch index, KHÔNG rải thêm
+│   ├── 13-trigger.sql                ⚠️ NOT FOR REPLICATION
+│   ├── 14-role-grant.sql             4 role + DENY trên bảng nhân bản
+│   └── 15-thutuc-dangky.sql          UPDATE có điều kiện + @@ROWCOUNT
+│
+├── crosssite/                    → CHỈ chạy trên máy giữ Linked Server
+│   ├── 20-linked-server.sql          2 ánh xạ login: ro (báo cáo) · rw (chuyển cơ sở)
+│   ├── 21-sp-chuyen-co-so.sql        ⭐ BEGIN DISTRIBUTED TRANSACTION
+│   └── 22-baocao-tonghop.sql         4 báo cáo OPENQUERY
+│
+├── replication/                  → chạy trên Publisher / Subscriber
+│   ├── 30-distributor.sql            retention CẢ HAI = 720 giờ
+│   ├── 31-publication.sql
+│   ├── 32-subscription.sql           cục bộ TRƯỚC, rồi mới qua VPN
+│   └── README.md                     các bước wizard + đối chiếu screenshot
+│
+└── seed/
+    └── 90-sinh-du-lieu.sql           ~5.000 SV · ~50.000 đăng ký mỗi site
+```
+
+### Ma trận: script nào chạy ở đâu
+
+| Thư mục | `UIS_MASTER` | `UIS_HCM` | `UIS_HN` | `UIS_DN` |
+|---|:---:|:---:|:---:|:---:|
+| `master/` | ✅ | — | — | — |
+| `site/` | — | ✅ | ✅ | ✅ |
+| `crosssite/` | — | ✅ *(nút báo cáo)* | — | — |
+| `replication/` — publication | ✅ | — | — | — |
+| `replication/` — subscription | — | ✅ | ✅ | ✅ |
+| `seed/` | — | ✅ | ✅ | ✅ |
+
+> ⚠️ Chạy nhầm `site/` lên `UIS_MASTER` sẽ tạo bảng vận hành trong database Master — phá vỡ ranh giới ở **C0**. Mỗi script mở đầu bằng một câu kiểm tra `DB_NAME()` và `THROW` nếu chạy sai chỗ.
+
+### Quy ước đặt tên
+
+| Đối tượng | Quy ước | Ví dụ |
+|---|---|---|
+| Bảng, cột | Tiếng Việt không dấu, PascalCase | `DangKyHocPhan`, `SoLuongDaDangKy` |
+| Read model | Hậu tố `Mirror` | `BangDiemMirror` |
+| Khoá chính | `PK_<Bang>` | `PK_DangKyHocPhan` |
+| Khoá ngoại | `FK_<Bang>_<BangCha>` | `FK_Diem_DangKyHocPhan` |
+| Duy nhất | `UQ_<Bang>_<Cot>` | `UQ_DangKyHocPhan_MaYeuCau` |
+| Kiểm tra | `CK_<Bang>_<YNghia>` | `CK_LopHocPhan_SucChua` |
+| Chỉ mục | `IX_<Bang>_<Cot>` | `IX_LopHocPhan_HocKy_MonHoc` |
+| Thủ tục | `sp_<DongTu><DoiTuong>` | `sp_ChuyenCoSoSinhVien` |
+| Trigger | `trg_<HanhVi>` | `trg_ChanGhiBangNhanBan` |
+
+---
+
+## J4. Thứ tự dựng — ai làm được gì song song
+
+```
+TUẦN 1–2   db/master + db/site + db/seed             ← hạ tầng CSDL 2
+           apps/web: design system + màn hình tĩnh   ← ứng dụng (KHÔNG chờ API)
+
+TUẦN 3     db/replication + db/crosssite             ← hạ tầng CSDL 1
+TUẦN 4     13-trigger · 14-role · 15-thutuc · 21-sp-chuyen-co-so
+           ✅ hết tuần 4: NĂM YÊU CẦU BẮT BUỘC XONG
+
+TUẦN 5     apps/api: shared/site · domain · 3 port · persistence
+TUẦN 6     application/dangky (saga) · shared/outbox
+TUẦN 7     shared/xray · features/xray · bench/
+```
+
+⭐ Frontend **không nằm trên đường găng**. Design system và màn hình tĩnh dựng được ngay từ tuần 1, chỉ nối API ở tuần 5. Đây là chỗ song song hoá tốt nhất trong cả dự án — và là lý do UI/UX được đầu tư mà không ảnh hưởng lịch.
 
 ---
 
