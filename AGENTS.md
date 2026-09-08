@@ -23,7 +23,13 @@ Trước khi sinh code, đọc mục **0.1b** (năm yêu cầu bắt buộc) và
 | **Vị từ phân mảnh dẫn xuất** | `DangKyHocPhan ⋉ LopHocPhan` — **KHÔNG** phải `⋉ SinhVien`. `Diem` dẫn xuất bậc 2 qua `DangKyHocPhan`. Đây là lỗi đã từng mắc, đừng lặp lại |
 | **Trigger ở Subscriber** | **BẮT BUỘC** `CREATE TRIGGER … NOT FOR REPLICATION`. Thiếu nó thì trigger chặn chính Distribution Agent và replication chết với triệu chứng không liên quan |
 | **Chống vượt sức chứa** | `UPDATE LopHocPhan SET SoLuongDaDangKy = SoLuongDaDangKy + 1 WHERE MaLopHP = … AND SoLuongDaDangKy < SoLuongToiDa;` rồi kiểm `@@ROWCOUNT`. **Cấm** `SELECT COUNT` rồi `IF` — đó là race condition |
-| **Chống vượt trần tín chỉ** | Cùng kỹ thuật, nhưng ở **Home**, trên `SinhVien.SoTinChiDangKyKy`. Cộng ngay khi tạo yêu cầu `CHO_DUYET`, trả lại khi bị từ chối |
+| **Chống vượt trần tín chỉ** | Cùng kỹ thuật, nhưng ở **Home**, trên **`SinhVienHocKy`** (khóa kép `MaSinhVien`+`MaHocKy`) — **KHÔNG** phải bộ đếm phẳng trên `SinhVien`. Cộng vào `SoTinChiDangGiuCho` ngay khi tạo yêu cầu `DANG_XU_LY`; chỉ trả lại khi có **kết quả dứt khoát** |
+| **Tuần tự hoá TRƯỚC khi kiểm** | `sp_getapplock` theo (`MaSinhVien`,`MaHocKy`) **trước** mọi phép kiểm tín chỉ/trùng lịch/trùng môn. Khoá lúc cộng bộ đếm là **quá muộn** — hai request đã cùng vượt qua bước kiểm rồi |
+| **Chống trùng môn** | Unique **filtered** index trên `DangKyMonHoc(MaSinhVien, MaHocKy, MaMonHoc)` `WHERE TrangThai IN ('DANG_XU_LY','DA_DANG_KY','DANG_HUY')`. `UNIQUE(MaSinhVien, MaLopHP)` ở Host **không** chặn được hai lớp khác nhau của cùng một môn |
+| **Trùng lịch** | Lưu `LichHocMirror` tại Home **ngay khi ghi nhận yêu cầu**, không đợi Host duyệt — nếu không, hai yêu cầu `DANG_XU_LY` cùng khung giờ sẽ cùng lọt |
+| **Hủy đăng ký** | `DANG_XU_LY → DANG_HUY → DA_HUY`. Tín chỉ **chỉ trả khi Host xác nhận**. Ở Host, cả ba việc (đổi `DA_HUY`, xoá ghi danh, trả chỗ) phải nằm trong **một** giao dịch, và khoá bằng `sp_getapplock` theo `MaYeuCau` — vì dòng kết quả có thể **chưa tồn tại** |
+| **Từ vựng trạng thái — dùng ĐÚNG bộ này** | `DANG_XU_LY` · `DA_DANG_KY` · `TU_CHOI` · `DANG_HUY` · `DA_HUY`. ⚠️ **Không** dùng `DA_DUYET` hay `CHO_DUYET` — filtered index lọc theo đúng các tên trên, ghi sai tên là ràng buộc **im lặng không áp dụng** |
+| **Liên cơ sở chỉ cho lớp trực tuyến** | v1: `HinhThucHoc = 'TRUC_TUYEN'`. Home kiểm, và **Host tự kiểm lại** vì Host mới sở hữu lớp |
 | **Bộ đếm do ứng dụng sở hữu** | Không trigger nào được cập nhật `SoLuongDaDangKy` — nếu không sẽ nhảy 2 mỗi lần đăng ký |
 | **Thứ tự khóa** | Luôn `LopHocPhan` trước, `DangKyHocPhan` sau — ở **mọi** luồng, kể cả hủy đăng ký. Đảo ở một chỗ là sinh deadlock ngẫu nhiên |
 | **Không dùng `MERGE`** | Dùng `UPDATE` trước, `INSERT` sau, có `UPDLOCK, HOLDLOCK`. `MERGE` của SQL Server không tự lấy khóa phù hợp |

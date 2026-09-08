@@ -84,7 +84,7 @@ Hệ thống dùng **hai cơ chế khác nhau cho hai nghiệp vụ khác nhau**
 | Cơ chế | **Distributed transaction (2PC)** | **Saga + idempotent receiver** |
 | Tần suất | Vài lần mỗi kỳ | 32.000 lượt/ngày cao điểm |
 | Tranh chấp | Không | Cao — tranh một dòng lớp |
-| Trạng thái trung gian an toàn | **Không có** — sinh viên không thể "nửa ở HCM nửa ở HN" | Có — `CHO_DUYET` |
+| Trạng thái trung gian an toàn | **Không có** — sinh viên không thể "nửa ở HCM nửa ở HN" | Có — `DANG_XU_LY`, và tín chỉ được giữ chỗ trong lúc chờ |
 
 Benchmark **B5** đo cả hai trên cùng một nghiệp vụ để chứng minh lựa chọn này bằng số liệu.
 
@@ -202,8 +202,9 @@ sequenceDiagram
     participant HOST as PTITONE_HN · Host
 
     SV->>API: POST /api/dang-ky lớp của HN
-    API->>HOME: Kiểm hồ sơ · tín chỉ · tiên quyết · trùng lịch
-    API->>HOME: INSERT YeuCauHocLienCoSo CHO_DUYET<br/>MaYeuCau = idempotency key
+    API->>HOME: sp_getapplock (MaSinhVien, MaHocKy)<br/>TUẦN TỰ HOÁ TRƯỚC khi kiểm
+    API->>HOME: Kiểm tín chỉ theo kỳ · trùng môn · trùng lịch · tiên quyết
+    API->>HOME: Ghi 4 bảng trong 1 giao dịch<br/>YeuCau + DangKyMonHoc + LichHocMirror + giữ tín chỉ
     API->>HOST: runAt HN qua JDBC
     HOST->>HOST: Tra KetQuaXuLyYeuCau theo MaYeuCau
     alt Đã xử lý trước đó
@@ -213,11 +214,11 @@ sequenceDiagram
         HOST->>HOST: INSERT KetQuaXuLyYeuCau<br/>lưu CẢ khi từ chối
         HOST-->>API: Kết quả
     end
-    API->>HOME: DA_DUYET / TU_CHOI + ghi snapshot lớp
+    API->>HOME: DA_DANG_KY / TU_CHOI + ghi snapshot lớp
     API-->>SV: Trạng thái
 ```
 
-**Mất mạng sau khi Host đã ghi nhận?** Home vẫn giữ `CHO_DUYET`, worker gửi lại cùng `MaYeuCau`, Host tra `KetQuaXuLyYeuCau` và trả đúng kết quả cũ — **không tăng sĩ số lần hai**.
+**Mất mạng sau khi Host đã ghi nhận?** Home vẫn giữ `DANG_XU_LY`, worker gửi lại cùng `MaYeuCau`, Host tra `KetQuaXuLyYeuCau` và trả đúng kết quả cũ — **không tăng sĩ số lần hai**.
 **Host đang tắt?** Sinh viên thấy "đang chờ cơ sở HN", không khoá tài nguyên nào ở Home.
 
 ### 5. ⭐ Chuyển cơ sở sinh viên — GIAO DỊCH PHÂN TÁN (yêu cầu bắt buộc số 3)
@@ -235,7 +236,7 @@ sequenceDiagram
 
     AD->>API: POST /api/chuyen-co-so
     API->>SP: EXEC — API chỉ GỌI, không điều phối
-    SP->>SP: Kiểm tiền điều kiện<br/>không còn CHO_DUYET · Outbox đã xả
+    SP->>SP: Kiểm tiền điều kiện<br/>không còn DANG_XU_LY · Outbox đã xả
     SP->>SP: SET XACT_ABORT ON<br/>BEGIN DISTRIBUTED TRANSACTION
     SP->>NEW: INSERT SinhVien + TaiKhoan qua Linked Server
     SP->>OLD: DELETE SinhVien + TaiKhoan
@@ -319,7 +320,7 @@ flowchart LR
 |---|---|
 | **`PTITONE_MASTER` tắt** | ✅ Đăng nhập, đăng ký, xem lịch, nhập điểm **vẫn chạy** bằng replica. Chỉ mất: sửa danh mục, nhân bản thay đổi mới, báo cáo tổng hợp |
 | **`PTITONE_HN` tắt** | HCM và ĐN chạy bình thường; sinh viên HN không thao tác được (tài khoản nằm tại HN) |
-| HN tắt khi SV HCM đăng ký lớp HN | Yêu cầu giữ `CHO_DUYET`, worker retry sau |
+| HN tắt khi SV HCM đăng ký lớp HN | Yêu cầu giữ `DANG_XU_LY`, worker retry sau |
 | HN tắt khi SV HCM xem lịch / điểm | ✅ Vẫn xem được từ snapshot và mirror, có thể hơi cũ |
 | **Máy API tắt** | ❌ Toàn bộ website ngừng — **điểm chết đơn lẻ của kiến trúc một API** |
 | Tunnel tắt | Không vào được từ Internet; LAN/VPN vẫn gọi API bình thường |

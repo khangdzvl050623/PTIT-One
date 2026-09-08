@@ -609,9 +609,17 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 | `CTDT_MonHoc` **[R]** | `MaCTDT` FK · `MaMonHoc` FK · `HocKyGoiY` · `BatBuoc` · PK kép | **Chưa có ở bản trước.** Không có bảng nối này thì không biết một chương trình đào tạo gồm những môn nào → không xét được tiến độ, không gợi ý được môn, không tính được điều kiện tốt nghiệp |
 | `LichHoc` **[F]** | `MaLopHP` FK · `Thu` (2–8) · `TietBatDau` · `SoTiet` · `PhongHoc` · `TuanBatDau` · `TuanKetThuc` | **Thay cho cột `ThoiGianHoc` dạng chuỗi.** Một lớp có thể học nhiều buổi/tuần, và kiểm trùng lịch cần so sánh có cấu trúc chứ không so chuỗi |
 | `SinhVienHocKy` **[F]** | `MaSinhVien`+`MaHocKy` PK · `SoTinChiDaDangKy` · `SoTinChiDangGiuCho` · `TranTinChi` | ⭐ **Thay cho bộ đếm phẳng trên `SinhVien`.** Một bộ đếm duy nhất không phân biệt được nhiều học kỳ (học kỳ hè, sang kỳ mới). Tách "đã đăng ký" khỏi "đang giữ chỗ" đúng bằng thứ saga cần |
-| `DangKyMonHoc` **[F]** | `MaSinhVien` · `MaHocKy` · `MaMonHoc` · `MaLopHP` · `MaCoSoHost` · `TrangThai` · `MaYeuCau` | ⭐ **Tại Home. Giữ quyền đăng ký một môn trong một kỳ.** Ghi nhận **mọi** đăng ký — cùng cơ sở lẫn liên cơ sở, ở mọi trạng thái còn hiệu lực |
+| `LichHocMirror` **[F]** | `MaSinhVien` · `MaHocKy` · `MaMonHoc` *(→ `DangKyMonHoc`)* · `Thu` · `TietBatDau` · `SoTiet` · `PhongHoc` · `TuanBatDau` · `TuanKetThuc` · `PhienBanLich` | ⭐ **Tại Home, CHỈ cho lớp liên cơ sở.** Mỗi dòng là **một buổi học**. Lưu **ngay khi ghi nhận yêu cầu**, không đợi Host duyệt — nếu không, hai yêu cầu `DANG_XU_LY` cùng khung giờ sẽ cùng lọt |
+| `DangKyMonHoc` **[F]** | `MaSinhVien`+`MaHocKy`+`MaMonHoc` **PK** · `MaLopHP` · `MaCoSoHost` · `TrangThai` · `MaYeuCau` · `SoTinChi` · `PhienBanLich` | ⭐ **Tại Home. Giữ quyền đăng ký một môn trong một kỳ.** Ghi nhận **mọi** đăng ký — cùng cơ sở lẫn liên cơ sở, ở mọi trạng thái còn hiệu lực |
 
 `LichHoc` phân mảnh dẫn xuất theo `LopHocPhan`, cùng site với lớp.
+**`PhongHoc` thuộc từng buổi**, không phải một cột phẳng trên lớp — một lớp
+có thể học ở nhiều phòng khác nhau theo ngày.
+
+> ⚠️ **Khung giờ tiết và cách đánh số tuần phải thống nhất giữa MỌI cơ sở**,
+> nếu không phép so `Thu`/`Tiet`/`Tuan` giữa hai site là vô nghĩa. Vì vậy
+> `KhungGioTiet` phải là **dữ liệu tham chiếu ở `PTITONE_MASTER` và được nhân
+> bản** — không để mỗi cơ sở tự quy ước. Số tuần suy ra từ `HocKy.NgayBatDau`.
 
 **Kiểm trùng lịch** trở thành một phép so khoảng có thể viết bằng SQL:
 
@@ -643,7 +651,7 @@ WHERE a.Thu = b.Thu
 | `YeuCauHocLienCoSo` **[F]** | `MaYeuCau` PK · `MaSinhVien` · `MaLopHP` · `MaCoSoHost` · `TrangThai` · `LyDoTuChoi` · `SoLanThu` · **snapshot:** `MaMonHoc`,`TenMonHoc`,`SoTinChi`,`HinhThucHoc`,`LichHocJson`,`PhongHoc`,`ThoiDiemDongBo` | Đặt tại **cơ sở nhà**. Vừa là trạng thái saga, **vừa là read model của lớp học ở site kia** |
 | `BangDiemMirror` **[P]** | `MaSinhVien`+`MaLopHP` PK · `MaMonHoc` · `TenMonHoc` · `SoTinChi` · `DiemTongKet` · `Version` · `LastSyncedAt` · `SyncStatus` | Đặt tại **cơ sở nhà**. **Không phải nguồn sự thật** — nguồn sự thật là `Diem` ở site Host |
 | `OutboxSuKien` **[F]** | `EventId` PK · `LoaiSuKien` · `KhoaThucThe` · `NoiDung` (JSON) · `Version` · `TrangThai` · `SoLanThu` · `ThoiDiemTao` · `ThoiDiemXuLy` | Đặt tại **mọi site**. Hàng đợi phát sự kiện ra ngoài |
-| `KetQuaXuLyYeuCau` **[F]** *(inbox / outcome)* | `MaYeuCau` PK · `KetQua` (`DA_DUYET`/`TU_CHOI`/**`DA_HUY`**) · `MaLoi` · `LyDo` · `MaLopHP` · `MaSinhVien` · `MaThaoTacHuy` · `ThoiDiemXuLy` | Đặt tại **site Host**. **Bắt buộc để saga idempotent.** Đồng thời là **bia mộ (tombstone)**: nếu lệnh hủy tới trước, dòng `DA_HUY` khiến lệnh đăng ký tới muộn bị từ chối — xem D3 |
+| `KetQuaXuLyYeuCau` **[F]** *(inbox / outcome)* | `MaYeuCau` PK · `KetQua` (`DA_DANG_KY`/`TU_CHOI`/**`DA_HUY`**) · `MaLoi` · `LyDo` · `MaLopHP` · `MaSinhVien` · `MaThaoTacHuy` · `ThoiDiemXuLy` | Đặt tại **site Host**. **Bắt buộc để saga idempotent.** Đồng thời là **bia mộ (tombstone)**: nếu lệnh hủy tới trước, dòng `DA_HUY` khiến lệnh đăng ký tới muộn bị từ chối — xem D3 |
 
 > ⚠️ **Kỷ luật quan trọng:** `YeuCauHocLienCoSo` chỉ giữ **trạng thái saga + snapshot đăng ký**. Không nhét thêm mirror điểm, mirror lịch, mirror gì khác vào đây — nếu cần thì tạo projection riêng như `BangDiemMirror`. Bảng này không được phép biến thành "kho dữ liệu từ xa của sinh viên".
 > **Quy ước đặt tên:** mọi bảng read model đều mang hậu tố `Mirror`. Nhìn tên bảng là biết nó không authoritative.
@@ -710,11 +718,11 @@ Chia làm ba giai đoạn, và **chỉ giai đoạn 2 nằm trong giao dịch ph
 
 | Giai đoạn | Việc | Trong 2PC? |
 |---|---|---|
-| **1. Tiền điều kiện** | Không còn `YeuCauHocLienCoSo` ở trạng thái `DANG_XU_LY` · `OutboxSuKien` của SV đã xả hết · không đang trong đợt đăng ký | ❌ kiểm tra trước |
-| **2. Giao dịch phân tán** | Xoá `SinhVien` + `TaiKhoan` ở cơ sở cũ · chèn ở cơ sở mới · cập nhật `DanhBaNguoiDung` tại Master | ✅ **nguyên tử trên 3 CSDL** |
-| **3. Hậu xử lý** | Dựng lại `BangDiemMirror` từ `Diem` ở các Host · tính lại `SoMonLienCoSo` · chuyển `YeuCauHocLienCoSo` lịch sử | ❌ idempotent, chạy sau |
+| **1. Tiền điều kiện** | Không còn `YeuCauHocLienCoSo` ở **`DANG_XU_LY` HOẶC `DANG_HUY`** · `OutboxSuKien` của SV đã xả hết · không trong đợt đăng ký · ⭐ **đặt `DanhBaNguoiDung.TrangThai = 'DANG_CHUYEN'` để chặn phát sinh yêu cầu mới** | ❌ kiểm tra trước |
+| **2. Giao dịch phân tán** | Chuyển **toàn bộ trạng thái do Home sở hữu**: `SinhVien` · `TaiKhoan` · **`SinhVienHocKy`** · **`DangKyMonHoc`** · **`LichHocMirror`** · `YeuCauHocLienCoSo` — chèn ở cơ sở mới, xoá ở cơ sở cũ · cập nhật `DanhBaNguoiDung` tại Master | ✅ **nguyên tử trên 3 CSDL** |
+| **3. Hậu xử lý** | Dựng lại `BangDiemMirror` từ `Diem` ở các Host · tính lại `SoMonLienCoSo` · ⭐ **chỉ gỡ `DANG_CHUYEN` khi dựng lại XONG** — nghiệp vụ phụ thuộc mirror không được mở lại sớm | ❌ idempotent, chạy sau |
 
-> ⚠️ **Giữ giao dịch phân tán càng ngắn càng tốt** — đúng 5 câu lệnh. Nhét cả bước dựng lại projection vào trong đó là giữ lock trên ba site lâu không cần thiết.
+> ⚠️ **Giữ giao dịch phân tán ngắn nhất có thể — nhưng phải đủ.** Mục tiêu không phải một con số câu lệnh, mà là: **chuyển đủ mọi trạng thái nghiệp vụ do Home sở hữu**, và **để bước dựng lại projection ra ngoài** (nó idempotent, chạy lại được, không cần giữ lock ba site).
 
 Chi tiết thủ tục, mã T-SQL và cấu hình MS DTC: **mục D8**.
 
@@ -791,7 +799,11 @@ Muốn biết định tuyến vào CSDL nào thì phải biết người dùng t
 3. Phát JWT mang claim đã ký:
       { "sub": "N22DCCN001", "role": "SINH_VIEN", "homeCampus": "HN" }
 
-4. Mọi request sau đọc claim từ JWT — KHÔNG tra danh bạ lại
+4. Mọi request sau đọc claim từ JWT — KHÔNG truy vấn CSDL danh bạ lại.
+   ⚠️ Nhưng CÓ đối chiếu `PhienBanTaiKhoan` với **bản danh bạ nạp sẵn trong
+   bộ nhớ** của tầng ứng dụng (danh bạ nhỏ, nhân bản cục bộ, đổi rất hiếm;
+   làm mới định kỳ). Đối chiếu trong RAM, không phải một lượt đi CSDL —
+   nên hai phát biểu này không mâu thuẫn nhau.
 
 5. Chưa thấy trong replica (độ trễ nhân bản) → tra thẳng PTITONE_MASTER
 ```
@@ -1100,6 +1112,10 @@ Rà lại thì phát hiện: **thiết kế hiện tại vốn không cần `IDE
                         Tầng nghiệp vụ
 ```
 
+> ⚠️ **`LichHocMirror` KHÔNG phải read model thuần.** Nó tham gia **ràng buộc
+> nghiệp vụ** (kiểm trùng lịch), nên phải có mặt **trước** khi Host trả lời.
+> Đây là khác biệt căn bản với `BangDiemMirror` — cái đó chỉ để đọc.
+
 | Thao tác | Nguồn dữ liệu |
 |---|---|
 | "Xem lịch học của tôi" | **Read model cục bộ** — thuần local, luôn chạy được |
@@ -1272,21 +1288,38 @@ Mô hình này **có thật**. UM System (Missouri) định nghĩa nguyên văn 
 
 Chi tiết đắt giá hơn là **quy trình**: sinh viên nộp yêu cầu qua hệ thống của **home campus** → **host campus** xét điều kiện → gửi hướng dẫn ghi danh trong **2–3 ngày làm việc**; học phí do host thu, hóa đơn riêng từng campus; điểm được chia sẻ **sau khi đã công bố**.
 
-> ⭐ **Đây là lập luận mạnh nhất để đưa vào báo cáo:** quy trình thật của một đại học đa cơ sở vốn dĩ **bất đồng bộ, có bước duyệt, và nhất quán cuối**. Không trường nào chạy 2PC giữa hai campus để ghi danh trong 200 ms. Việc không dùng distributed transaction **không phải né tránh kỹ thuật, mà là mô hình hóa đúng nghiệp vụ.**
+> ⭐ **Mô hình tham chiếu:** UM System phân biệt **Course Sharing** — sinh viên
+> đăng ký môn do cơ sở khác cung cấp **ngay trong hệ thống đăng ký của cơ sở
+> nhà** — với **Cross Campus Enrollment**, vốn có quy trình và cách thu học phí
+> riêng. **PTIT One v1 theo mô hình Course Sharing.**
+>
+> ⚠️ Tài liệu nghiệp vụ công khai của họ **không chứng minh được kiến trúc
+> backend**, nên không dùng nó để lập luận về 2PC. Lý do PTIT One chọn saga cho
+> đăng ký nằm ở **đặc tính tải của chính hệ thống này**: đường nóng, tranh chấp
+> cao trên một dòng lớp, nơi 2PC giữ lock qua mạng suốt round-trip.
+> Bằng chứng là **số đo ở B5**, không phải quy trình của trường khác.
 
 ### Luồng saga
 
 ```
-[HOME]  1. SV nộp yêu cầu.
-           Home kiểm bằng DỮ LIỆU CỦA CHÍNH MÌNH:
+[HOST]  0. Home ĐỌC thông tin lớp + PhienBanLich từ Host (chỉ đọc, chưa ghi).
+
+[HOME]  1. ⭐ sp_getapplock theo (MaSinhVien, MaHocKy) — TUẦN TỰ HOÁ TRƯỚC
+           KHI KIỂM, không phải chỉ lúc cộng tín chỉ. Kiểm rồi mới khoá là
+           TOCTOU: hai request cùng vượt qua bước kiểm rồi mới tranh nhau ghi.
+
+           Trong CÙNG một giao dịch cục bộ tại Home:
+             • kiểm bằng DỮ LIỆU CỦA CHÍNH MÌNH:
              • đang hoạt động, không bị hold
              • tiên quyết (từ bảng điểm + BangDiemMirror)
              • trần tín chỉ theo KỲ (SinhVienHocKy), tính cả yêu cầu DANG_XU_LY
              • chưa đăng ký môn này trong kỳ  (DangKyMonHoc, unique filtered)
              • trùng lịch với các lớp đã đăng ký
              • ⭐ lớp phải là HinhThucHoc = 'TRUC_TUYEN'
-           → 1 giao dịch cục bộ: INSERT YeuCauHocLienCoSo (DANG_XU_LY)
-                                 với MaYeuCau = idempotency key
+             • INSERT YeuCauHocLienCoSo (DANG_XU_LY), MaYeuCau = idempotency key
+             • INSERT DangKyMonHoc      (DANG_XU_LY) — giữ quyền đăng ký môn
+             • ⭐ INSERT LichHocMirror   — LƯU LỊCH NGAY, kèm PhienBanLich
+             • UPDATE SinhVienHocKy      — SoTinChiDangGiuCho += c
 
         ── SiteContext.runAt(HOST, …) qua JDBC/VPN ──►
 
@@ -1294,6 +1327,8 @@ Chi tiết đắt giá hơn là **quy trình**: sinh viên nộp yêu cầu qua 
            Đã có bản ghi → TRẢ VỀ NGUYÊN KẾT QUẢ CŨ, không đánh giá lại.
 
            Chưa có → kiểm bằng DỮ LIỆU CỦA CHÍNH MÌNH:
+             • ⭐ PhienBanLich còn KHỚP với lúc Home kiểm
+               (lịch đổi giữa chừng thì kiểm trùng lịch vừa rồi vô nghĩa)
              • còn chỗ · đợt đăng ký của Host đang mở
              • lớp đang mở và cho phép liên cơ sở
              • ⭐ TỰ KIỂM LẠI HinhThucHoc = 'TRUC_TUYEN'
@@ -1305,7 +1340,7 @@ Chi tiết đắt giá hơn là **quy trình**: sinh viên nộp yêu cầu qua 
 
         ◄── trả kết quả ──
 
-[HOME]  3. Cập nhật DANG_XU_LY → DA_DUYET / TU_CHOI
+[HOME]  3. Cập nhật DANG_XU_LY → DA_DANG_KY / TU_CHOI
            + ghi snapshot lớp vào chính dòng đó   ← read model (C10)
            + tăng SinhVien.SoMonLienCoSo          ← cờ fan-out
 
@@ -1348,7 +1383,7 @@ nhiều lớp, không tin đầu vào từ site khác.
 
 ```
         DANG_XU_LY  ──(SV bấm hủy)──►  DANG_HUY  ──(Host xác nhận)──►  DA_HUY
-        DA_DUYET    ──(SV bấm hủy)──►  DANG_HUY                          │
+        DA_DANG_KY    ──(SV bấm hủy)──►  DANG_HUY                          │
                                                                          ▼
                                                         Home MỚI trả hạn mức tín chỉ
 ```
@@ -1368,12 +1403,48 @@ nhiều lớp, không tin đầu vào từ site khác.
 Đăng ký và hủy **phối hợp qua cùng `MaYeuCau`**, nên không thể vừa xác nhận
 hủy vừa tạo đăng ký. Lệnh hủy mang **`MaThaoTacHuy`** riêng để retry an toàn.
 
+#### ⭐ Bảng chuyển tín chỉ giữa hai bộ đếm
+
+Với một môn có **c** tín chỉ:
+
+| Sự kiện | `SoTinChiDaDangKy` | `SoTinChiDangGiuCho` | Tổng chiếm |
+|---|:---:|:---:|:---:|
+| Gửi yêu cầu | — | **+c** | c |
+| Host chấp nhận | **+c** | **−c** | c |
+| Host từ chối | — | **−c** | 0 |
+| SV hủy yêu cầu **đang xử lý** | — | — | c *(chưa đổi)* |
+| SV hủy đăng ký **đã thành công** | **−c** | **+c** | c *(chưa đổi)* |
+| Host xác nhận hủy | — | **−c** | 0 |
+
+> ⭐ Bất biến: **`DANG_HUY` luôn thuộc phần "đang giữ"**, và tổng hạn mức bị
+> chiếm **không giảm** khi sinh viên vừa bấm hủy. Nó chỉ giảm khi Host xác nhận.
+
+⚠️ **Mọi chuyển trạng thái phải cập nhật đồng thời trong MỘT giao dịch Home:**
+bản ghi `DangKyMonHoc` + trạng thái saga + hai bộ đếm. Và phải **chống xử lý
+lặp** bằng cùng một khuôn:
+
+```sql
+UPDATE <bảng> SET TrangThai = <đích>
+ WHERE <khoá> = @k AND TrangThai = <nguồn>;   -- chỉ chuyển từ ĐÚNG nguồn
+
+IF @@ROWCOUNT = 1                              -- chỉ luồng THẮNG mới đụng bộ đếm
+    UPDATE SinhVienHocKy SET ... ;
+```
+
+Kèm ràng buộc DBMS bảo vệ:
+
+```sql
+CHECK (SoTinChiDaDangKy   >= 0)
+CHECK (SoTinChiDangGiuCho >= 0)
+CHECK (SoTinChiDaDangKy + SoTinChiDangGiuCho <= TranTinChi)
+```
+
 #### Máy trạng thái tại Home
 
 | Trạng thái | Nghĩa | Tín chỉ | Chuyển tiếp |
 |---|---|---|---|
-| `DANG_XU_LY` | Đã ghi yêu cầu, chờ Host trả lời | **Đang giữ** | → `DA_DUYET` · `TU_CHOI` · `DANG_HUY` |
-| `DA_DUYET` | Host đã ghi danh | **Đã dùng** | → `DANG_HUY` |
+| `DANG_XU_LY` | Đã ghi yêu cầu, chờ Host trả lời | **Đang giữ** | → `DA_DANG_KY` · `TU_CHOI` · `DANG_HUY` |
+| `DA_DANG_KY` | Host đã ghi danh | **Đã dùng** | → `DANG_HUY` |
 | `TU_CHOI` | Host từ chối | ✅ Đã trả | *(kết thúc)* |
 | `DANG_HUY` | SV bấm hủy, chờ Host xác nhận | ⚠️ **Vẫn giữ** | → `DA_HUY` |
 | `DA_HUY` | Host đã xác nhận hủy | ✅ Đã trả | *(kết thúc)* |
@@ -1385,26 +1456,46 @@ thuộc Host trả lời — đó là lý do UI phải nói rõ thay vì báo "�
 
 | Trạng thái hiện tại | Nhận lệnh ĐĂNG KÝ | Nhận lệnh HỦY |
 |---|---|---|
-| *(chưa có)* | Xét điều kiện → `DA_DUYET` hoặc `TU_CHOI` | Ghi bia mộ `DA_HUY` |
-| `DA_DUYET` | Trả lại nguyên kết quả cũ | Xoá đăng ký + trả chỗ → `DA_HUY` |
+| *(chưa có)* | Xét điều kiện → `DA_DANG_KY` hoặc `TU_CHOI` | Ghi bia mộ `DA_HUY` |
+| `DA_DANG_KY` | Trả lại nguyên kết quả cũ | Xoá đăng ký + trả chỗ → `DA_HUY` |
 | `TU_CHOI` | Trả lại nguyên kết quả cũ | → `DA_HUY` *(không có chỗ để trả)* |
 | `DA_HUY` | ❌ **Từ chối** — đã bị hủy | Trả lại `DA_HUY`, **không trả chỗ lần hai** |
 
-**Trả chỗ đúng một lần** được bảo đảm bằng chính kỹ thuật đã dùng cho sức chứa:
+⚠️ **"Cùng `MaYeuCau`" KHÔNG tự tạo ra khoá.** Khi dòng `KetQuaXuLyYeuCau`
+**chưa tồn tại**, hai lệnh đăng ký và hủy cùng `MaYeuCau` sẽ cùng đi qua —
+không có dòng nào để khoá. Phải khoá tường minh:
 
 ```sql
-UPDATE KetQuaXuLyYeuCau
-   SET KetQua = 'DA_HUY', MaThaoTacHuy = @MaThaoTacHuy
- WHERE MaYeuCau = @MaYeuCau
-   AND KetQua   = 'DA_DUYET';      -- chỉ chuyển từ ĐÚNG trạng thái này
+BEGIN TRAN;                          -- ⚠️ CẢ BA việc trong MỘT giao dịch
 
-IF @@ROWCOUNT = 1                   -- chỉ luồng THẮNG mới trả chỗ
-BEGIN
-    UPDATE LopHocPhan SET SoLuongDaDangKy = SoLuongDaDangKy - 1
-     WHERE MaLopHP = @MaLopHP;
-    DELETE FROM DangKyHocPhan WHERE MaYeuCau = @MaYeuCau;
-END
+  -- Khoá theo MaYeuCau, kể cả khi bản ghi kết quả chưa tồn tại.
+  -- Mọi nhánh (đăng ký, hủy, retry) đều lấy khoá này TRƯỚC, cùng thứ tự.
+  EXEC sp_getapplock @Resource   = @MaYeuCau,
+                     @LockMode   = 'Exclusive',
+                     @LockOwner  = 'Transaction',
+                     @LockTimeout = 5000;
+
+  UPDATE KetQuaXuLyYeuCau
+     SET KetQua = 'DA_HUY', MaThaoTacHuy = @MaThaoTacHuy
+   WHERE MaYeuCau = @MaYeuCau
+     AND KetQua   = 'DA_DANG_KY';    -- chỉ chuyển từ ĐÚNG trạng thái này
+
+  IF @@ROWCOUNT = 1                  -- chỉ luồng THẮNG mới trả chỗ
+  BEGIN
+      UPDATE LopHocPhan SET SoLuongDaDangKy = SoLuongDaDangKy - 1
+       WHERE MaLopHP = @MaLopHP;
+      DELETE FROM DangKyHocPhan WHERE MaYeuCau = @MaYeuCau;
+  END
+
+COMMIT;
 ```
+
+⚠️ **Ba việc phải nằm trong MỘT giao dịch.** Nếu câu `UPDATE` đầu commit rồi
+tiến trình chết, lần retry sẽ thấy `DA_HUY` và **không trả chỗ nữa** — chỗ đó
+mất vĩnh viễn.
+
+Bốn tình huống bắt buộc phải kiểm thử: **hủy đến trước** · **phản hồi đến
+muộn** · **gửi lặp** · **tiến trình chết giữa chừng**.
 
 #### Tại Home — chống phản hồi đến muộn ghi đè
 
@@ -1413,7 +1504,7 @@ Không được để nó ghi đè `DANG_HUY` hoặc `DA_HUY`:
 
 ```sql
 UPDATE YeuCauHocLienCoSo
-   SET TrangThai = 'DA_DUYET'
+   SET TrangThai = 'DA_DANG_KY'
  WHERE MaYeuCau  = @MaYeuCau
    AND TrangThai = 'DANG_XU_LY';    -- chỉ ghi đè khi VẪN đang xử lý
 ```
@@ -1433,6 +1524,21 @@ phát hiện tín chỉ vẫn bị trừ.
 > ⚠️ **Không tự động hết hạn theo thời gian để trả tín chỉ sớm.** Nó tạo cửa
 > sổ hai bên bất đồng: Home đã trả hạn mức trong khi Host vừa chấp nhận.
 
+### ⚠️ Giới hạn phạm vi v1 — có chủ đích
+
+**Lịch học, số tín chỉ và hình thức học của một lớp được ĐÓNG BĂNG** từ lúc mở
+đăng ký tới hết học kỳ. Đổi lịch sau khi đã có người đăng ký là **ngoài phạm vi
+v1**.
+
+Nhờ vậy `PhienBanLich` trong v1 là **phòng thủ nhiều lớp**, không phải cơ chế
+chịu tải chính. Muốn cho đổi lịch sau đăng ký thì phải có đồng bộ phiên bản về
+mọi `LichHocMirror` đang giữ và một quy trình xử lý xung đột — đáng một phiên
+bản riêng.
+
+**Waitlist ("chờ có chỗ") cũng để phiên bản sau.** Nó cần bộ quy tắc riêng
+(thứ tự hàng đợi, thời hạn nhận chỗ) và **không được dùng chung `DANG_XU_LY`**
+— trộn hai ngữ nghĩa vào một trạng thái là cách chắc chắn để sinh lỗi.
+
 ### Quy tắc nghiệp vụ
 
 | Mức | Quy tắc | Kiểm ở đâu |
@@ -1442,7 +1548,7 @@ phát hiện tín chỉ vẫn bị trừ.
 | **MUST** | Đợt đăng ký của Host đang mở | Host |
 | **MUST** | SV đang hoạt động, không bị hold | Home |
 | **MUST** | Trần tín chỉ mỗi kỳ (gồm cả yêu cầu `DANG_XU_LY`) | Home |
-| **MUST** | Trạng thái duyệt `DANG_XU_LY → DA_DUYET/TU_CHOI` | Home |
+| **MUST** | Trạng thái duyệt `DANG_XU_LY → DA_DANG_KY/TU_CHOI` | Home |
 | SHOULD | Môn tiên quyết | **Home** — bảng điểm nằm ở Home. Ví dụ sách giáo khoa của *push computation to data* |
 | SHOULD | Trùng lịch | Home — dùng giờ học trong payload yêu cầu |
 | SHOULD | Trần liên cơ sở (≤ 2 môn/kỳ) | Home — một dòng `CHECK` |
