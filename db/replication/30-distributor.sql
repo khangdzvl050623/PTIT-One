@@ -26,13 +26,19 @@ GO
 /* ---------------------------------------------------------------------
    0. CHẶN CHẠY NHẦM MÁY
    --------------------------------------------------------------------- */
-IF CHARINDEX(UPPER('$(SrvMaster)'), UPPER(@@SERVERNAME)) = 0
-   AND UPPER(@@SERVERNAME) <> UPPER('$(SrvMaster)')
+/* Kiem tra bang SU TON TAI CUA DATABASE, khong so ten may.
+   So chuoi ten may khong dang tin: named instance tra ve 'MAY\SITE_HN'
+   trong khi cau hinh co the ghi '.\SITE_HN'; so chuoi con thi 'SRV-HN'
+   khop nham ca 'SRV-HN2'. Bat bien that su la: may Master la may CO
+   database Master. */
+IF DB_ID(N'$(DbMaster)') IS NULL
 BEGIN
-    RAISERROR(N'Script nay CHI duoc chay tren may Master ($(SrvMaster)). May hien tai: %s',
+    RAISERROR(N'Khong tim thay database $(DbMaster) tren instance nay (%s). Script chi chay tren may Master, va phai chay 00-create-databases.sql truoc.',
               16, 1, @@SERVERNAME);
     SET NOEXEC ON;
 END
+ELSE
+    PRINT '  [ok] Tim thay $(DbMaster) — dung la may Master';
 GO
 
 /* ---------------------------------------------------------------------
@@ -88,17 +94,20 @@ GO
 /* ---------------------------------------------------------------------
    4. TẠO DISTRIBUTION DATABASE
 
-   ⚠️ HAI THAM SỐ RETENTION — chỗ dễ sai nhất của cả file này.
+   HAI THAM SỐ RETENTION — điều khiển hai cơ chế KHÁC NHAU:
 
-      @max_distretention : thời gian lệnh được GIỮ trong distribution db
-      (ở 31-publication) @retention : thời gian subscription HẾT HẠN
+      @max_distretention  (ở đây)          : lệnh được GIỮ bao lâu trong
+                                             distribution database
+      @retention          (ở 31-publication): subscription HẾT HẠN sau bao
+                                             lâu không đồng bộ
 
-      Thời gian một máy site có thể tắt tối đa = MIN(hai giá trị).
-      Đặt lệch nhau thì con số nhỏ hơn mới là giới hạn thật — nếu lệnh đã
-      bị dọn, subscription dù chưa hết hạn cũng KHÔNG CÒN GÌ để bắt kịp,
-      buộc phải khởi tạo lại snapshot.
+      Đặt bằng nhau ($(DistRetention) giờ) là QUY ƯỚC CỦA NHÓM cho dễ vận
+      hành, KHÔNG phải yêu cầu của SQL Server.
 
-      Cả hai đặt = $(DistRetention) giờ.
+      ⚠️ Đừng diễn đạt thành bảo đảm "máy tắt N ngày vẫn bắt kịp". Nếu lệnh
+      đã bị cleanup job dọn đi thì subscription dù chưa hết hạn vẫn không
+      còn gì để bắt kịp. Đây là giới hạn TRÊN, không phải cam kết — vẫn
+      phải giám sát bằng Replication Monitor.
    --------------------------------------------------------------------- */
 IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N'distribution')
 BEGIN

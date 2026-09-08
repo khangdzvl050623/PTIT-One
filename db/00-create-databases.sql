@@ -3,13 +3,14 @@
    ---------------------------------------------------------------------
    Tạo các database theo topology đã chốt ở mục C0 của tài liệu thiết kế.
 
-   CHẠY Ở ĐÂU : trên MỖI máy chủ, một lần
+   CHẠY Ở ĐÂU : trên MỖI MÁY CHỦ, đúng MỘT lần
                   .\run.ps1 -Script 00-create-databases.sql -On MASTER
                   .\run.ps1 -Script 00-create-databases.sql -On HN
                   .\run.ps1 -Script 00-create-databases.sql -On DN
 
-   Script chỉ tạo những database THUỘC VỀ máy đang chạy, nên chạy nhầm
-   máy cũng không sinh ra database thừa.
+   Mỗi lần chạy tạo TẤT CẢ database mà config.ps1 gán cho máy đó.
+   Với phương án 3 máy, lần chạy -On MASTER tạo cả PTITONE_MASTER lẫn
+   PTITONE_HCM vì hai database này cùng nằm trên SRV-HCM.
 
    CHẠY LẠI ĐƯỢC: có, mọi thao tác đều được bọc IF NOT EXISTS.
 
@@ -19,48 +20,53 @@
 SET NOCOUNT ON;
 GO
 
-/* ---------------------------------------------------------------------
-   Thủ tục cục bộ: tạo một database nếu chưa có, rồi đặt các tuỳ chọn
-   bắt buộc của dự án.
-   --------------------------------------------------------------------- */
-DECLARE @sql NVARCHAR(MAX);
-
 /* ===================================================================
-   1. DATABASE VAI TRÒ MASTER
-      Chỉ chứa 7 bảng tham chiếu + danh bạ định vị + tài khoản Admin Master.
-      TUYỆT ĐỐI không chứa dữ liệu vận hành (xem C0).
-      Chỉ tạo khi máy đang chạy chính là máy Master.
+   1. TẠO MỌI DATABASE THUỘC INSTANCE NÀY
+
+   $(DbList) do run.ps1 tính sẵn: tất cả database mà config.ps1 gán cho
+   đúng máy chủ đang kết nối.
+
+   Vì sao phân giải ở PowerShell chứ không so tên máy trong T-SQL:
+     - Named instance: @@SERVERNAME trả về 'MAY\SITE_HN' còn cấu hình có
+       thể ghi '.\SITE_HN' — so chuỗi sẽ sai
+     - So khớp chuỗi con dễ nhầm 'SRV-HN' với 'SRV-HN2'
+     - Alias và CNAME làm mọi phép so tên trở nên không đáng tin
+
+   Nhờ vậy CHẠY MỘT LẦN trên mỗi máy là tạo đủ. Máy vừa giữ Master vừa
+   giữ HCM sẽ tạo cả hai, không cần chạy thêm lần thứ hai.
    =================================================================== */
-IF UPPER(@@SERVERNAME) = UPPER('$(SrvMaster)')
-   OR CHARINDEX(UPPER('$(SrvMaster)'), UPPER(@@SERVERNAME)) > 0
+DECLARE @dbList NVARCHAR(1000) = N'$(DbList)';
+DECLARE @db     SYSNAME,
+        @sql    NVARCHAR(MAX);
+
+IF NULLIF(LTRIM(RTRIM(@dbList)), N'') IS NULL
 BEGIN
-    IF DB_ID(N'$(DbMaster)') IS NULL
+    RAISERROR(N'Bien DbList rong. Hay chay qua run.ps1, dung goi sqlcmd truc tiep.', 16, 1);
+    SET NOEXEC ON;
+END
+
+DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
+    SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@dbList, ',')
+     WHERE LTRIM(RTRIM(value)) <> N'';
+
+OPEN cur;
+FETCH NEXT FROM cur INTO @db;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF DB_ID(@db) IS NULL
     BEGIN
-        SET @sql = N'CREATE DATABASE [$(DbMaster)] COLLATE $(Collation);';
+        SET @sql = N'CREATE DATABASE ' + QUOTENAME(@db)
+                 + N' COLLATE $(Collation);';
         EXEC sp_executesql @sql;
-        PRINT '  [+] Da tao database $(DbMaster)';
+        PRINT '  [+] Da tao database ' + @db;
     END
     ELSE
-        PRINT '  [=] Database $(DbMaster) da ton tai, bo qua';
-END
-ELSE
-    PRINT '  [ ] May nay khong phai Master ($(SrvMaster)), bo qua $(DbMaster)';
-GO
+        PRINT '  [=] Database ' + @db + ' da ton tai, bo qua';
 
-/* ===================================================================
-   2. DATABASE VẬN HÀNH của cơ sở tương ứng máy đang chạy
-      Mỗi máy chỉ tạo mảnh của chính nó.
-   =================================================================== */
-DECLARE @sql NVARCHAR(MAX);
-
-IF DB_ID(N'$(DbTarget)') IS NULL
-BEGIN
-    SET @sql = N'CREATE DATABASE [$(DbTarget)] COLLATE $(Collation);';
-    EXEC sp_executesql @sql;
-    PRINT '  [+] Da tao database $(DbTarget)  (co so $(SiteTarget))';
+    FETCH NEXT FROM cur INTO @db;
 END
-ELSE
-    PRINT '  [=] Database $(DbTarget) da ton tai, bo qua';
+CLOSE cur;
+DEALLOCATE cur;
 GO
 
 /* ===================================================================
@@ -70,9 +76,11 @@ DECLARE @db  SYSNAME,
         @sql NVARCHAR(MAX);
 
 DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
-    SELECT name FROM sys.databases
-     WHERE name IN (N'$(DbMaster)', N'$(DbTarget)')
-       AND state_desc = 'ONLINE';
+    SELECT d.name
+      FROM sys.databases d
+      JOIN STRING_SPLIT(N'$(DbList)', ',') sp
+        ON d.name = LTRIM(RTRIM(sp.value))
+     WHERE d.state_desc = 'ONLINE';
 
 OPEN cur;
 FETCH NEXT FROM cur INTO @db;
@@ -136,4 +144,7 @@ PRINT '  Buoc tiep theo:';
 PRINT '    - Tren may Master : replication\30-distributor.sql';
 PRINT '    - Cho toan bo      : xem db/replication/README.md';
 PRINT '  ------------------------------------------------------------';
+GO
+
+SET NOEXEC OFF;
 GO

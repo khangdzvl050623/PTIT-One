@@ -51,8 +51,17 @@
 
         PublicationName = 'PUB_ThamChieu'
 
-        # ⚠️ HAI giá trị này PHẢI BẰNG NHAU.
-        #    Thời gian tắt máy tối đa = min(hai giá trị).
+        # Hai tham số điều khiển HAI cơ chế hết hạn KHÁC NHAU:
+        #   DistributionRetention : lệnh được GIỮ bao lâu trong distribution db
+        #   SubscriptionRetention : subscription HẾT HẠN sau bao lâu không đồng bộ
+        #
+        # Đặt bằng nhau là QUY ƯỚC CỦA NHÓM cho dễ vận hành, không phải
+        # yêu cầu của SQL Server. Đặt lệch nhau vẫn hợp lệ.
+        #
+        # ⚠️ Không coi con số này là bảo đảm "tắt N ngày vẫn bắt kịp".
+        #    Nó là giới hạn TRÊN, còn thực tế phụ thuộc lịch chạy cleanup
+        #    job và snapshot còn dùng được hay không. Vẫn phải giám sát
+        #    bằng Replication Monitor.
         #    720 giờ = 30 ngày.
         DistributionRetentionHours = 720
         SubscriptionRetentionHours = 720

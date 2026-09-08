@@ -25,17 +25,12 @@ GO
 /* ---------------------------------------------------------------------
    0. CHẶN CHẠY NHẦM MÁY VÀ NHẦM DATABASE
    --------------------------------------------------------------------- */
-IF UPPER(@@SERVERNAME) <> UPPER('$(SrvMaster)')
-   AND CHARINDEX(UPPER('$(SrvMaster)'), UPPER(@@SERVERNAME)) = 0
-BEGIN
-    RAISERROR(N'Script nay CHI chay tren may Master ($(SrvMaster)). May hien tai: %s', 16, 1, @@SERVERNAME);
-    SET NOEXEC ON;
-END
-GO
-
+/* Bat bien: may Master la may CO database Master.
+   Khong so ten may — xem giai thich o 30-distributor.sql. */
 IF DB_ID(N'$(DbMaster)') IS NULL
 BEGIN
-    RAISERROR(N'Chua co database $(DbMaster). Chay 00-create-databases.sql truoc.', 16, 1);
+    RAISERROR(N'Khong tim thay $(DbMaster) tren instance nay (%s). Script chi chay tren may Master; chay 00-create-databases.sql truoc.',
+              16, 1, @@SERVERNAME);
     SET NOEXEC ON;
 END
 GO
@@ -134,11 +129,14 @@ GO
      (a) Đã đối chiếu file Excel phân công đề tài của giảng viên
      (b) db/master/01-schema-thamchieu.sql đã chạy xong
 
-   Bảy bảng dự kiến (mục C1, nhóm 1 — tên có thể đổi theo đề tài):
+   TÁM bảng dự kiến (mục C1, nhóm 1 — tên có thể đổi theo đề tài):
 
        CoSo                  cấu hình topology, có TenLinkedServer + TenDatabase
        Khoa
        ChuongTrinhDaoTao
+       CTDT_MonHoc           ⭐ chương trình đào tạo gồm những môn nào.
+                                Không có bảng này thì không xét được tiến độ
+                                học tập, không kiểm được điều kiện tốt nghiệp
        MonHoc                bảng bị đọc nhiều nhất hệ thống
        MonHocTienQuyet
        HocKy                 ⚠️ CHỈ lịch chung toàn trường.
@@ -165,8 +163,8 @@ GO
    ⚠️ HAI ĐIỀU PHẢI NHỚ KHI BỎ COMMENT:
 
    1. Thứ tự article phải tôn trọng khoá ngoại. Bảng cha trước bảng con:
-        CoSo → Khoa → ChuongTrinhDaoTao → MonHoc → MonHocTienQuyet
-             → HocKy → DanhBaNguoiDung
+        CoSo → Khoa → ChuongTrinhDaoTao → MonHoc → CTDT_MonHoc
+             → MonHocTienQuyet → HocKy → DanhBaNguoiDung
 
    2. Trigger ở Subscriber PHẢI khai báo NOT FOR REPLICATION, nếu không
       nó sẽ chặn chính Distribution Agent và replication chết với triệu

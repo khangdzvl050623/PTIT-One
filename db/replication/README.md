@@ -71,7 +71,10 @@ Sau khi đổi, **khởi động lại Agent**.
 Mọi lệnh chạy từ thư mục `db/`, dùng runner để bơm cấu hình từ `config.ps1`:
 
 ```powershell
-# --- Bước 0: tạo database, chạy trên TỪNG máy ---
+# --- Bước 0: tạo database, chạy MỘT lần trên TỪNG MÁY CHỦ ---
+# Mỗi lần chạy tạo TẤT CẢ database mà config.ps1 gán cho máy đó.
+# Phương án 3 máy: lệnh đầu tạo cả PTITONE_MASTER lẫn PTITONE_HCM,
+# vì hai database này cùng nằm trên SRV-HCM.
 .\run.ps1 -Script 00-create-databases.sql -On MASTER
 .\run.ps1 -Script 00-create-databases.sql -On HN
 .\run.ps1 -Script 00-create-databases.sql -On DN
@@ -183,17 +186,21 @@ SELECT * FROM <BangThamChieu> WHERE ...;   -- phai thay dong vua them
 | `@max_distretention` | `30-distributor.sql` | **720 giờ** | Lệnh được **giữ** trong distribution database |
 | `@retention` | `31-publication.sql` | **720 giờ** | Subscription **hết hạn** sau bấy lâu không đồng bộ |
 
-> ⚠️ **Hai giá trị PHẢI BẰNG NHAU.**
->
-> **Thời gian một máy site tắt tối đa = min(hai giá trị).**
->
-> Đặt lệch nhau thì con số nhỏ hơn mới là giới hạn thật: nếu lệnh đã bị dọn
-> khỏi distribution database, subscription dù **chưa** hết hạn vẫn **không
-> còn gì để bắt kịp** → buộc phải khởi tạo lại snapshot.
+Hai tham số điều khiển **hai cơ chế hết hạn khác nhau**. Đặt bằng nhau là
+**quy ước của nhóm** cho dễ vận hành, **không phải yêu cầu của SQL Server** —
+đặt lệch nhau vẫn hoàn toàn hợp lệ.
 
-720 giờ = 30 ngày, thoải mái cho một dự án 8 tuần kể cả khi ai đó mang máy
-về quê suốt kỳ nghỉ. Với 7 bảng tham chiếu nhỏ và ~15 lượt ghi/ngày, giữ 30
-ngày tốn không đáng kể dung lượng.
+> ⚠️ **Đừng diễn đạt thành bảo đảm "máy tắt 30 ngày vẫn bắt kịp".**
+>
+> Nếu lệnh đã bị cleanup job dọn khỏi distribution database, subscription dù
+> **chưa** hết hạn vẫn **không còn gì để bắt kịp**. Con số 720 giờ là **giới
+> hạn trên**, không phải cam kết: thực tế còn phụ thuộc lịch chạy của các
+> cleanup job và snapshot còn dùng được hay không.
+>
+> **Cách duy nhất để biết chắc là giám sát Replication Monitor hằng tuần.**
+
+Với 8 bảng tham chiếu nhỏ và ~15 lượt ghi/ngày, giữ 720 giờ tốn không đáng kể
+dung lượng — nên vẫn là lựa chọn hợp lý, chỉ cần phát biểu cho đúng.
 
 ---
 
@@ -214,7 +221,7 @@ ngày tốn không đáng kể dung lượng.
 
 | File | Trạng thái |
 |---|---|
-| `30-distributor.sql` | ✅ Xong — không phụ thuộc schema |
+| `30-distributor.sql` | ✅ Xong — không phụ thuộc schema. ⚠️ **Chưa chạy thật trên SQL Server**, mới kiểm `-WhatIf` và biến SQLCMD |
 | `31-publication.sql` | ⚠️ **Khung xong, thiếu article.** `sp_addarticle` gắn trực tiếp vào bảng nguồn nên phải chờ schema |
 | `32-subscription.sql` | ⏳ Chưa viết — chỉ cần sau khi có article |
 | `39-go-*.sql` | ⏳ Chưa viết — script gỡ để chạy lại từ đầu |
