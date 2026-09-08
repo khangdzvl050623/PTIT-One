@@ -353,8 +353,8 @@ Bấm *"đổi sang four-part"* — cùng câu hỏi, hiện ngay **84.213 dòng
 
 ```
 uisptitv2/
-├── AGENTS.md                       ← quy ước cho coding agent (Claude, Codex…)
-├── CLAUDE.md                       ← import AGENTS.md + phần riêng của Claude Code
+├── AGENTS.md                       ← quy ước dự án — MỌI agent (Claude, Codex…) đọc file này
+├── CLAUDE.md                       ← chỉ 1 dòng: @AGENTS.md
 ├── docs/
 │   ├── UISPTITv2-Thiet-Ke-v2.md   ← TÀI LIỆU DUY NHẤT của dự án
 │   ├── bao-cao/                    ← bản Word nộp thầy
@@ -371,6 +371,17 @@ uisptitv2/
 │   └── web/                        ← React + Vite
 └── bench/                          ← sinh tải + kịch bản benchmark
 ```
+
+---
+
+## Hướng dẫn cho coding agent
+
+Quy tắc dự án nằm ở **[`AGENTS.md`](AGENTS.md)** — Codex và các agent khác đọc trực tiếp file này. Claude Code **không tự nạp** file tên `AGENTS.md`, nên [`CLAUDE.md`](CLAUDE.md) chỉ chứa một dòng `@AGENTS.md` để import.
+
+> **Sửa quy tắc dự án thì sửa `AGENTS.md`.** File riêng của từng agent chỉ giữ cấu hình đặc thù của agent đó.
+
+Kiểm chứng import đã nạp: mở phiên Claude Code mới rồi gõ **`/context`**, xem mục *Memory files*. Muốn biết chính xác file nào được nạp và vì sao thì dùng hook **`InstructionsLoaded`**.
+*(Hỏi Claude một quy tắc trong file rồi thấy trả lời đúng **không** chứng minh được gì — nó có thể tự đọc file sau khi nghe câu hỏi.)*
 
 ---
 
@@ -545,7 +556,11 @@ export default defineConfig({
 npm run dev                     # http://localhost:5173
 ```
 
-> ⚠️ **Giữ frontend tối giản.** Không shadcn/ui, không state library, không router phức tạp — chỉ `fetch` + `useState` + bảng và form. Barem chấm ở tầng CSDL; mỗi giờ dành cho UI là một giờ không dành cho replication đang gãy.
+> ⭐ **UI/UX được đầu tư nghiêm túc.** Nhóm có vai riêng phụ trách ứng dụng nên frontend chạy song song, không lấy giờ của người làm hạ tầng CSDL. Dùng thoải mái shadcn/ui, design system, animation.
+>
+> Thiết kế và dựng màn hình **bắt đầu được từ tuần 1** — mockup và component tĩnh không phụ thuộc schema hay API, nên đây là phần song song hoá tốt nhất trong cả dự án.
+>
+> Ràng buộc duy nhất: **không để frontend làm chậm Phần F** (cài đặt vật lý). Đó là chuyện lịch, không phải chuyện chất lượng UI.
 
 ### 4. Truy cập từ máy khác
 
