@@ -405,34 +405,80 @@ Hệ thống theo mô hình **Client/Server** — xem C6 để biết lý do kh�
 
 ## B6. **Mô hình thực thể liên kết (ERD)**
 
-```
-        ┌──────────┐        ┌────────────────────┐
-        │   Khoa   │───1:N──│ ChuongTrinhDaoTao  │
-        └────┬─────┘        └─────────┬──────────┘
-             │ 1:N                    │ 1:N
-        ┌────▼─────┐             ┌────▼──────┐
-        │  MonHoc  │             │ SinhVien  │
-        └────┬─────┘             └────┬──────┘
-             │ 1:N                    │ 1:N
-             │      ┌───────────┐     │
-        ┌────▼──────▼───┐  ┌────▼─────▼─────────┐
-        │  LopHocPhan   │──│   DangKyHocPhan    │
-        └──┬────────┬───┘  └─────────┬──────────┘
-           │        │ N:1            │ 1:1
-           │   ┌────▼──────┐   ┌─────▼────┐
-           │   │ GiangVien │   │   Diem   │
-           │   └───────────┘   └──────────┘
-      ┌────▼─────┐   ┌────────────┐
-      │  HocKy   │───│ DotDangKy  │
-      └──────────┘   └────────────┘
+> ⚠️ **ERD phải đọc theo từng database, không đọc như một lược đồ liền mạch.**
+> SQL Server **không hỗ trợ khoá ngoại xuyên database**, nên nhiều quan hệ ở
+> đây là **quan hệ logic** do luồng nghiệp vụ bảo đảm, không phải `FOREIGN KEY`.
+> Vẽ nhầm hai loại này thành một là chỗ dễ bị hỏi nhất khi bảo vệ.
 
-  MonHocTienQuyet : MonHoc ──N:M── MonHoc  (tự quan hệ)
-  DanhBaNguoiDung  : danh bạ định vị, 1:1 logic với SinhVien
+**Ký hiệu:** `──►` khoá ngoại **THẬT** (cùng database) · `┈┈►` quan hệ **LOGIC**
+(khác database, nghiệp vụ bảo đảm)
 
-  ➕ YeuCauHocLienCoSo : SinhVien 1:N — LopHocPhan N:1
-  ➕ BangDiemMirror    : projection của Diem ở site khác
-  ➕ OutboxSuKien      : hàng đợi sự kiện, không có khóa ngoại
+### PTITONE_MASTER — dữ liệu tham chiếu
+
 ```
+   ┌──────┐        ┌───────────────────┐        ┌────────────────┐
+   │ CoSo │        │ ChuongTrinhDaoTao │◄──────►│  CTDT_MonHoc   │
+   └──────┘        └─────────┬─────────┘   FK   └───────┬────────┘
+                             │ FK                       │ FK
+   ┌──────┐        ┌─────────▼──┐              ┌────────▼────────┐
+   │ Khoa │───FK──►│   MonHoc   │◄────FK──────►│ MonHocTienQuyet │
+   └──────┘        └────────────┘  (tự quan hệ N:M)  └───────────┘
+
+   ┌───────┐   ┌──────────────┐   ┌─────────────────┐   ┌────────────────┐
+   │ HocKy │   │ KhungGioTiet │   │ DanhBaNguoiDung │   │ TaiKhoanMaster │
+   └───────┘   └──────────────┘   └─────────────────┘   └────────────────┘
+                                    danh bạ định vị        không nhân bản
+```
+
+### PTITONE_<site> — dữ liệu vận hành *(cấu trúc GIỐNG NHAU ở mọi cơ sở)*
+
+```
+  ── Ràng buộc theo SINH VIÊN (Home bảo vệ) ──────────────────────────
+   ┌───────────┐        ┌────────────────┐        ┌───────────────┐
+   │ SinhVien  │───FK──►│ SinhVienHocKy  │        │ DangKyMonHoc  │
+   └─────┬─────┘        └────────────────┘        └───────┬───────┘
+         │ FK              bộ đếm tín chỉ/kỳ              │ FK
+   ┌─────▼─────┐                                  ┌───────▼────────┐
+   │ TaiKhoan  │                                  │ LichHocMirror  │
+   └───────────┘                                  └────────────────┘
+                                            chỉ lưu lịch lớp LIÊN CƠ SỞ
+
+   ┌────────────────────┐        ┌──────────────────┐
+   │ YeuCauHocLienCoSo  │        │  BangDiemMirror  │   projection,
+   └────────────────────┘        └──────────────────┘   nguồn ở Host
+
+  ── Ràng buộc theo LỚP (Host bảo vệ) ────────────────────────────────
+   ┌────────────┐        ┌──────────────┐        ┌──────────────────┐
+   │ GiangVien  │◄──FK───│  LopHocPhan  │───FK──►│     LichHoc      │
+   └────────────┘        └───┬──────┬───┘        └──────────────────┘
+                             │ FK   │ FK
+              ┌──────────────▼─┐  ┌─▼──────────┐
+              │ DangKyHocPhan  │  │ DotDangKy  │
+              └───────┬────────┘  └────────────┘
+                      │ FK
+                 ┌────▼─────┐        ┌───────────────────┐
+                 │   Diem   │        │ KetQuaXuLyYeuCau  │  inbox/tombstone
+                 └──────────┘        └───────────────────┘
+
+   ┌────────────────┐
+   │  OutboxSuKien  │  hàng đợi, KHÔNG có khoá ngoại nào
+   └────────────────┘
+```
+
+### Quan hệ LOGIC — không phải khoá ngoại
+
+| Quan hệ | Vì sao không thể là FK |
+|---|---|
+| `DangKyHocPhan` ┈┈► `SinhVien` | ⚠️ **Quan trọng nhất.** Bảng này chứa **cả** sinh viên cơ sở mình **lẫn** sinh viên khách từ cơ sở khác. FK xuyên database không tồn tại → **không đặt FK cho bất kỳ dòng nào**, kể cả sinh viên cục bộ. Đó là lý do có hai cột phi chuẩn hoá `MaCoSoNhaSV`, `HoTenSinhVien` |
+| `DangKyMonHoc` ┈┈► `LopHocPhan` | Lớp có thể nằm ở database của cơ sở khác |
+| `LichHocMirror` ┈┈► `LichHoc` | Bản chụp lịch của lớp ở site khác, kèm `PhienBanLich` |
+| `BangDiemMirror` ┈┈► `Diem` | Projection; nguồn sự thật ở Host |
+| `YeuCauHocLienCoSo` ┈┈► `KetQuaXuLyYeuCau` | Hai đầu của saga, nằm ở hai database |
+| Mọi bảng vận hành ┈┈► `MonHoc`, `HocKy`, `Khoa`… | Bảng tham chiếu là **bản sao nhân bản** trong cùng database, **nên FK ở đây LÀ THẬT** — chỉ quan hệ tới bản gốc ở Master mới là logic |
+
+> ⭐ Điểm cuối đáng nói trong báo cáo: **nhân bản biến một quan hệ xuyên
+> database thành quan hệ cùng database**, nhờ đó khôi phục được khoá ngoại
+> mà phân mảnh đã làm mất. Đây là lợi ích của nhân bản mà thường bị bỏ qua.
 
 ---
 
@@ -568,6 +614,7 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 | `MonHoc` | `MaMonHoc` PK · `TenMonHoc` · `SoTinChi` · `MaKhoa` FK |
 | `MonHocTienQuyet` | `MaMonHoc` FK · `MaMonTienQuyet` FK · PK kép |
 | `HocKy` | `MaHocKy` PK · `TenHocKy` · `NamHoc` · `NgayBatDau` · `NgayKetThuc` |
+| `KhungGioTiet` | `SoTiet` PK · `GioBatDau` · `GioKetThuc` | ⚠️ **Phải dùng chung mọi cơ sở.** Nếu mỗi nơi tự quy ước khung giờ hoặc cách đánh số tuần thì phép so `Thu`/`Tiet`/`Tuan` giữa hai site là vô nghĩa. Số tuần suy ra từ `HocKy.NgayBatDau` |
 | `DanhBaNguoiDung` | `TenDangNhap` PK · `MaCoSo` FK **NULL được** *(chỉ nhận mã cơ sở CÓ THẬT; `NULL` cho `ADMIN_MASTER` — ⚠️ **`MASTER` KHÔNG phải một mã cơ sở**, nó là vai trò triển khai)* · `LoaiNguoiDung` *(SINH_VIEN / GIANG_VIEN / ADMIN_CO_SO / ADMIN_MASTER)* · `MaThucThe` UQ *(MaSinhVien hoặc MaGiangVien)* · `TrangThai` · `NgayCapNhat` |
 | `TaiKhoanMaster` | `TenDangNhap` PK · `MatKhauHash` · `VaiTro` — **chỉ tồn tại trong `PTITONE_MASTER`**, dành cho Admin Master. Không nhân bản |
 
@@ -665,6 +712,9 @@ WHERE a.Thu = b.Thu
 | `CoSo` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Cấu hình topology là **dữ liệu**, không phải code |
 | `Khoa`, `ChuongTrinhDaoTao` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | |
 | `MonHoc`, `MonHocTienQuyet` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Bảng bị đọc nhiều nhất hệ thống |
+| `CTDT_MonHoc` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Chương trình đào tạo gồm những môn nào — cần để xét tiến độ và điều kiện tốt nghiệp |
+| `KhungGioTiet` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | ⚠️ **Phải dùng chung mọi cơ sở**, nếu không phép so `Thu`/`Tiet`/`Tuan` giữa hai site vô nghĩa |
+| `TaiKhoanMaster` | **`PTITONE_MASTER`** | **Không nhân bản** | Chỉ tại Master | Tài khoản Admin Master — không cơ sở nào cần đọc |
 | `HocKy` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Chỉ lịch chung toàn trường |
 | `DanhBaNguoiDung` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | **Danh bạ định vị** — nền tảng của Location Transparency |
 | `SinhVien` | **Cơ sở nhà** | Phân mảnh ngang | Cục bộ | Hồ sơ đầy đủ, khác với danh bạ |
@@ -679,6 +729,7 @@ WHERE a.Thu = b.Thu
 | `LichHoc` ➕ | **Host** | Dẫn xuất từ `LopHocPhan` | Cục bộ | Thứ · tiết · khoảng tuần |
 | `YeuCauHocLienCoSo` | **Cơ sở nhà** | Phân mảnh ngang | Cục bộ | Trạng thái saga + snapshot lớp |
 | `BangDiemMirror` | **Cơ sở nhà** *(ghi bởi worker)* | **Projection** | Cục bộ | Nguồn sự thật ở Host |
+| `KetQuaXuLyYeuCau` ➕ | **Host** | Phân mảnh ngang | Cục bộ | Inbox/outcome **và bia mộ**. Khoá theo `MaYeuCau` bằng `sp_getapplock` |
 | `OutboxSuKien` | **Cơ sở phát sinh sự kiện** | Phân mảnh ngang | Cục bộ | |
 
 ### Vì sao `DangKyHocPhan` thuộc Host chứ không thuộc Home
@@ -2832,15 +2883,18 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 
 `[R]` nhân bản · `[F]` phân mảnh · `[P]` read model (projection — **không phải** mảnh)
 
-| Nhóm | Bảng | Loại | Chủ sở hữu | Vị từ phân mảnh / Ghi chú | Chiến lược khóa |
+| Nhóm | Bảng | Loại | Chủ sở hữu | Vị từ phân mảnh / Ghi chú | **Khóa chính** |
 |---|---|---|---|---|---|
 | Tham chiếu | `CoSo` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
 | Tham chiếu | `Khoa` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
 | Tham chiếu | `ChuongTrinhDaoTao` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
 | Tham chiếu | `MonHoc` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần — bảng bị đọc nhiều nhất | Mã nghiệp vụ toàn cục |
 | Tham chiếu | `MonHocTienQuyet` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Khóa kép |
+| Tham chiếu | `CTDT_MonHoc` ➕ | `[R]` | `PTITONE_MASTER` | CTĐT gồm những môn nào | PK kép (`MaCTDT`,`MaMonHoc`) |
 | Tham chiếu | `HocKy` | `[R]` | `PTITONE_MASTER` | Chỉ lịch chung toàn trường | Mã nghiệp vụ toàn cục |
-| Tham chiếu | `DanhBaNguoiDung` | `[R]` | `PTITONE_MASTER` | **Danh bạ định vị** — nền tảng của Location Transparency | `MaSinhVien` |
+| Tham chiếu | `KhungGioTiet` ➕ | `[R]` | `PTITONE_MASTER` | ⚠️ **Dùng chung mọi cơ sở** — nếu không, so `Thu`/`Tiet`/`Tuan` giữa hai site vô nghĩa | `SoTiet` |
+| Tham chiếu | `TaiKhoanMaster` ➕ | — | `PTITONE_MASTER` | ⚠️ **KHÔNG nhân bản** — chỉ tồn tại ở Master | `TenDangNhap` |
+| Tham chiếu | `DanhBaNguoiDung` | `[R]` | `PTITONE_MASTER` | **Danh bạ định vị** — phủ **mọi vai trò**, không riêng sinh viên | **PK `TenDangNhap`** · UQ `MaThucThe` |
 | Phân mảnh | `SinhVien` | `[F]` | Cơ sở nhà | `MaCoSoNha = <site>` | Mã toàn trường — **không** tiền tố cơ sở |
 | Phân mảnh | `GiangVien` | `[F]` | Cơ sở | `MaCoSo = <site>` | Mã nghiệp vụ toàn trường |
 | Phân mảnh | `TaiKhoan` | `[F]` | Cơ sở | `MaCoSo = <site>` | `TenDangNhap` |
@@ -2849,14 +2903,24 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 | Dẫn xuất | `DangKyHocPhan` | `[F]` | **Host** | **Bậc 1:** `⋉ LopHocPhan` — *không phải* `⋉ SinhVien` | Khóa kép (`MaLopHP`, `MaSinhVien`) |
 | Dẫn xuất | `Diem` | `[F]` | **Host** | **Bậc 2:** `Diem ⋉ DangKyHocPhan ⋉ LopHocPhan` | Khóa kép (`MaLopHP`, `MaSinhVien`) |
 | Phân mảnh | `SinhVienHocKy` ➕ | `[F]` | Cơ sở nhà | Bộ đếm tín chỉ **theo kỳ** | Khóa kép (`MaSinhVien`,`MaHocKy`) |
-| Phân mảnh | `DangKyMonHoc` ➕ | `[F]` | Cơ sở nhà | Giữ quyền đăng ký môn trong kỳ | UQ filtered (`MaSinhVien`,`MaHocKy`,`MaMonHoc`) |
-| Dẫn xuất | `LichHoc` ➕ | `[F]` | Host | Dẫn xuất từ `LopHocPhan` | Khóa kép (`MaLopHP`,`Thu`,`TietBatDau`) |
+| Phân mảnh | `DangKyMonHoc` ➕ | `[F]` | Cơ sở nhà | Giữ quyền đăng ký môn trong kỳ | **PK (`MaSinhVien`,`MaHocKy`,`MaMonHoc`)** + UQ **filtered** cùng bộ cột `WHERE TrangThai IN ('DANG_XU_LY','DA_DANG_KY','DANG_HUY')` |
+| Phân mảnh | `LichHocMirror` ➕ | `[F]` | Cơ sở nhà | ⚠️ **Không phải read model thuần** — tham gia kiểm trùng lịch. Chỉ lưu lớp **liên cơ sở** | PK (`MaSinhVien`,`MaHocKy`,`MaMonHoc`,`Thu`,`TietBatDau`) |
+| Dẫn xuất | `LichHoc` ➕ | `[F]` | Host | Dẫn xuất từ `LopHocPhan`. **`PhongHoc` thuộc từng buổi** | PK (`MaLopHP`,`Thu`,`TietBatDau`) |
 | Liên cơ sở ➕ | `YeuCauHocLienCoSo` | `[F]` | Cơ sở nhà | Trạng thái saga + snapshot lớp | `MaYeuCau` (`uniqueidentifier`) |
 | Liên cơ sở ➕ | `KetQuaXuLyYeuCau` | `[F]` | **Host** | Inbox/outcome — lưu **cả kết quả từ chối** | `MaYeuCau` |
 | Liên cơ sở ➕ | `BangDiemMirror` | `[P]` | Cơ sở nhà (worker ghi) | ⚠️ **Không phải nguồn sự thật** — nguồn ở Host | Khóa kép + `Version` |
 | Liên cơ sở ➕ | `OutboxSuKien` | `[F]` | Site phát sinh | Hàng đợi phát sự kiện | `EventId` (`uniqueidentifier`) |
 
 > **Quy tắc khóa:** nhúng mã cơ sở vào khóa **chỉ khi cơ sở là một phần ngữ nghĩa** của thực thể. Lớp học phần thuộc về một cơ sở → đúng. Sinh viên thì không, vì sinh viên có thể chuyển cơ sở. **Không dùng `IDENTITY` ở bất kỳ đâu.**
+>
+> ⚠️ **`DangKyMonHoc` cần CẢ HAI ràng buộc**, không thay thế nhau được:
+> **PK** giữ tính duy nhất của bản ghi (kể cả dòng đã `DA_HUY` phải còn lại làm
+> lịch sử), còn **UQ filtered** mới là thứ chặn đăng ký trùng môn — nó chỉ áp
+> cho các trạng thái **còn hiệu lực**, nên hủy rồi đăng ký lại vẫn được.
+>
+> ⚠️ Nếu môn được phép học lại nhiều lần trong **các kỳ khác nhau**, PK ba cột
+> đã đủ vì `MaHocKy` nằm trong khóa. Học lại **trong cùng một kỳ** là ngoài
+> phạm vi v1.
 
 ---
 
