@@ -353,6 +353,8 @@ Bấm *"đổi sang four-part"* — cùng câu hỏi, hiện ngay **84.213 dòng
 
 ```
 uisptitv2/
+├── AGENTS.md                       ← quy ước cho coding agent (Claude, Codex…)
+├── CLAUDE.md                       ← import AGENTS.md + phần riêng của Claude Code
 ├── docs/
 │   ├── UISPTITv2-Thiet-Ke-v2.md   ← TÀI LIỆU DUY NHẤT của dự án
 │   ├── bao-cao/                    ← bản Word nộp thầy
