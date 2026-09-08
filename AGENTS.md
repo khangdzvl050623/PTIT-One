@@ -3,12 +3,15 @@
      Codex và các agent khác đọc trực tiếp file này.
      Sửa ở ĐÂY, không sửa CLAUDE.md. -->
 
-# UISPTITv2 — Quản lý đăng ký tín chỉ đa cơ sở
+# PTIT One — Quản lý đăng ký tín chỉ đa cơ sở
+
+**Tên sản phẩm chính thức: PTIT One.** Dùng thống nhất tên này trong giao diện
+và tài liệu dự án.
 
 Đồ án **Cơ sở dữ liệu phân tán**. SQL Server, nhiều cơ sở, phân mảnh ngang +
 nhân bản một chiều + giao dịch phân tán + truy vấn phân tán.
 
-**Thiết kế đã CHỐT.** Nguồn sự thật duy nhất: `docs/UISPTITv2-Thiet-Ke-v2.md`.
+**Thiết kế đã CHỐT.** Nguồn sự thật duy nhất: `docs/PTIT-One-Thiet-Ke.md`.
 Trước khi sinh code, đọc mục **0.1b** (năm yêu cầu bắt buộc) và **0.1**
 (bảng quyết định D1–D16). Đề xuất khác thiết kế thì nêu ra để nhóm quyết,
 đừng tự đổi.

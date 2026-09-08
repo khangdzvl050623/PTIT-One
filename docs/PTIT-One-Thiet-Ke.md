@@ -1,4 +1,4 @@
-# Quản lý đăng ký tín chỉ đa cơ sở — Thiết kế hệ thống
+# PTIT One — Thiết kế hệ thống đăng ký tín chỉ đa cơ sở
 
 > **Đồ án cuối kỳ — Cơ sở dữ liệu phân tán.**
 > **Đây là tài liệu duy nhất của dự án.** Cấu trúc bám sát mục 2–3 của đề bài để nạp thẳng vào báo cáo.
@@ -65,8 +65,8 @@
 | Mã | Quyết định | Chốt |
 |---|---|---|
 | D1 | Đăng ký liên cơ sở (Home/Host) | ✅ Làm |
-| D2 | Master cho dữ liệu tham chiếu | ✅ **Database `UIS_MASTER` riêng biệt, đặt trên hạ tầng SRV-HCM** — Master là một *vai trò*, không phải một cơ sở (xem C0) |
-| **D14** | **Tách Master khỏi CSDL vận hành** | ✅ **Có.** `UIS_MASTER` là Publisher; cả ba CSDL vận hành (`UIS_HCM`, `UIS_HN`, `UIS_DN`) đều là Subscriber → topology **đối xứng hoàn toàn** |
+| D2 | Master cho dữ liệu tham chiếu | ✅ **Database `PTITONE_MASTER` riêng biệt, đặt trên hạ tầng SRV-HCM** — Master là một *vai trò*, không phải một cơ sở (xem C0) |
+| **D14** | **Tách Master khỏi CSDL vận hành** | ✅ **Có.** `PTITONE_MASTER` là Publisher; cả ba CSDL vận hành (`PTITONE_HCM`, `PTITONE_HN`, `PTITONE_DN`) đều là Subscriber → topology **đối xứng hoàn toàn** |
 | **D15** | **Master colocate hay chạy máy riêng** | ⏳ **Quyết ở tuần 3 theo số máy thật.** 3 máy → colocate trên SRV-HCM · 4 máy → nút `SRV-MASTER` riêng. **Kiến trúc logic không đổi trong cả hai trường hợp** (xem C0) |
 | D3 | Chủ sở hữu `DangKyHocPhan` | ✅ **Host Campus** (cơ sở mở lớp) |
 | **D4** | **Distributed transaction / 2PC** | ✅ **BẮT BUỘC có một luồng** — đặt tại **chuyển cơ sở sinh viên** (D8). Không đặt vào đăng ký học phần vì đó là đường nóng có tranh chấp |
@@ -84,7 +84,7 @@
 | — | Tính sẵn sàng cho dữ liệu liên cơ sở | ✅ **Local projection (read model)** ở tầng ứng dụng, không dùng publication chiều ngược |
 | — | Đồng bộ điểm về cơ sở nhà | ✅ **BẮT BUỘC** — qua Outbox + worker + upsert idempotent có `Version` |
 | — | Abstraction boundary | ✅ Đúng **3 port**: `CrossSiteQuery`, `GlobalReport`, `CatalogHealth` |
-| — | Linked Server topology | ✅ **Hình sao từ SRV-HCM**, N−1 định nghĩa; báo cáo chạy trong ngữ cảnh `UIS_HCM` |
+| — | Linked Server topology | ✅ **Hình sao từ SRV-HCM**, N−1 định nghĩa; báo cáo chạy trong ngữ cảnh `PTITONE_HCM` |
 
 🔶 **Giả định đang dùng, cần xác nhận:** quy mô 8.000 SV HCM / 5.000 HN / 3.000 ĐN · 6 học phần mỗi kỳ · đợt đăng ký dồn 3 ngày · 2% sinh viên học liên cơ sở · tài liệu Replication của giảng viên hướng dẫn theo wizard SSMS.
 
@@ -97,7 +97,7 @@
 | # | Yêu cầu | Hiện thực ở đâu | Chứng minh bằng | Trạng thái |
 |---|---|---|---|---|
 | 1 | **1 phương pháp phân mảnh** | **Phân mảnh ngang** theo cơ sở — `SinhVien`, `GiangVien`, `TaiKhoan`, `DotDangKy`, `LopHocPhan` (C3) *(có thêm dẫn xuất bậc 1 và bậc 2 — phần dư)* | F7b-1, F7b-2 | ✅ |
-| 2 | **1 phương pháp replication** | **Transactional Replication** một chiều `UIS_MASTER` → mọi Subscriber (D1) | F7b-3, F7b-4 | ✅ |
+| 2 | **1 phương pháp replication** | **Transactional Replication** một chiều `PTITONE_MASTER` → mọi Subscriber (D1) | F7b-3, F7b-4 | ✅ |
 | 3 | **1 distributed transaction** | **2PC / MS DTC cho nghiệp vụ chuyển cơ sở sinh viên** (D8) — ba CSDL trong một giao dịch nguyên tử | F7e | ⚠️ **PHẢI LÀM** |
 | 4 | **1 tình huống concurrency** | **100 luồng tranh 30 chỗ** khi đăng ký học phần — `UPDATE` có điều kiện + 4 lớp ràng buộc (D4) | G3 | ✅ |
 | 5 | **1 distributed query** | **`OPENQUERY` thống kê toàn hệ thống** qua Linked Server (D2) | F7c, B1 | ✅ |
@@ -226,10 +226,10 @@ Hệ thống có **ba cơ sở vận hành** cộng **một vai trò Master** t�
 
 | Vị trí | Vai trò | Dữ liệu do vị trí này chịu trách nhiệm ghi |
 |---|---|---|
-| **`UIS_MASTER`** *(vai trò, đặt trên hạ tầng SRV-HCM)* | Publisher + Distributor. **Không chứa dữ liệu vận hành** | **Toàn bộ danh mục dùng chung + danh bạ người dùng toàn trường** |
-| **Site HCM** (`UIS_HCM`) | Chi nhánh vận hành · Subscriber | SV có cơ sở nhà HCM · GV HCM · Lớp mở tại HCM · Đăng ký & điểm của các lớp đó · Đợt đăng ký HCM |
-| **Site HN** (`UIS_HN`) | Chi nhánh vận hành · Subscriber | SV có cơ sở nhà HN · GV HN · Lớp mở tại HN · Đăng ký & điểm của các lớp đó · Đợt đăng ký HN |
-| **Site ĐN** (`UIS_DN`) | Chi nhánh vận hành · Subscriber | Tương tự HN |
+| **`PTITONE_MASTER`** *(vai trò, đặt trên hạ tầng SRV-HCM)* | Publisher + Distributor. **Không chứa dữ liệu vận hành** | **Toàn bộ danh mục dùng chung + danh bạ người dùng toàn trường** |
+| **Site HCM** (`PTITONE_HCM`) | Chi nhánh vận hành · Subscriber | SV có cơ sở nhà HCM · GV HCM · Lớp mở tại HCM · Đăng ký & điểm của các lớp đó · Đợt đăng ký HCM |
+| **Site HN** (`PTITONE_HN`) | Chi nhánh vận hành · Subscriber | SV có cơ sở nhà HN · GV HN · Lớp mở tại HN · Đăng ký & điểm của các lớp đó · Đợt đăng ký HN |
+| **Site ĐN** (`PTITONE_DN`) | Chi nhánh vận hành · Subscriber | Tương tự HN |
 
 > Ba cơ sở vận hành **hoàn toàn đối xứng** — không cơ sở nào có đặc quyền lên dữ liệu của cơ sở khác.
 
@@ -349,15 +349,15 @@ TẦNG ỨNG DỤNG      →  QUYỀN THEO DÒNG
 
 ## B4. Phân tích chức năng của từng vị trí
 
-| | **`UIS_MASTER`** (vai trò) | **`UIS_HCM` · `UIS_HN` · `UIS_DN`** (cơ sở vận hành) |
+| | **`PTITONE_MASTER`** (vai trò) | **`PTITONE_HCM` · `PTITONE_HN` · `PTITONE_DN`** (cơ sở vận hành) |
 |---|---|---|
 | **Vai trò CSDL** | Publisher + Distributor | Subscriber |
 | **Ghi được** | Danh mục dùng chung + danh bạ SV | Chỉ dữ liệu vận hành của cơ sở mình |
 | **Chỉ đọc** | — | Danh mục dùng chung và danh bạ (bản sao) |
 | **Chức năng** | Quản lý danh mục toàn trường · Quản lý danh bạ SV · Nguồn của luồng nhân bản | **Ba cơ sở đối xứng hoàn toàn** — cùng một tập chức năng vận hành |
-| **Linked Server** | — | Chỉ `UIS_HCM` giữ liên kết tới SRV-HN và SRV-DN, phục vụ báo cáo tổng hợp |
+| **Linked Server** | — | Chỉ `PTITONE_HCM` giữ liên kết tới SRV-HN và SRV-DN, phục vụ báo cáo tổng hợp |
 
-**Bất đối xứng còn lại — và nó nhỏ:** vì `UIS_MASTER` nằm cùng instance với `UIS_HCM`, máy SRV-HCM chịu thêm tải của Distributor. Tải này cực thấp (~15 lượt ghi/ngày). Hướng mở rộng: chuyển `UIS_MASTER` sang một instance riêng — **không thay đổi gì về mặt logic**, chỉ đổi connection string.
+**Bất đối xứng còn lại — và nó nhỏ:** vì `PTITONE_MASTER` nằm cùng instance với `PTITONE_HCM`, máy SRV-HCM chịu thêm tải của Distributor. Tải này cực thấp (~15 lượt ghi/ngày). Hướng mở rộng: chuyển `PTITONE_MASTER` sang một instance riêng — **không thay đổi gì về mặt logic**, chỉ đổi connection string.
 
 ⚠️ Trước khi tách database Master, thiết kế cũ gộp danh mục vào chính CSDL vận hành của HCM, khiến "cơ sở HCM" và "vai trò Master" bị lẫn làm một. Việc tách ở C0 xóa bỏ sự nhập nhằng này.
 
@@ -386,7 +386,7 @@ Hệ thống theo mô hình **Client/Server** — xem C6 để biết lý do kh�
    │ JDBC/VPN       │ JDBC/VPN       │ JDBC/VPN     │ DS_MASTER
    │                │                │              │ (chỉ quản trị danh mục)
 ┌──▼──────────┐ ┌───▼─────────┐ ┌────▼────────┐ ┌───▼──────────┐
-│  UIS_HCM    │ │  UIS_HN     │ │  UIS_DN     │ │ UIS_MASTER   │
+│  PTITONE_HCM    │ │  PTITONE_HN     │ │  PTITONE_DN     │ │ PTITONE_MASTER   │
 │ Subscriber  │ │ Subscriber  │ │ Subscriber  │ │ Publisher    │
 │ Linked Srv  │ │             │ │             │ │ Distributor  │
 │ → HN, ĐN    │ │             │ │             │ │              │
@@ -483,8 +483,8 @@ Trong doanh nghiệp nó có tên riêng: **Master Data Management** — dữ li
 
 ```
 SRV-HCM (một instance SQL Server, hai database)
-├── UIS_MASTER   ← 7 bảng tham chiếu · là PUBLISHER · KHÔNG chứa dữ liệu vận hành
-└── UIS_HCM      ← mảnh vận hành của cơ sở HCM · là SUBSCRIBER
+├── PTITONE_MASTER   ← 7 bảng tham chiếu · là PUBLISHER · KHÔNG chứa dữ liệu vận hành
+└── PTITONE_HCM      ← mảnh vận hành của cơ sở HCM · là SUBSCRIBER
 ```
 
 Nhờ vậy **lược đồ logic trở nên đối xứng**: ba cơ sở vận hành có hình dạng giống hệt nhau và **đều là Subscriber**, cộng thêm một vai trò Master tách bạch.
@@ -494,7 +494,7 @@ Nhờ vậy **lược đồ logic trở nên đối xứng**: ba cơ sở vận 
 ⚠️ Đối xứng ở đây là **đối xứng logic**. Về mặt vật lý, chừng nào Master còn colocate với SRV-HCM thì máy đó vẫn gánh thêm Distributor và Global Reporting Node — xem "Bốn vai trò" ngay dưới.
 
 Lợi ích:
-- Database vận hành `UIS_HCM` **không còn là Publisher** → hết bất đối xứng giữa các cơ sở
+- Database vận hành `PTITONE_HCM` **không còn là Publisher** → hết bất đối xứng giữa các cơ sở
 - Sau này chuyển Master sang máy riêng thì **không thay đổi gì về mặt logic**, chỉ đổi connection string
 - Sơ đồ định vị (C5) đọc rõ ràng hơn hẳn
 
@@ -509,11 +509,11 @@ Chữ "Master" đang che bốn thứ khác nhau. Tách bạch ra thì mới nói
 | Vai trò | Bản chất | Tách được không |
 |---|---|---|
 | **Master Data Authority** | Thẩm quyền quản trị dữ liệu tham chiếu — khái niệm **logic**, không phải máy móc | ❌ Theo định nghĩa là duy nhất |
-| **Publisher** | Vai trò trong SQL Server Replication: database công bố các article | Gắn liền với database chứa bản gốc (`UIS_MASTER`) |
+| **Publisher** | Vai trò trong SQL Server Replication: database công bố các article | Gắn liền với database chứa bản gốc (`PTITONE_MASTER`) |
 | **Distributor** | Vai trò trong SQL Server Replication: giữ distribution database, chạy các Agent | ✅ Tách được, nhưng **không nên** — thêm một máy phải bật liên tục |
 | **Global Reporting Node** | Nơi định nghĩa Linked Server và chạy truy vấn tổng hợp toàn hệ thống | ✅ Tách được, và **tách thì đối xứng hơn** |
 
-⚠️ **Hệ quả quan trọng:** khi Master colocate với SRV-HCM, `UIS_HCM` vẫn phải giữ Linked Server và chạy mọi báo cáo → **HCM vẫn đặc biệt về mặt vật lý**, dù đã tách ở mức database. Đối xứng chỉ trọn vẹn khi Global Reporting Node có máy riêng.
+⚠️ **Hệ quả quan trọng:** khi Master colocate với SRV-HCM, `PTITONE_HCM` vẫn phải giữ Linked Server và chạy mọi báo cáo → **HCM vẫn đặc biệt về mặt vật lý**, dù đã tách ở mức database. Đối xứng chỉ trọn vẹn khi Global Reporting Node có máy riêng.
 
 ### D15 — Phương án triển khai theo số máy
 
@@ -529,7 +529,7 @@ Chữ "Master" đang che bốn thứ khác nhau. Tách bạch ra thì mới nói
 
 **Nếu chọn 4 máy — hai lập luận kỹ thuật (không chỉ thẩm mỹ):**
 
-1. **Distribution database bị ghi cho mọi giao dịch được nhân bản.** Đặt Distributor chung với `UIS_HCM` là thêm tải ghi I/O lên chính site đang chịu 92.000 lượt/ngày. Tải này nhỏ (~15 giao dịch/ngày) nhưng là chi phí thật.
+1. **Distribution database bị ghi cho mọi giao dịch được nhân bản.** Đặt Distributor chung với `PTITONE_HCM` là thêm tải ghi I/O lên chính site đang chịu 92.000 lượt/ngày. Tải này nhỏ (~15 giao dịch/ngày) nhưng là chi phí thật.
 2. **Global report kéo dữ liệu qua mạng rồi tổng hợp cục bộ** — công việc này nên tách khỏi máy đang phục vụ nghiệp vụ giờ cao điểm.
 
 ⚠️ **Chọn máy nào làm `SRV-MASTER`:** tiêu chí là **ít bị mang đi lại nhất (ưu tiên máy để bàn), và đĩa khá** — *không phải* "máy nào yếu thì đưa vào đó". Distributor làm việc thật: Log Reader Agent đọc transaction log, distribution database bị ghi liên tục, và lúc sinh snapshot ban đầu thì I/O rất nặng.
@@ -553,7 +553,7 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 
 ### Nhóm 1 — Dữ liệu tham chiếu, nhân bản một chiều từ Master **[R]**
 
-> Bản gốc nằm trong database **`UIS_MASTER`**. Mỗi cơ sở vận hành giữ một bản sao chỉ đọc (xem C0).
+> Bản gốc nằm trong database **`PTITONE_MASTER`**. Mỗi cơ sở vận hành giữ một bản sao chỉ đọc (xem C0).
 
 | Bảng | Cột chính |
 |---|---|
@@ -564,7 +564,7 @@ Quy ước: `PK` khóa chính · `FK` khóa ngoại · `UQ` duy nhất · **[R]*
 | `MonHocTienQuyet` | `MaMonHoc` FK · `MaMonTienQuyet` FK · PK kép |
 | `HocKy` | `MaHocKy` PK · `TenHocKy` · `NamHoc` · `NgayBatDau` · `NgayKetThuc` |
 | `DanhBaNguoiDung` | `TenDangNhap` PK · `MaCoSo` FK *(HCM/HN/DN/**MASTER**)* · `LoaiNguoiDung` *(SINH_VIEN / GIANG_VIEN / ADMIN_CO_SO / ADMIN_MASTER)* · `MaThucThe` UQ *(MaSinhVien hoặc MaGiangVien)* · `TrangThai` · `NgayCapNhat` |
-| `TaiKhoanMaster` | `TenDangNhap` PK · `MatKhauHash` · `VaiTro` — **chỉ tồn tại trong `UIS_MASTER`**, dành cho Admin Master. Không nhân bản |
+| `TaiKhoanMaster` | `TenDangNhap` PK · `MatKhauHash` · `VaiTro` — **chỉ tồn tại trong `PTITONE_MASTER`**, dành cho Admin Master. Không nhân bản |
 
 > `CoSo` được nhân bản chứ không hardcode — đây là điều làm cho thiết kế đúng cho **N cơ sở**. Thêm một cơ sở = thêm một dòng + một subscription, không sửa code.
 
@@ -640,11 +640,11 @@ WHERE a.Thu = b.Thu
 
 | Thực thể | Chủ sở hữu (ghi) | Kỹ thuật | Đọc ở đâu | Ghi chú |
 |---|---|---|---|---|
-| `CoSo` | **`UIS_MASTER`** | Nhân bản | Replica cục bộ | Cấu hình topology là **dữ liệu**, không phải code |
-| `Khoa`, `ChuongTrinhDaoTao` | **`UIS_MASTER`** | Nhân bản | Replica cục bộ | |
-| `MonHoc`, `MonHocTienQuyet` | **`UIS_MASTER`** | Nhân bản | Replica cục bộ | Bảng bị đọc nhiều nhất hệ thống |
-| `HocKy` | **`UIS_MASTER`** | Nhân bản | Replica cục bộ | Chỉ lịch chung toàn trường |
-| `DanhBaNguoiDung` | **`UIS_MASTER`** | Nhân bản | Replica cục bộ | **Danh bạ định vị** — nền tảng của Location Transparency |
+| `CoSo` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Cấu hình topology là **dữ liệu**, không phải code |
+| `Khoa`, `ChuongTrinhDaoTao` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | |
+| `MonHoc`, `MonHocTienQuyet` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Bảng bị đọc nhiều nhất hệ thống |
+| `HocKy` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | Chỉ lịch chung toàn trường |
+| `DanhBaNguoiDung` | **`PTITONE_MASTER`** | Nhân bản | Replica cục bộ | **Danh bạ định vị** — nền tảng của Location Transparency |
 | `SinhVien` | **Cơ sở nhà** | Phân mảnh ngang | Cục bộ | Hồ sơ đầy đủ, khác với danh bạ |
 | `GiangVien` | **Cơ sở** | Phân mảnh ngang | Cục bộ | |
 | `TaiKhoan` | **Cơ sở** | Phân mảnh ngang | Cục bộ | Xác thực tại cơ sở nhà |
@@ -664,12 +664,12 @@ Ràng buộc cần bảo vệ là **sức chứa của lớp**, và bộ đếm 
 
 ### Vòng đời sinh viên — tạo mới và chuyển cơ sở
 
-Một sinh viên tồn tại ở **hai nơi**: dòng danh bạ tại `UIS_MASTER` và hồ sơ đầy đủ + tài khoản tại cơ sở nhà. Hai chỗ này phải được tạo có thứ tự và chịu được lỗi giữa chừng.
+Một sinh viên tồn tại ở **hai nơi**: dòng danh bạ tại `PTITONE_MASTER` và hồ sơ đầy đủ + tài khoản tại cơ sở nhà. Hai chỗ này phải được tạo có thứ tự và chịu được lỗi giữa chừng.
 
 **Tạo mới — dùng lại đúng cơ chế Outbox của C10, không thêm cơ chế mới:**
 
 ```
-┌ Giao dịch cục bộ tại UIS_MASTER ──────────────┐
+┌ Giao dịch cục bộ tại PTITONE_MASTER ──────────────┐
 │  INSERT DanhBaNguoiDung (MaSV, MaCoSoNha,      │
 │                         TrangThai='CHO_KICH_HOAT')
 │  INSERT OutboxSuKien   ('SinhVienDuocTao')    │
@@ -708,7 +708,7 @@ Giao dịch phân tán chỉ lo phần dữ liệu. Ba chỗ dưới đây nằm
 | # | Vấn đề | Cách xử lý |
 |---|---|---|
 | 1 | **JWT cũ vẫn mang `homeCampus` cũ** — sinh viên đang đăng nhập sẽ tiếp tục bị định tuyến về site cũ, nơi tài khoản đã bị xoá | Thêm cột `PhienBanTaiKhoan` vào danh bạ; JWT mang theo giá trị này và **mỗi request đối chiếu**. Thủ tục chuyển cơ sở tăng số phiên bản → mọi JWT cũ lập tức vô hiệu, buộc đăng nhập lại. Rẻ hơn nhiều so với danh sách thu hồi token |
-| 2 | **Replica danh bạ ở site khác chưa kịp cập nhật** — đăng nhập có thể vẫn được chỉ về site cũ trong vài giây | Quy tắc dự phòng khi đăng nhập: *nếu danh bạ chỉ tới site X mà tài khoản **không tồn tại** ở X → tra thẳng `UIS_MASTER` rồi định tuyến lại.* Cùng cơ chế đã dùng cho trường hợp danh bạ chưa nhân bản kịp |
+| 2 | **Replica danh bạ ở site khác chưa kịp cập nhật** — đăng nhập có thể vẫn được chỉ về site cũ trong vài giây | Quy tắc dự phòng khi đăng nhập: *nếu danh bạ chỉ tới site X mà tài khoản **không tồn tại** ở X → tra thẳng `PTITONE_MASTER` rồi định tuyến lại.* Cùng cơ chế đã dùng cho trường hợp danh bạ chưa nhân bản kịp |
 | 3 | **`DangKyHocPhan.MaCoSoNhaSV` ở Host vẫn ghi cơ sở cũ** | ✅ **Đây là đúng, không phải lỗi.** Cột này là **bản chụp tại thời điểm đăng ký**, không phải con trỏ sống. Sinh viên *đã* thuộc cơ sở cũ khi học môn đó — giữ nguyên mới đúng lịch sử. Chỉ các đăng ký **mới** dùng cơ sở mới. Phải ghi rõ ngữ nghĩa này vào từ điển dữ liệu, nếu không người sau sẽ tưởng là dữ liệu rác |
 
 **Ràng buộc vận hành:** chỉ cho chuyển cơ sở **ngoài đợt đăng ký** — thêm vào tiền điều kiện của thủ tục. Chuyển ngay giữa đợt đăng ký làm cả ba vấn đề trên xảy ra cùng lúc với hàng nghìn request đang chạy.
@@ -769,14 +769,14 @@ Muốn biết định tuyến vào CSDL nào thì phải biết người dùng t
 
 2. Xác thực tại đúng site đó
       SINH_VIEN / GIANG_VIEN / ADMIN_CO_SO  →  TaiKhoan tại site
-      ADMIN_MASTER                          →  TaiKhoanMaster tại UIS_MASTER
+      ADMIN_MASTER                          →  TaiKhoanMaster tại PTITONE_MASTER
 
 3. Phát JWT mang claim đã ký:
       { "sub": "N22DCCN001", "role": "SINH_VIEN", "homeCampus": "HN" }
 
 4. Mọi request sau đọc claim từ JWT — KHÔNG tra danh bạ lại
 
-5. Chưa thấy trong replica (độ trễ nhân bản) → tra thẳng UIS_MASTER
+5. Chưa thấy trong replica (độ trễ nhân bản) → tra thẳng PTITONE_MASTER
 ```
 
 > ⚠️ **Bước 4 là chỗ dễ tạo lỗ hổng bảo mật.** Cơ sở phải lấy từ **claim trong JWT đã ký**, tuyệt đối không lấy từ tham số client gửi lên. Nếu tin `?campus=HN` do client truyền thì bất kỳ ai cũng đọc được dữ liệu của cơ sở khác.
@@ -813,7 +813,7 @@ Ký hiệu:
                                    nguồn sự thật ở site khác
 
               ┌──────────────────────────────────────────┐
-              │  UIS_MASTER — VAI TRÒ MASTER             │
+              │  PTITONE_MASTER — VAI TRÒ MASTER             │
               │  PUBLISHER · DISTRIBUTOR                 │
               │  (database TÁCH BIỆT, đặt trên SRV-HCM)  │
               │                                          │
@@ -828,7 +828,7 @@ Ký hiệu:
                    │              │              │
                    ▼              ▼              ▼
       ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
-      │    UIS_HCM     │ │    UIS_HN      │ │    UIS_DN      │
+      │    PTITONE_HCM     │ │    PTITONE_HN      │ │    PTITONE_DN      │
       │  SUBSCRIBER    │ │  SUBSCRIBER    │ │  SUBSCRIBER    │
       │   (SRV-HCM)    │ │   (SRV-HN)     │ │   (SRV-DN)     │
       ├────────────────┤ ├────────────────┤ ├────────────────┤
@@ -852,7 +852,7 @@ Ký hiệu:
             └── Linked Server hình sao (N−1 định nghĩa) ──┘
 
   GLOBAL REPORTING NODE — phụ thuộc D15:
-     • 3 máy (Master colocate) → UIS_HCM giữ Linked Server tới SRV-HN, SRV-DN
+     • 3 máy (Master colocate) → PTITONE_HCM giữ Linked Server tới SRV-HN, SRV-DN
                                   ⚠️ HCM vẫn đặc biệt về mặt VẬT LÝ
      • 4 máy (Master riêng)    → SRV-MASTER giữ Linked Server tới CẢ BA site
                                   ✅ ba site vận hành đối xứng hoàn toàn
@@ -864,9 +864,9 @@ Ký hiệu:
   KHÔNG bao giờ phục vụ đăng nhập, đăng ký hay xem điểm.
 ```
 
-> Sơ đồ trên vẽ theo **phương án 3 máy**. Với 4 máy, mũi tên Linked Server chuyển từ `UIS_HCM` sang `SRV-MASTER` — **không có gì khác thay đổi**.
+> Sơ đồ trên vẽ theo **phương án 3 máy**. Với 4 máy, mũi tên Linked Server chuyển từ `PTITONE_HCM` sang `SRV-MASTER` — **không có gì khác thay đổi**.
 
-> ⭐ **Ba cơ sở vận hành có hình dạng giống hệt nhau.** Đó là điều cần thấy được ngay khi nhìn sơ đồ này: `UIS_HCM` không đặc biệt hơn `UIS_HN` hay `UIS_DN` ở bất kỳ điểm nào. Thứ đặc biệt là `UIS_MASTER` — một **vai trò**, không phải một cơ sở.
+> ⭐ **Ba cơ sở vận hành có hình dạng giống hệt nhau.** Đó là điều cần thấy được ngay khi nhìn sơ đồ này: `PTITONE_HCM` không đặc biệt hơn `PTITONE_HN` hay `PTITONE_DN` ở bất kỳ điểm nào. Thứ đặc biệt là `PTITONE_MASTER` — một **vai trò**, không phải một cơ sở.
 
 **Năm loại kết nối trong toàn hệ thống — và chỉ năm:**
 
@@ -889,7 +889,7 @@ Mọi thứ còn lại là cục bộ. Đó là toàn bộ luận điểm của 
 
 **Chọn Client/Server.** Ba lý do:
 
-1. **Có phân vai bất đối xứng rõ ràng** đối với dữ liệu tham chiếu: `UIS_MASTER` là Publisher, mọi CSDL vận hành là Subscriber chỉ đọc. Mô hình ngang hàng đòi hỏi mọi nút có vai trò tương đương và cùng quyền ghi lên cùng tập dữ liệu. *(Lưu ý: với dữ liệu vận hành thì ba cơ sở lại hoàn toàn đối xứng — xem C0 về hai chế độ ghi.)*
+1. **Có phân vai bất đối xứng rõ ràng** đối với dữ liệu tham chiếu: `PTITONE_MASTER` là Publisher, mọi CSDL vận hành là Subscriber chỉ đọc. Mô hình ngang hàng đòi hỏi mọi nút có vai trò tương đương và cùng quyền ghi lên cùng tập dữ liệu. *(Lưu ý: với dữ liệu vận hành thì ba cơ sở lại hoàn toàn đối xứng — xem C0 về hai chế độ ghi.)*
 2. **Máy trạm không kết nối trực tiếp tới CSDL.** Toàn bộ truy cập đi qua một tầng máy chủ ứng dụng, nơi thực hiện xác thực, phân quyền và định tuyến.
 3. **Dữ liệu dùng chung chỉ có một nơi ghi.** Đây là quan hệ chủ–tớ, không phải quan hệ đồng cấp. Chọn ngang hàng sẽ kéo theo nhân bản hai chiều và bài toán giải quyết xung đột mà nghiệp vụ vốn không cần.
 
@@ -1047,7 +1047,7 @@ Nguyên tắc: **chỉ gọi tên pattern mà hệ thống thật sự dùng.** 
 | Aggregate | Ai sở hữu | Chiến lược khóa | Lý do |
 |---|---|---|---|
 | `MaSinhVien`, `MaGiangVien` | Master / cơ sở | Mã nghiệp vụ toàn trường, **không có tiền tố cơ sở** | ⚠️ Bắt buộc — mã SV **không được** mã hóa cơ sở, nếu không sẽ mâu thuẫn với D7 và sinh viên chuyển cơ sở phải đổi mã |
-| `MaMonHoc`, `MaKhoa`, `MaCTDT`, `MaHocKy` | `UIS_MASTER` | Mã nghiệp vụ toàn cục | Dữ liệu tham chiếu chỉ có một nơi cấp phát → không thể trùng |
+| `MaMonHoc`, `MaKhoa`, `MaCTDT`, `MaHocKy` | `PTITONE_MASTER` | Mã nghiệp vụ toàn cục | Dữ liệu tham chiếu chỉ có một nơi cấp phát → không thể trùng |
 | `MaLopHP` | **Host** | `<MaMonHoc>-<MaHocKy>-<MaCoSo><STT>` | Lớp thuộc về một cơ sở cụ thể → nhúng mã cơ sở là **đúng ngữ nghĩa**, không phải mẹo chống trùng |
 | `MaDot` | **Cơ sở** | `<MaCoSo>-<MaHocKy>-<STT>` | Tương tự |
 | `DangKyHocPhan`, `Diem` | **Host** | **Khóa kép** (`MaLopHP`, `MaSinhVien`) — không có khóa thay thế | `MaLopHP` đã định vị được cơ sở → khóa kép duy nhất toàn cục |
@@ -1196,9 +1196,9 @@ Hình thái mã nguồn: **modular monolith** (Spring Boot, phân tầng theo C8
 | Hạng mục | Lựa chọn |
 |---|---|
 | Loại | **Transactional Replication** |
-| Publisher | **database `UIS_MASTER`** (đặt trên SRV-HCM) |
+| Publisher | **database `PTITONE_MASTER`** (đặt trên SRV-HCM) |
 | Distributor | **Local** — cùng instance SRV-HCM, bớt một máy phải bật |
-| Subscriber | **`UIS_HCM`** (cục bộ, cùng instance) · `UIS_HN` · `UIS_DN` · và mọi site thêm sau |
+| Subscriber | **`PTITONE_HCM`** (cục bộ, cùng instance) · `PTITONE_HN` · `PTITONE_DN` · và mọi site thêm sau |
 | Kiểu subscription | **Push** — Distribution Agent chạy tại Distributor, dễ giám sát tập trung |
 | Bài báo (article) | `CoSo`, `Khoa`, `ChuongTrinhDaoTao`, `MonHoc`, `MonHocTienQuyet`, `HocKy`, `DanhBaNguoiDung` |
 | Bảo vệ Subscriber | **`DENY INSERT/UPDATE/DELETE`** cho mọi role ứng dụng + **trigger chặn ghi** |
@@ -1502,7 +1502,7 @@ BEGIN
 
         -- (c) cập nhật danh bạ định vị tại Master
         --     ⚠️ đúng tên cột của DanhBaNguoiDung: MaCoSo và MaThucThe
-        UPDATE UIS_MASTER.dbo.DanhBaNguoiDung
+        UPDATE PTITONE_MASTER.dbo.DanhBaNguoiDung
            SET MaCoSo      = @CoSoMoi,
                NgayCapNhat = SYSUTCDATETIME()
          WHERE MaThucThe   = @MaSinhVien
@@ -1528,9 +1528,9 @@ Phần khai báo và kiểm tra tham số ở đầu thủ tục:
     DECLARE @SrvCu SYSNAME, @SrvMoi SYSNAME, @sql NVARCHAR(MAX);
 
     SELECT @SrvCu  = TenLinkedServer + N'.' + TenDatabase
-      FROM UIS_MASTER.dbo.CoSo WHERE MaCoSo = @CoSoCu;
+      FROM PTITONE_MASTER.dbo.CoSo WHERE MaCoSo = @CoSoCu;
     SELECT @SrvMoi = TenLinkedServer + N'.' + TenDatabase
-      FROM UIS_MASTER.dbo.CoSo WHERE MaCoSo = @CoSoMoi;
+      FROM PTITONE_MASTER.dbo.CoSo WHERE MaCoSo = @CoSoMoi;
 
     IF @SrvCu IS NULL OR @SrvMoi IS NULL
         THROW 51004, N'Mã cơ sở không hợp lệ', 1;
@@ -1565,7 +1565,7 @@ Phần khai báo và kiểm tra tham số ở đầu thủ tục:
 
 ```sql
 BEGIN DISTRIBUTED TRANSACTION;
-SELECT TOP 1 1 FROM SRV_HN.UIS_HN.dbo.SinhVien;
+SELECT TOP 1 1 FROM SRV_HN.PTITONE_HN.dbo.SinhVien;
 COMMIT TRANSACTION;
 ```
 
@@ -1636,8 +1636,8 @@ DENY INSERT, UPDATE, DELETE ON MonHoc TO r_AdminCoSo, r_AdminMaster;
 
 | # | Kịch bản | Hành vi mong muốn | Điều kiện để đúng |
 |---|---|---|---|
-| **KB0** ⭐ | **Chỉ dừng DATABASE `UIS_MASTER`** (không tắt máy) | **Cả ba cơ sở vận hành đầy đủ:** đăng nhập được, xem lịch học, **đăng ký học phần bình thường**. Chỉ mất: sửa danh mục · nhân bản thay đổi mới · báo cáo toàn hệ thống | Mọi đường đọc danh mục phải trỏ vào **replica cục bộ**, không bao giờ trỏ vào `DS_MASTER`. Đây chính là kiểm chứng Replication Transparency |
-| **KB0b** | ⚠️ **Tắt cả MÁY SRV-HCM** (phương án 3 máy) | ❌ **Toàn bộ website ngừng** — vì backend cũng nằm trên máy đó. Đây **không** phải phép thử của Replication Transparency mà là phép thử SPOF của tầng ứng dụng | Muốn diễn KB0 cho sạch: hoặc dùng phương án 4 máy (D15), hoặc chỉ dừng service của riêng database `UIS_MASTER` |
+| **KB0** ⭐ | **Chỉ dừng DATABASE `PTITONE_MASTER`** (không tắt máy) | **Cả ba cơ sở vận hành đầy đủ:** đăng nhập được, xem lịch học, **đăng ký học phần bình thường**. Chỉ mất: sửa danh mục · nhân bản thay đổi mới · báo cáo toàn hệ thống | Mọi đường đọc danh mục phải trỏ vào **replica cục bộ**, không bao giờ trỏ vào `DS_MASTER`. Đây chính là kiểm chứng Replication Transparency |
+| **KB0b** | ⚠️ **Tắt cả MÁY SRV-HCM** (phương án 3 máy) | ❌ **Toàn bộ website ngừng** — vì backend cũng nằm trên máy đó. Đây **không** phải phép thử của Replication Transparency mà là phép thử SPOF của tầng ứng dụng | Muốn diễn KB0 cho sạch: hoặc dùng phương án 4 máy (D15), hoặc chỉ dừng service của riêng database `PTITONE_MASTER` |
 | **KB1** | HN chết, SV HCM làm việc bình thường | Hoạt động đầy đủ | `initializationFailTimeout = -1` để ứng dụng vẫn khởi động được khi một site chết; không đường code cục bộ nào chạm DataSource của HN |
 | **KB2** | HN chết, SV HCM đăng ký lớp HN | Yêu cầu ở trạng thái `CHO_DUYET`, hiện "đang chờ cơ sở HN xác nhận", có nút thử lại. Retry idempotent | ⭐ Đây là chỗ saga trả cổ tức — nếu dùng 2PC thì kịch bản này là **lock treo** |
 | **KB3** | HN chết, SV HCM xem lịch học có môn ở HN | **Vẫn hiện đủ**, kèm "Dữ liệu cơ sở HN tính đến 14:32" | Nhờ read model cục bộ (C10) |
@@ -1647,7 +1647,7 @@ DENY INSERT, UPDATE, DELETE ON MonHoc TO r_AdminCoSo, r_AdminMaster;
 
 > ⭐ **KB0 là cảnh demo mạnh nhất của cả đồ án.** Tắt "trung tâm" mà sinh viên ở cả ba cơ sở vẫn đăng nhập được, vẫn xem lịch, vẫn đăng ký học phần — đó là câu trả lời trực quan nhất cho câu hỏi ở A2 *"vì sao không dùng một CSDL tập trung?"*. Nó cũng làm rõ đúng ranh giới mà team đã chỉ ra: **Master là SPOF của control plane, không phải SPOF của data plane.**
 >
-> Lưu ý khi diễn: nếu Master colocate trên SRV-HCM (phương án 3 máy), tắt máy đó là **tắt cùng lúc một cơ sở và Master** → kịch bản bị nhòe. Muốn diễn KB0 cho sạch thì hoặc dùng phương án 4 máy, hoặc chỉ dừng **service/database `UIS_MASTER`** thay vì tắt cả máy.
+> Lưu ý khi diễn: nếu Master colocate trên SRV-HCM (phương án 3 máy), tắt máy đó là **tắt cùng lúc một cơ sở và Master** → kịch bản bị nhòe. Muốn diễn KB0 cho sạch thì hoặc dùng phương án 4 máy, hoặc chỉ dừng **service/database `PTITONE_MASTER`** thay vì tắt cả máy.
 
 ⚠️ **`connectionTimeout` + `socketTimeout` ngắn (2–5 s) trên DataSource của site ở xa.** Thiếu cái này, một site chết sẽ hút cạn thread pool và kéo sập cả những request cục bộ vốn đáng lẽ vẫn phải sống.
 
@@ -1750,10 +1750,10 @@ Bảng nhỏ ở góc màn hình, bật/tắt bằng một nút. Mỗi thao tác
 ```
 ┌─ PHÒNG ĐIỀU KHIỂN ─────────────────────────────────────┐
 │  Database     Trạng thái  Độ trễ giả lập  Nhân bản     │
-│  UIS_MASTER   ● LIVE      —               Publisher    │
-│  UIS_HCM      ● LIVE      0 ms            ● 0,4s trễ   │
-│  UIS_HN       ● LIVE      0 ms   [+200ms] ● 2,3s trễ   │
-│  UIS_DN       ○ TẮT       —      [bật]    ⚠ dừng       │
+│  PTITONE_MASTER   ● LIVE      —               Publisher    │
+│  PTITONE_HCM      ● LIVE      0 ms            ● 0,4s trễ   │
+│  PTITONE_HN       ● LIVE      0 ms   [+200ms] ● 2,3s trễ   │
+│  PTITONE_DN       ○ TẮT       —      [bật]    ⚠ dừng       │
 │                                                         │
 │  Outbox chờ gửi:  HCM 0 · HN 3 · ĐN 12 (site đang tắt) │
 │  Danh mục đồng bộ lần cuối: HN 14:32:10 · ĐN 14:21:04  │
@@ -1842,7 +1842,7 @@ Trên **mọi máy** tham gia giao dịch phân tán:
 
 ```sql
 BEGIN DISTRIBUTED TRANSACTION;
-SELECT TOP 1 1 FROM SRV_HN.UIS_HN.dbo.SinhVien;
+SELECT TOP 1 1 FROM SRV_HN.PTITONE_HN.dbo.SinhVien;
 COMMIT TRANSACTION;
 ```
 
@@ -1861,7 +1861,7 @@ Lỗi hay gặp và ý nghĩa:
 
 ## F5. **Tạo Linked Server**
 
-Linked Server là đối tượng **ở cấp instance**, nên định nghĩa một lần trên **SRV-HCM** là dùng được cho mọi database trên máy đó. Báo cáo tổng hợp chạy trong ngữ cảnh **`UIS_HCM`**, vì dữ liệu cần tổng hợp là dữ liệu vận hành chứ không phải dữ liệu tham chiếu.
+Linked Server là đối tượng **ở cấp instance**, nên định nghĩa một lần trên **SRV-HCM** là dùng được cho mọi database trên máy đó. Báo cáo tổng hợp chạy trong ngữ cảnh **`PTITONE_HCM`**, vì dữ liệu cần tổng hợp là dữ liệu vận hành chứ không phải dữ liệu tham chiếu.
 
 Hình sao từ SRV-HCM — chỉ N−1 định nghĩa:
 
@@ -1912,14 +1912,14 @@ Theo **tài liệu hướng dẫn của giảng viên**, dùng **wizard SSMS** (
 
 | Bước | Lựa chọn |
 |---|---|
-| Publisher | Database **`UIS_MASTER`** — **không phải** `UIS_HCM` |
+| Publisher | Database **`PTITONE_MASTER`** — **không phải** `PTITONE_HCM` |
 | Distributor | **Local**, cùng instance với Publisher (SRV-HCM hoặc SRV-MASTER tùy D15) |
 | ⚠️ **Retention — chỉnh CẢ HAI, và ĐẶT BẰNG NHAU** | **(a)** Distribution retention `@max_distretention` (mặc định 72 giờ) — thời gian lệnh được **giữ**. **(b)** Subscription expiration `@retention` (mặc định 336 giờ) — thời gian subscription **hết hạn**. **Đặt cả hai = 720 giờ (30 ngày).** ⚠️ Thời gian tắt máy tối đa = **min(a, b)** — đặt lệch nhau thì con số nhỏ hơn mới là giới hạn thật |
 | ⚠️ **Snapshot folder** | **Bắt buộc là UNC share** — **KHÔNG** để mặc định `C:\Program Files\...\ReplData`, vì máy Subscriber không thể với tới. **Đây là lỗi số một giết các nhóm.** Share phải nằm trên **máy chạy Distributor**, không phải máy chạy Publisher (trùng nhau ở đây, nhưng nhớ nguyên tắc): 3 máy → `\\SRV-HCM\repldata` · 4 máy → `\\SRV-MASTER\repldata` |
 | Quyền trên share | Tài khoản Windows chung ở F4 phải có quyền đọc/ghi |
 | Loại publication | **Transactional** |
 | Article | `CoSo`, `Khoa`, `ChuongTrinhDaoTao`, `MonHoc`, `MonHocTienQuyet`, `HocKy`, `DanhBaNguoiDung` |
-| Subscription | **Push** — ba subscription: `UIS_HCM` (cục bộ, cùng instance — dễ nhất, làm trước để kiểm chứng), `UIS_HN`, `UIS_DN` |
+| Subscription | **Push** — ba subscription: `PTITONE_HCM` (cục bộ, cùng instance — dễ nhất, làm trước để kiểm chứng), `PTITONE_HN`, `PTITONE_DN` |
 | Kiểm tra | Replication Monitor phải xanh; đẩy một dòng test và xác nhận nó tới nơi |
 
 ## F7. **Thử các giao tác — mục 3.7**
@@ -1939,7 +1939,7 @@ Thêm sinh viên · mở lớp học phần · đăng ký học phần · nhập
 | **Database role** | Đăng nhập `sv_test`, thử `UPDATE Diem` | ❌ Bị từ chối — chụp thông báo lỗi |
 | **Linked Server** | `SELECT * FROM OPENQUERY(SRV_HN, '…')` từ HCM | Trả về dữ liệu của HN |
 
-### c. **Thống kê** — bốn báo cáo ở D2, chạy trong ngữ cảnh `UIS_HCM` (nơi có Linked Server tới các site còn lại).
+### c. **Thống kê** — bốn báo cáo ở D2, chạy trong ngữ cảnh `PTITONE_HCM` (nơi có Linked Server tới các site còn lại).
 
 ### d. **Thử transaction**
 Chạy đăng ký đồng thời (G3), đối soát bất biến (D4), và demo compensating transaction khi hủy đăng ký liên cơ sở.
@@ -2064,7 +2064,7 @@ TUẦN 2  ── Thiết kế + Dữ liệu
   □ Thiết kế CSDL quan hệ · Ownership Matrix
   □ Lược đồ phân mảnh · Lược đồ ánh xạ · Sơ đồ định vị (3 ký hiệu)
   □ Tuyên bố Client/Server · Mô hình front-end/back-end · Hai chế độ ghi (C0)
-  □ ★ Tạo 4 database: UIS_MASTER + UIS_HCM/HN/DN
+  □ ★ Tạo 4 database: PTITONE_MASTER + PTITONE_HCM/HN/DN
   □ ★ Viết schema + câu UPDATE có điều kiện + 4 lớp ràng buộc
   □ ★ Sinh dữ liệu lớn (G1)
 
@@ -2072,9 +2072,9 @@ TUẦN 3  ── ★ CÀI ĐẶT VẬT LÝ — TUẦN NẶNG ĐIỂM NHẤT
   □ VPN · Link mạng · SQL Server · Agent
   □ ★ MS DTC (F4b) — port 135 + dải RPC động + No Authentication Required
   □ Linked Server (hình sao từ SRV-HCM)
-  □ Publication trên UIS_MASTER
-  □ Subscription: UIS_HCM (cục bộ — LÀM TRƯỚC để kiểm chứng)
-                  → rồi mới tới UIS_HN, UIS_DN qua VPN
+  □ Publication trên PTITONE_MASTER
+  □ Subscription: PTITONE_HCM (cục bộ — LÀM TRƯỚC để kiểm chứng)
+                  → rồi mới tới PTITONE_HN, PTITONE_DN qua VPN
   □ ★ Chụp TỪNG MÀN HÌNH, đánh số ngay khi làm
 
 TUẦN 4  ── ★ Mục 3.7 — hoàn tất phần BẮT BUỘC
@@ -2143,9 +2143,9 @@ infrastructure  ──────┘   (cài đặt các PORT do application đ
 ### Cây thư mục
 
 ```
-apps/api/src/main/java/vn/ptit/uis/
+apps/api/src/main/java/vn/ptit/one/
 │
-├── UisApplication.java
+├── PtitOneApplication.java
 │
 ├── shared/                      ── hạ tầng dùng chung, không thuộc nghiệp vụ nào
 │   ├── site/
@@ -2286,13 +2286,13 @@ Dựng lại toàn bộ môi trường từ số 0 chỉ bằng cách chạy l�
 db/
 ├── 00-create-databases.sql       → chạy MỘT LẦN trên mỗi máy chủ
 │
-├── master/                       → CHỈ chạy trên UIS_MASTER
+├── master/                       → CHỈ chạy trên PTITONE_MASTER
 │   ├── 01-schema-thamchieu.sql       7 bảng + CoSo(TenLinkedServer, TenDatabase)
 │   ├── 02-danhba-nguoidung.sql       danh bạ định vị
 │   ├── 03-taikhoan-master.sql        tài khoản Admin Master
 │   └── 04-seed-danhmuc.sql
 │
-├── site/                         → chạy trên MỌI UIS_<site>
+├── site/                         → chạy trên MỌI PTITONE_<site>
 │   ├── 10-schema-vanhanh.sql
 │   ├── 11-rangbuoc.sql               UNIQUE · CHECK sức chứa · CHECK tín chỉ
 │   ├── 12-chimuc.sql                 theo kế hoạch index, KHÔNG rải thêm
@@ -2317,7 +2317,7 @@ db/
 
 ### Ma trận: script nào chạy ở đâu
 
-| Thư mục | `UIS_MASTER` | `UIS_HCM` | `UIS_HN` | `UIS_DN` |
+| Thư mục | `PTITONE_MASTER` | `PTITONE_HCM` | `PTITONE_HN` | `PTITONE_DN` |
 |---|:---:|:---:|:---:|:---:|
 | `master/` | ✅ | — | — | — |
 | `site/` | — | ✅ | ✅ | ✅ |
@@ -2326,7 +2326,7 @@ db/
 | `replication/` — subscription | — | ✅ | ✅ | ✅ |
 | `seed/` | — | ✅ | ✅ | ✅ |
 
-> ⚠️ Chạy nhầm `site/` lên `UIS_MASTER` sẽ tạo bảng vận hành trong database Master — phá vỡ ranh giới ở **C0**. Mỗi script mở đầu bằng một câu kiểm tra `DB_NAME()` và `THROW` nếu chạy sai chỗ.
+> ⚠️ Chạy nhầm `site/` lên `PTITONE_MASTER` sẽ tạo bảng vận hành trong database Master — phá vỡ ranh giới ở **C0**. Mỗi script mở đầu bằng một câu kiểm tra `DB_NAME()` và `THROW` nếu chạy sai chỗ.
 
 ### Quy ước đặt tên
 
@@ -2368,9 +2368,9 @@ TUẦN 7     shared/xray · features/xray · bench/
 ## I1. Cấu trúc repository
 
 ```
-uisptitv2/
+PTIT-One/
 ├── docs/
-│   ├── UISPTITv2-Thiet-Ke-v2.md      ← tài liệu này
+│   ├── PTIT-One-Thiet-Ke.md      ← tài liệu này
 │   ├── bao-cao/                       ← bản Word nộp thầy
 │   ├── diagrams/                      ← ERD, lược đồ phân mảnh/ánh xạ/định vị
 │   └── screenshots/
@@ -2378,14 +2378,14 @@ uisptitv2/
 │       ├── 04-linkedserver/ 05-publication/  06-trigger-role/
 │       └── 07-demo-3.7/
 ├── db/
-│   ├── 00-create-databases.sql     ← UIS_MASTER · UIS_HCM · UIS_HN · UIS_DN
-│   ├── 01-schema-master.sql        ← 7 bảng tham chiếu, chỉ trong UIS_MASTER
+│   ├── 00-create-databases.sql     ← PTITONE_MASTER · PTITONE_HCM · PTITONE_HN · PTITONE_DN
+│   ├── 01-schema-master.sql        ← 7 bảng tham chiếu, chỉ trong PTITONE_MASTER
 │   ├── 02-schema-site.sql          ← mảnh vận hành, chạy trên MỌI CSDL site
 │   ├── 03-roles-grants.sql         04-triggers.sql
 │   ├── 05-linked-server.sql        06-replication/
 │   └── 99-seed/
 ├── apps/
-│   ├── api/    vn/ptit/uis/{domain,application,infrastructure,interfaces}
+│   ├── api/    vn/ptit/one/{domain,application,infrastructure,interfaces}
 │   └── web/    React + Vite
 └── bench/      sinh tải + kịch bản benchmark
 ```
@@ -2453,9 +2453,9 @@ Nếu mỗi máy có ~70% khả năng bật được đúng hẹn:
 
 ```
 Máy A  ──VPN──  Máy B
-├─ UIS_MASTER          └─ UIS_HN
-├─ UIS_HCM
-└─ UIS_DN  (named instance trên chính máy A)
+├─ PTITONE_MASTER          └─ PTITONE_HN
+├─ PTITONE_HCM
+└─ PTITONE_DN  (named instance trên chính máy A)
 ```
 
 Được cả hai: **replication qua VPN thật giữa hai máy** (phần khó và được chấm điểm) **và** đủ 3 site cho thiết kế N-site. Chỉ cần 2 người bật máy thay vì 3–4.
@@ -2541,11 +2541,11 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 | F4 | Kiểm tra SQL Server Agent | ⚠️ **Cái bẫy nặng nhất:** `NT Service\SQLSERVERAGENT` không xác thực được ra share máy khác trong workgroup. Tạo tài khoản Windows **trùng username + trùng password trên mọi máy** | ☐ | ☐ |
 | **F4b** | ⭐ **Cấu hình MS DTC** | **Bắt buộc cho yêu cầu 3.** Mở TCP 135 + dải RPC động 49152–65535 · bật Network DTC Access / Allow Inbound / Allow Outbound · ⚠️ **`No Authentication Required`** vì là workgroup · khởi động lại dịch vụ DTC | ☐ | ☐ |
 | F5 | Tạo Linked Server | Chặn ánh xạ mặc định **trước**, rồi chỉ mở cho login chạy báo cáo. Tài khoản đầu xa chỉ cần `SELECT` | ☐ | ☐ |
-| F6a | Publication trên `UIS_MASTER` | Publisher là `UIS_MASTER`, **không phải** `UIS_HCM`. Distributor local | ☐ | ☐ |
+| F6a | Publication trên `PTITONE_MASTER` | Publisher là `PTITONE_MASTER`, **không phải** `PTITONE_HCM`. Distributor local | ☐ | ☐ |
 | F6b | Snapshot folder | ⚠️ **Lỗi số một giết các nhóm:** bắt buộc **UNC share**, không để mặc định `C:\Program Files\…\ReplData`. Share nằm trên máy chạy **Distributor** | ☐ | ☐ |
 | F6c | Retention (**cả hai, BẰNG NHAU**) | `@max_distretention` 72h → **720h**. `@retention` 336h → **720h**. ⚠️ Giới hạn tắt máy = **min** của hai số | ☐ | ☐ |
-| F6d | Subscription cục bộ (`UIS_HCM`) | **Làm trước** — cùng instance, không qua VPN. Tách *"publication có đúng không"* khỏi *"mạng có thông không"* | ☐ | ☐ |
-| F6e | Subscription qua VPN (`UIS_HN`, `UIS_DN`) | Push subscription. Kiểm tra bằng Replication Monitor | ☐ | ☐ |
+| F6d | Subscription cục bộ (`PTITONE_HCM`) | **Làm trước** — cùng instance, không qua VPN. Tách *"publication có đúng không"* khỏi *"mạng có thông không"* | ☐ | ☐ |
+| F6e | Subscription qua VPN (`PTITONE_HN`, `PTITONE_DN`) | Push subscription. Kiểm tra bằng Replication Monitor | ☐ | ☐ |
 | F7a | Nhập dữ liệu | Thêm SV · Mở lớp · Đăng ký · Nhập điểm. Chụp trước/sau | ☐ | ☐ |
 | F7b-1 | Kiểm chứng **phân mảnh ngang** | `SELECT COUNT(*) FROM SinhVien` tại từng site — số khác nhau, tổng = toàn trường, không trùng | ☐ | ☐ |
 | F7b-2 | Kiểm chứng **dẫn xuất** | `SELECT * FROM DangKyHocPhan` tại HN — chỉ chứa đăng ký của lớp mở tại HN | ☐ | ☐ |
@@ -2554,7 +2554,7 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 | F7b-5 | Kiểm chứng **trigger chéo site** | `INSERT SinhVien` với `MaCoSoNha='HN'` vào CSDL HCM → **bị từ chối**. Chụp lỗi | ☐ | ☐ |
 | F7b-6 | Kiểm chứng **database role** | Đăng nhập `sv_test`, thử `UPDATE Diem` → **bị từ chối**. Chụp lỗi | ☐ | ☐ |
 | F7b-7 | Kiểm chứng **Linked Server** | `SELECT * FROM OPENQUERY(SRV_HN, '…')` từ HCM | ☐ | ☐ |
-| F7c | Thống kê | Bốn báo cáo (D2), chạy trong ngữ cảnh `UIS_HCM` | ☐ | ☐ |
+| F7c | Thống kê | Bốn báo cáo (D2), chạy trong ngữ cảnh `PTITONE_HCM` | ☐ | ☐ |
 | F7d | Thử transaction | Test 100 luồng tranh 30 chỗ · Truy vấn đối soát bất biến (phải trả **0 dòng**) · Demo compensating transaction | ☐ | ☐ |
 | **F7e-1** | ⭐ **Giao dịch phân tán — chạy thành công** | `EXEC sp_ChuyenCoSoSinhVien` · kiểm tra 3 CSDL: HCM không còn · HN đã có · danh bạ đã đổi | ☐ | ☐ |
 | **F7e-2** | ⭐ **Giao dịch phân tán — demo ROLLBACK** | **Tắt SQL Server ở site đích** rồi chạy lại → giao dịch thất bại, sinh viên vẫn **nguyên vẹn** ở site cũ, danh bạ **không** đổi | ☐ | ☐ |
@@ -2567,13 +2567,13 @@ Không thuê gì, và cũng **không thuê được**: đề bài cần quyền 
 
 | Nhóm | Bảng | Loại | Chủ sở hữu | Vị từ phân mảnh / Ghi chú | Chiến lược khóa |
 |---|---|---|---|---|---|
-| Tham chiếu | `CoSo` | `[R]` | `UIS_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
-| Tham chiếu | `Khoa` | `[R]` | `UIS_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
-| Tham chiếu | `ChuongTrinhDaoTao` | `[R]` | `UIS_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
-| Tham chiếu | `MonHoc` | `[R]` | `UIS_MASTER` | Nhân bản toàn phần — bảng bị đọc nhiều nhất | Mã nghiệp vụ toàn cục |
-| Tham chiếu | `MonHocTienQuyet` | `[R]` | `UIS_MASTER` | Nhân bản toàn phần | Khóa kép |
-| Tham chiếu | `HocKy` | `[R]` | `UIS_MASTER` | Chỉ lịch chung toàn trường | Mã nghiệp vụ toàn cục |
-| Tham chiếu | `DanhBaNguoiDung` | `[R]` | `UIS_MASTER` | **Danh bạ định vị** — nền tảng của Location Transparency | `MaSinhVien` |
+| Tham chiếu | `CoSo` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
+| Tham chiếu | `Khoa` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
+| Tham chiếu | `ChuongTrinhDaoTao` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Mã nghiệp vụ toàn cục |
+| Tham chiếu | `MonHoc` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần — bảng bị đọc nhiều nhất | Mã nghiệp vụ toàn cục |
+| Tham chiếu | `MonHocTienQuyet` | `[R]` | `PTITONE_MASTER` | Nhân bản toàn phần | Khóa kép |
+| Tham chiếu | `HocKy` | `[R]` | `PTITONE_MASTER` | Chỉ lịch chung toàn trường | Mã nghiệp vụ toàn cục |
+| Tham chiếu | `DanhBaNguoiDung` | `[R]` | `PTITONE_MASTER` | **Danh bạ định vị** — nền tảng của Location Transparency | `MaSinhVien` |
 | Phân mảnh | `SinhVien` | `[F]` | Cơ sở nhà | `MaCoSoNha = <site>` | Mã toàn trường — **không** tiền tố cơ sở |
 | Phân mảnh | `GiangVien` | `[F]` | Cơ sở | `MaCoSo = <site>` | Mã nghiệp vụ toàn trường |
 | Phân mảnh | `TaiKhoan` | `[F]` | Cơ sở | `MaCoSo = <site>` | `TenDangNhap` |

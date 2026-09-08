@@ -1,4 +1,4 @@
-# UISPTITv2 — Quản lý đăng ký tín chỉ đa cơ sở
+# PTIT One — Quản lý đăng ký tín chỉ đa cơ sở
 
 > Đồ án cuối kỳ môn **Cơ sở dữ liệu phân tán (CSDLPT)**
 > Hệ thống đăng ký tín chỉ cho một trường đại học có nhiều cơ sở đào tạo, xây trên **SQL Server** với phân mảnh ngang, phân mảnh dẫn xuất, nhân bản một chiều và truy vấn phân tán.
@@ -27,10 +27,10 @@ flowchart TB
     API["SRV-HCM · Spring Boot<br/>React đã build + REST API<br/>Xác thực · SiteContext · Định tuyến"]
 
     subgraph VPN["Mạng riêng VPN — CHỈ các máy chủ tham gia"]
-        MASTER[("UIS_MASTER<br/>Danh mục + DanhBaNguoiDung<br/>Publisher · Distributor")]
-        HCM[("UIS_HCM<br/>Mảnh vận hành HCM")]
-        HN[("UIS_HN<br/>Mảnh vận hành HN")]
-        DN[("UIS_DN<br/>Mảnh vận hành ĐN")]
+        MASTER[("PTITONE_MASTER<br/>Danh mục + DanhBaNguoiDung<br/>Publisher · Distributor")]
+        HCM[("PTITONE_HCM<br/>Mảnh vận hành HCM")]
+        HN[("PTITONE_HN<br/>Mảnh vận hành HN")]
+        DN[("PTITONE_DN<br/>Mảnh vận hành ĐN")]
     end
 
     U -->|"HTTPS 443"| PUB
@@ -70,7 +70,7 @@ Hệ thống **không** phải single-master. Ghi được phân hoạch theo m�
 | # | Yêu cầu | Hiện thực ở đâu | Mục |
 |---|---|---|---|
 | 1 | **1 phương pháp phân mảnh** | Phân mảnh ngang theo cơ sở *(có thêm dẫn xuất bậc 1 và bậc 2)* | C3 |
-| 2 | **1 phương pháp replication** | Transactional Replication một chiều `UIS_MASTER` → Subscriber | D1 |
+| 2 | **1 phương pháp replication** | Transactional Replication một chiều `PTITONE_MASTER` → Subscriber | D1 |
 | 3 | **1 distributed transaction** | **2PC / MS DTC cho chuyển cơ sở sinh viên** — nguyên tử trên 3 CSDL | **D8** |
 | 4 | **1 tình huống concurrency** | 100 luồng tranh 30 chỗ khi đăng ký học phần | D4 |
 | 5 | **1 distributed query** | `OPENQUERY` thống kê toàn hệ thống qua Linked Server | D2 |
@@ -166,7 +166,7 @@ sequenceDiagram
     Note over API,U: Request sau đọc claim từ JWT ĐÃ KÝ<br/>TUYỆT ĐỐI không tin tham số client gửi lên
 ```
 
-Danh bạ phủ **mọi vai trò**, không riêng sinh viên — nhờ vậy giảng viên và Admin không phải tự chọn cơ sở lúc đăng nhập, và Admin Master có chỗ ở hợp lệ (`TaiKhoanMaster` trong `UIS_MASTER`).
+Danh bạ phủ **mọi vai trò**, không riêng sinh viên — nhờ vậy giảng viên và Admin không phải tự chọn cơ sở lúc đăng nhập, và Admin Master có chỗ ở hợp lệ (`TaiKhoanMaster` trong `PTITONE_MASTER`).
 
 ### 3. Đăng ký học phần cùng cơ sở — không 2PC, không Linked Server
 
@@ -174,7 +174,7 @@ Danh bạ phủ **mọi vai trò**, không riêng sinh viên — nhờ vậy gi�
 sequenceDiagram
     participant SV as Sinh viên HN
     participant API as API
-    participant HN as UIS_HN
+    participant HN as PTITONE_HN
 
     SV->>API: POST /api/dang-ky
     API->>API: JWT → homeCampus = HN
@@ -190,7 +190,7 @@ sequenceDiagram
     API-->>SV: Kết quả
 ```
 
-Toàn bộ giao dịch nằm trong `UIS_HN` → không thể vượt sức chứa, và bấm hai lần bị chặn bởi `UNIQUE(MaSinhVien, MaLopHP)`.
+Toàn bộ giao dịch nằm trong `PTITONE_HN` → không thể vượt sức chứa, và bấm hai lần bị chặn bởi `UNIQUE(MaSinhVien, MaLopHP)`.
 
 ### 4. Đăng ký liên cơ sở — Saga, không 2PC
 
@@ -198,8 +198,8 @@ Toàn bộ giao dịch nằm trong `UIS_HN` → không thể vượt sức chứ
 sequenceDiagram
     participant SV as Sinh viên HCM
     participant API as API
-    participant HOME as UIS_HCM · Home
-    participant HOST as UIS_HN · Host
+    participant HOME as PTITONE_HCM · Home
+    participant HOST as PTITONE_HN · Host
 
     SV->>API: POST /api/dang-ky lớp của HN
     API->>HOME: Kiểm hồ sơ · tín chỉ · tiên quyết · trùng lịch
@@ -229,9 +229,9 @@ sequenceDiagram
     participant AD as Admin Master
     participant API as API
     participant SP as sp_ChuyenCoSoSinhVien
-    participant OLD as UIS_HCM · cơ sở cũ
-    participant NEW as UIS_HN · cơ sở mới
-    participant M as UIS_MASTER
+    participant OLD as PTITONE_HCM · cơ sở cũ
+    participant NEW as PTITONE_HN · cơ sở mới
+    participant M as PTITONE_MASTER
 
     AD->>API: POST /api/chuyen-co-so
     API->>SP: EXEC — API chỉ GỌI, không điều phối
@@ -259,9 +259,9 @@ sequenceDiagram
 sequenceDiagram
     participant GV as Giảng viên HN
     participant API as API
-    participant HN as UIS_HN
+    participant HN as PTITONE_HN
     participant W as OutboxWorker
-    participant HCM as UIS_HCM
+    participant HCM as PTITONE_HCM
 
     GV->>API: PUT /api/lop/.../diem
     API->>HN: BEGIN TRAN
@@ -291,7 +291,7 @@ flowchart LR
     L2 --> R
     L3 --> R
     R --> SV
-    R -.->|"CHỈ khi bấm Làm mới"| HN["UIS_HN — dữ liệu tươi"]
+    R -.->|"CHỈ khi bấm Làm mới"| HN["PTITONE_HN — dữ liệu tươi"]
 ```
 
 **Không fan-out mặc định.** HN tắt thì sinh viên vẫn xem được, kèm nhãn *"đồng bộ từ HN lúc 14:32"*. Mirror lo **tính sẵn sàng**, fan-out lo **độ tươi**.
@@ -301,10 +301,10 @@ flowchart LR
 ```mermaid
 flowchart LR
     AD["Admin Master"] --> API["API báo cáo"]
-    API --> RN["Global Reporting Node<br/>UIS_HCM"]
-    RN --> H["UIS_HCM — cục bộ"]
-    RN -.->|"OPENQUERY"| HN["UIS_HN"]
-    RN -.->|"OPENQUERY"| DN["UIS_DN"]
+    API --> RN["Global Reporting Node<br/>PTITONE_HCM"]
+    RN --> H["PTITONE_HCM — cục bộ"]
+    RN -.->|"OPENQUERY"| HN["PTITONE_HN"]
+    RN -.->|"OPENQUERY"| DN["PTITONE_DN"]
     H --> RS["Kết quả tổng hợp"]
     HN --> RS
     DN --> RS
@@ -317,14 +317,14 @@ flowchart LR
 
 | Sự cố | Kết quả |
 |---|---|
-| **`UIS_MASTER` tắt** | ✅ Đăng nhập, đăng ký, xem lịch, nhập điểm **vẫn chạy** bằng replica. Chỉ mất: sửa danh mục, nhân bản thay đổi mới, báo cáo tổng hợp |
-| **`UIS_HN` tắt** | HCM và ĐN chạy bình thường; sinh viên HN không thao tác được (tài khoản nằm tại HN) |
+| **`PTITONE_MASTER` tắt** | ✅ Đăng nhập, đăng ký, xem lịch, nhập điểm **vẫn chạy** bằng replica. Chỉ mất: sửa danh mục, nhân bản thay đổi mới, báo cáo tổng hợp |
+| **`PTITONE_HN` tắt** | HCM và ĐN chạy bình thường; sinh viên HN không thao tác được (tài khoản nằm tại HN) |
 | HN tắt khi SV HCM đăng ký lớp HN | Yêu cầu giữ `CHO_DUYET`, worker retry sau |
 | HN tắt khi SV HCM xem lịch / điểm | ✅ Vẫn xem được từ snapshot và mirror, có thể hơi cũ |
 | **Máy API tắt** | ❌ Toàn bộ website ngừng — **điểm chết đơn lẻ của kiến trúc một API** |
 | Tunnel tắt | Không vào được từ Internet; LAN/VPN vẫn gọi API bình thường |
 
-> `UIS_MASTER` là **SPOF của control plane, không phải SPOF của data plane** — đó là đánh đổi được chấp nhận có chủ đích.
+> `PTITONE_MASTER` là **SPOF của control plane, không phải SPOF của data plane** — đó là đánh đổi được chấp nhận có chủ đích.
 
 ---
 
@@ -352,16 +352,16 @@ Bấm *"đổi sang four-part"* — cùng câu hỏi, hiện ngay **84.213 dòng
 ## Cấu trúc repo
 
 ```
-uisptitv2/
+PTIT-One/
 ├── AGENTS.md                       ← quy ước dự án — MỌI agent (Claude, Codex…) đọc file này
 ├── CLAUDE.md                       ← chỉ 1 dòng: @AGENTS.md
 ├── docs/
-│   ├── UISPTITv2-Thiet-Ke-v2.md   ← TÀI LIỆU DUY NHẤT của dự án
+│   ├── PTIT-One-Thiet-Ke.md   ← TÀI LIỆU DUY NHẤT của dự án
 │   ├── bao-cao/                    ← bản Word nộp thầy
 │   ├── diagrams/                   ← ERD, lược đồ phân mảnh/ánh xạ/định vị
 │   └── screenshots/                ← ảnh cài đặt từng bước (chụp từ tuần 1)
 ├── db/
-│   ├── 00-create-databases.sql     ← UIS_MASTER · UIS_HCM · UIS_HN · UIS_DN
+│   ├── 00-create-databases.sql     ← PTITONE_MASTER · PTITONE_HCM · PTITONE_HN · PTITONE_DN
 │   ├── 01-schema-master.sql        02-schema-site.sql
 │   ├── 03-roles-grants.sql         04-triggers.sql
 │   ├── 05-linked-server.sql        06-replication/
@@ -387,7 +387,7 @@ Kiểm chứng import đã nạp: mở phiên Claude Code mới rồi gõ **`/co
 
 ## Bắt đầu từ đâu
 
-Toàn bộ thiết kế nằm trong **một tài liệu duy nhất**: [`docs/UISPTITv2-Thiet-Ke-v2.md`](docs/UISPTITv2-Thiet-Ke-v2.md)
+Toàn bộ thiết kế nằm trong **một tài liệu duy nhất**: [`docs/PTIT-One-Thiet-Ke.md`](docs/PTIT-One-Thiet-Ke.md)
 
 | Bạn đang cần… | Đọc mục |
 |---|---|
@@ -440,9 +440,9 @@ Thứ tự việc:
 1. Cài SQL Server Developer trên từng máy, bật **Mixed Mode**, mở **TCP 1433**, collation `Vietnamese_CI_AS`
 2. Nối các máy bằng VPN, thêm entry vào `hosts` (replication lưu **tên máy**, không lưu IP)
 3. Bật **SQL Server Agent**, đặt `Automatic`, và xử lý tài khoản chạy Agent trong môi trường workgroup
-4. Tạo 4 database: `UIS_MASTER`, `UIS_HCM`, `UIS_HN`, `UIS_DN`
+4. Tạo 4 database: `PTITONE_MASTER`, `PTITONE_HCM`, `PTITONE_HN`, `PTITONE_DN`
 5. Chạy script trong `db/` theo thứ tự số
-6. Tạo **Linked Server**, rồi **Publication** trên `UIS_MASTER` và các **Subscription**
+6. Tạo **Linked Server**, rồi **Publication** trên `PTITONE_MASTER` và các **Subscription**
 
 > 📖 Chi tiết từng bước, kèm cái bẫy ở mỗi bước: **Phần F** trong tài liệu thiết kế.
 > ✅ Bản tick nhanh để vừa làm vừa đánh dấu: **mục I5**.
@@ -472,19 +472,19 @@ Thêm driver SQL Server và JWT vào `pom.xml`:
 uis:
   sites:
     MASTER:
-      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=UIS_MASTER;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=PTITONE_MASTER;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
     HCM:
-      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=UIS_HCM;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=PTITONE_HCM;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
     HN:
-      url: "jdbc:sqlserver://SRV-HN:1433;databaseName=UIS_HN;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-HN:1433;databaseName=PTITONE_HN;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
     DN:
-      url: "jdbc:sqlserver://SRV-DN:1433;databaseName=UIS_DN;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-DN:1433;databaseName=PTITONE_DN;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
 
@@ -819,7 +819,7 @@ git merge --abort
 
 ### ⚠️ Ba chỗ dễ conflict nhất của dự án này
 
-**1. `docs/UISPTITv2-Thiet-Ke-v2.md` — nguy hiểm nhất.**
+**1. `docs/PTIT-One-Thiet-Ke.md` — nguy hiểm nhất.**
 Đây là tài liệu duy nhất, gần 1.900 dòng, và **cả 5 người đều viết báo cáo từ nó**. Cách tránh:
 
 - **Chia theo mục, không chia theo file.** Mỗi người chỉ sửa mục được phân công (người làm Phần B không đụng Phần C)
