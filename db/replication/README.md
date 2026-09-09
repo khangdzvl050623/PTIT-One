@@ -114,6 +114,16 @@ subscriber **cùng instance**, không đi qua VPN.
 Không có bước đệm này thì mọi lỗi trông giống nhau, và nhóm sẽ mất cả buổi
 để đoán xem hỏng ở publication hay ở mạng.
 
+### ⚠️ Vì sao `32` phải khởi động lại Snapshot Agent
+
+Publication đặt `@immediate_sync = 'false'`. Với thiết lập đó, ảnh chụp sinh ở
+bước 31 **chỉ dùng được cho subscription đã tồn tại lúc nó được sinh** — mà lúc
+đó chưa có subscription nào.
+
+Nếu không sinh lại, cả ba subscriber sẽ **rỗng dữ liệu mà Replication Monitor
+không báo lỗi đỏ** — triệu chứng khó đoán nhất trong toàn bộ phần này. Vì vậy
+`32-subscription.sql` tự gọi lại Snapshot Agent ở mục 3 sau khi đăng ký xong.
+
 ---
 
 ## 4. Kiểm chứng
@@ -227,7 +237,7 @@ dung lượng — nên vẫn là lựa chọn hợp lý, chỉ cần phát biể
 |---|---|
 | `30-distributor.sql` | ✅ Xong — không phụ thuộc schema. ⚠️ **Chưa chạy thật trên SQL Server**, mới kiểm `-WhatIf` và biến SQLCMD |
 | `31-publication.sql` | ✅ **Xong** — 9 article theo đúng thứ tự khoá ngoại, tự kiểm bảng tồn tại trước khi khai báo |
-| `32-subscription.sql` | ⏳ Chưa viết — làm tiếp được ngay vì article đã có |
+| `32-subscription.sql` | ✅ **Xong** — 3 push subscription, cục bộ trước VPN sau, tự sinh lại snapshot, chặn ghi ngược. ⚠️ **Chưa chạy thật** |
 | `db/master/01..04` | ✅ **Xong** — 8 bảng tham chiếu + danh bạ + tài khoản Master + seed |
 | `39-go-*.sql` | ⏳ Chưa viết — script gỡ để chạy lại từ đầu |
 
