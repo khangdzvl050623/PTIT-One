@@ -11,7 +11,8 @@ và tài liệu dự án.
 **Cập nhật phạm vi ngày 24/09/2026 theo yêu cầu nhóm:** Phần 1 làm UI/UX và
 nghiệp vụ với một database tập trung; Phần 2 phân tán lập kế hoạch sau.
 Được dựng `apps/api` và nối chức năng Phần 1 trước cổng G3 của lịch cũ.
-Frontend hiện ở `fe-ptitone/`, không tự chuyển sang `apps/web`.
+Frontend ở `apps/web`, backend ở `apps/api`; nhóm đã thống nhất cấu trúc này.
+Mọi hướng dẫn chạy, cấu hình và tính năng mới dùng hai đường dẫn trên.
 Khung API hiện chưa kết nối DB; xem `docs/PTIT-One-Backend-Khoi-Dong.md`.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.

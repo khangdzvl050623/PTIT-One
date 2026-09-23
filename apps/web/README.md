@@ -1,14 +1,13 @@
-# fe-ptitone
+# PTIT One Web
 
 React 19 + TypeScript + Vite + SCSS Modules. Frontend của **PTIT One**.
 
-> Tài liệu thiết kế (`docs/PTIT-One-Thiet-Ke.md`, mục J2) ghi frontend là
-> **React + Vite**. Công nghệ ở đây đã theo đúng J2; chỉ khác vị trí: giữ
-> `fe-ptitone/` ở gốc repo thay vì `apps/web` theo quyết định của nhóm.
-> Nếu đổi vị trí, cập nhật ghi chú ở đây và ở J2.
+> Frontend đặt tại `apps/web`, backend tại `apps/api`, theo cấu trúc monorepo
+> trong [tài liệu thiết kế, mục J2](../../docs/PTIT-One-Thiet-Ke.md).
+> Mở terminal hoặc IDE tại `apps/web` để chạy các lệnh dưới đây.
 
 ```bash
-npm install
+npm ci
 npm run dev       # http://localhost:5173
 npm run build
 ```
@@ -16,12 +15,12 @@ npm run build
 API được dựng ở `apps/api`, mặc định cổng 8080. Vite cổng 5173 đã proxy
 `/api` tới `http://127.0.0.1:8080`; truy cập `/api/health` qua Vite để kiểm
 kết nối. Backend hiện là skeleton, form đăng nhập chưa nối auth.
-Xem [hướng dẫn backend](../apps/api/README.md). UI tiếp tục làm song song
+Xem [hướng dẫn backend](../api/README.md). UI tiếp tục làm song song
 theo kế hoạch Phần 1; không cần chờ cổng phân tán của lịch cũ.
 
 ## Kiến trúc: Feature-Sliced (rút gọn)
 
-Ba tầng, phụ thuộc **một chiều**: `app → pages → features → shared`.
+Bốn tầng, phụ thuộc **một chiều**: `app → pages → features → shared`.
 **Feature không import lẫn nhau. `shared` không import feature.**
 
 ```
@@ -87,5 +86,6 @@ component không nhúng sẵn mảng dữ liệu hay chuỗi hiển thị dài.
 | Màu/nền logo | `Logo` nhận `variant="tile"` khi nền phía sau đậm (header/footer đỏ) |
 
 Xem thêm mục **J2. Frontend** và **J4. Thứ tự dựng** trong
-`docs/PTIT-One-Thiet-Ke.md` để biết feature nào dựng được từ tuần 1 (không
-chờ API) và feature nào chờ tới tuần 5+.
+[tài liệu thiết kế](../../docs/PTIT-One-Thiet-Ke.md) về tổ chức mã nguồn.
+Thứ tự triển khai hiện tại theo [Phần 1 và các nhánh tiếp theo](../../docs/PTIT-One-Backend-Khoi-Dong.md);
+lịch phân tán cũ không chặn công việc UI/API trên một DB tập trung.

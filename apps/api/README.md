@@ -41,12 +41,12 @@ Smoke test khởi động server ở cổng ngẫu nhiên và gọi HTTP thật,
 
 ## Kết nối frontend khi dev
 
-Frontend hiện ở `fe-ptitone/` tại gốc repo, giữ nguyên vị trí của nhóm frontend.
-Chạy `npm ci` rồi `npm run dev` tại đó; Vite ở 5173 và proxy `/api` tới backend
+Frontend ở `apps/web`, cùng cấp với `apps/api`. Xem
+[hướng dẫn frontend](../web/README.md). Chạy `npm ci` rồi `npm run dev` tại đó; Vite ở 5173 và proxy `/api` tới backend
 8080. Gọi `http://localhost:5173/api/health` để kiểm đường đi qua proxy.
 Frontend nên gọi URL tương đối `/api/...`; không cần bật CORS rộng.
 
-Nếu đổi cổng backend, sửa đích proxy tương ứng trong `fe-ptitone/vite.config.ts`.
+Nếu đổi cổng backend, sửa đích proxy tương ứng trong `apps/web/vite.config.ts`.
 Form đăng nhập hiện tại vẫn là giao diện mẫu, chưa xác thực với API.
 
 ## Ranh giới các tầng

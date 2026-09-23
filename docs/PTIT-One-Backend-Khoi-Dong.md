@@ -6,7 +6,7 @@ backend được dựng sớm theo yêu cầu này, không chờ cổng G3 trong
 
 ## Phạm vi nhánh feature/api-skeleton
 
-- Dùng frontend đã có ở `fe-ptitone/`, không chuyển vị trí hoặc đổi thiết kế UI.
+- Dùng frontend đã có, đặt tại `apps/web` cùng cấp với `apps/api`; giữ nguyên UI.
 - Thêm `apps/api` với Spring Boot, JDK 21, Maven Wrapper và package theo J1.
 - Có endpoint liveness `/api/health`, kiểm thử HTTP và Vite proxy `/api`.
 - Chưa có nghiệp vụ, xác thực hoặc kết nối DB; các màn frontend vẫn dùng dữ liệu mẫu.
@@ -17,9 +17,26 @@ bắt đầu còn ở `f480b7d`, nên so sánh nhánh này với `dev` sẽ th�
 frontend và các commit nền mà `dev` chưa nhận. Phần backend mới được giới hạn
 trong commit `feat: them khung backend Spring Boot va proxy API`.
 
-Khi review, dùng `FrontEnd...feature/api-skeleton` để xem phần backend bổ sung.
+Khi review, dùng `FrontEnd...feature/api-skeleton` để xem backend bổ sung và
+việc chuyển frontend về `apps/web`. Commit di chuyển chỉ đổi vị trí file;
+commit sau cập nhật đường dẫn và tên package.
 Người quản lý repo quyết định nhập nhánh frontend trước hay nhận toàn bộ qua
 PR nhánh này vào `dev`; không cherry-pick lại những commit đã có sau khi merge.
+
+## Cập nhật máy đang dùng thư mục frontend cũ
+
+Ngày 24/09/2026, nhóm thống nhất chuyển `fe-ptitone/` sang `apps/web/`.
+Frontend vẫn dùng React + Vite; backend vẫn ở `apps/api`.
+
+1. Commit công việc đang làm trên nhánh riêng trước khi nhận thay đổi.
+2. Sau khi PR vào `dev` được merge, đứng trên nhánh riêng, chạy
+   `git fetch origin` rồi `git merge origin/dev`. Giải quyết conflict nếu có.
+3. Mở lại IDE/terminal tại `apps/web`, chạy `npm ci` rồi `npm run dev`.
+4. Cập nhật run configuration cá nhân nếu còn trỏ vào thư mục cũ.
+
+`node_modules/` và `dist/` không được Git quản lý nên có thể còn ở vị trí cũ.
+Cài dependency tại `apps/web`; không tiếp tục sửa code trong thư mục cũ.
+Vite vẫn chạy cổng 5173 và proxy `/api` tới backend 8080.
 
 ## Nhánh nên làm tiếp
 
@@ -42,7 +59,7 @@ Không push thẳng `dev` hoặc `main`, không force-push nhánh người khác
 ## Chạy và bàn giao
 
 Backend: [apps/api/README.md](../apps/api/README.md).
-Frontend: [fe-ptitone/README.md](../fe-ptitone/README.md).
+Frontend: [apps/web/README.md](../apps/web/README.md).
 
 Chạy backend 8080 và Vite 5173; kiểm `/api/health` trực tiếp và qua Vite.
 `mvnw.cmd verify` kiểm khởi động/HTTP; `npm run build` kiểm frontend.
