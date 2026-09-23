@@ -8,6 +8,14 @@
 **Tên sản phẩm chính thức: PTIT One.** Dùng thống nhất tên này trong giao diện
 và tài liệu dự án.
 
+**Cập nhật phạm vi ngày 24/09/2026 theo yêu cầu nhóm:** Phần 1 làm UI/UX và
+nghiệp vụ với một database tập trung; Phần 2 phân tán lập kế hoạch sau.
+Được dựng `apps/api` và nối chức năng Phần 1 trước cổng G3 của lịch cũ.
+Frontend hiện ở `fe-ptitone/`, không tự chuyển sang `apps/web`.
+Khung API hiện chưa kết nối DB; xem `docs/PTIT-One-Backend-Khoi-Dong.md`.
+Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
+điều kiện để skeleton hoặc Phần 1 khởi động.
+
 Đồ án **Cơ sở dữ liệu phân tán**. SQL Server, nhiều cơ sở, phân mảnh ngang +
 nhân bản một chiều + giao dịch phân tán + truy vấn phân tán.
 

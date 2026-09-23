@@ -64,6 +64,7 @@
 
 | Mã | Quyết định | Chốt |
 |---|---|---|
+| D20 | Thứ tự triển khai cập nhật ngày 24/09/2026 | Theo yêu cầu nhóm: Phần 1 là UI/UX và nghiệp vụ trên một database tập trung; dựng backend sớm. Phần 2 phân tán lập kế hoạch sau. Khung hiện tại chưa nối DB; xem [ghi chú backend](PTIT-One-Backend-Khoi-Dong.md). Lịch/cổng chặn cũ không áp dụng để trì hoãn Phần 1 |
 | D1 | Đăng ký liên cơ sở (Home/Host) | ✅ Làm |
 | D2 | Master cho dữ liệu tham chiếu | ✅ **Database `PTITONE_MASTER` riêng biệt, đặt trên hạ tầng SRV-HCM** — Master là một *vai trò*, không phải một cơ sở (xem C0) |
 | **D14** | **Tách Master khỏi CSDL vận hành** | ✅ **Có.** `PTITONE_MASTER` là Publisher; cả ba CSDL vận hành (`PTITONE_HCM`, `PTITONE_HN`, `PTITONE_DN`) đều là Subscriber → topology **đối xứng hoàn toàn** |

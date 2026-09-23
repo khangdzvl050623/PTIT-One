@@ -1,5 +1,12 @@
 # PTIT One — Quản lý đăng ký tín chỉ đa cơ sở
 
+**Khung ứng dụng hiện tại:** frontend ở [fe-ptitone](fe-ptitone/README.md),
+backend ở [apps/api](apps/api/README.md). Chạy riêng Vite 5173 và API 8080;
+Vite đã có proxy `/api`. Backend mới có `/api/health`, chưa nối DB hoặc auth.
+Theo quyết định ngày 24/09/2026, Phần 1 làm nghiệp vụ trên một DB tập trung
+trước; xem [phạm vi khung backend và nhánh tiếp theo](docs/PTIT-One-Backend-Khoi-Dong.md).
+Các phần kiến trúc phân tán bên dưới là mục tiêu tiếp theo của đồ án.
+
 > Đồ án cuối kỳ môn **Cơ sở dữ liệu phân tán (CSDLPT)**
 > Hệ thống đăng ký tín chỉ cho một trường đại học có nhiều cơ sở đào tạo, xây trên **SQL Server** với phân mảnh ngang, phân mảnh dẫn xuất, nhân bản một chiều và truy vấn phân tán.
 

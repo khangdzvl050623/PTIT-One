@@ -13,6 +13,12 @@ npm run dev       # http://localhost:5173
 npm run build
 ```
 
+API được dựng ở `apps/api`, mặc định cổng 8080. Vite cổng 5173 đã proxy
+`/api` tới `http://127.0.0.1:8080`; truy cập `/api/health` qua Vite để kiểm
+kết nối. Backend hiện là skeleton, form đăng nhập chưa nối auth.
+Xem [hướng dẫn backend](../apps/api/README.md). UI tiếp tục làm song song
+theo kế hoạch Phần 1; không cần chờ cổng phân tán của lịch cũ.
+
 ## Kiến trúc: Feature-Sliced (rút gọn)
 
 Ba tầng, phụ thuộc **một chiều**: `app → pages → features → shared`.
