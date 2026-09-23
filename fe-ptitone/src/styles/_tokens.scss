@@ -1,0 +1,6 @@
+// Design tokens: màu, spacing, breakpoint, chiều cao header — khai báo một chỗ duy nhất.
+// Màu dùng custom property (biến CSS) trong global.scss vì cần đổi theo
+// prefers-color-scheme lúc chạy — biến $scss ở đây chỉ cho giá trị cố định
+// lúc build, ví dụ breakpoint.
+
+$breakpoint-tablet: 1024px;
