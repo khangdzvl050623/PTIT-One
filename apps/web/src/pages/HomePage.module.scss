@@ -1,0 +1,44 @@
+@use '@/styles/tokens' as tokens;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}
+
+.columns {
+  display: grid;
+  /* Cột chính 78% · sidebar 22% như cổng thông tin gốc */
+  grid-template-columns: minmax(0, 78fr) minmax(0, 22fr);
+  gap: tokens.$space-lg;
+  align-items: start;
+
+  @media (max-width: tokens.$breakpoint-tablet) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mainColumn,
+.asideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+  min-width: 0;
+}
+
+/* Trong khung THÔNG BÁO: tiêu điểm bên trái, danh sách bên phải */
+.notices {
+  display: grid;
+  grid-template-columns: tokens.$home-spotlight-width minmax(0, 1fr);
+  gap: tokens.$space-lg;
+
+  @media (max-width: tokens.$breakpoint-compact) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stats {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: tokens.$space-md;
+}

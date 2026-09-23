@@ -1,0 +1,43 @@
+name: branch-guard
+
+# Ép luồng feature/* -> dev -> main.
+# Ruleset của GitHub chỉ ép "phải qua PR", KHÔNG kiểm PR đến từ nhánh nào.
+# Workflow này bịt khoảng trống đó cho nhánh main.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  branch-guard:
+    name: branch-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chỉ cho phép PR vào main từ dev hoặc hotfix/*
+        env:
+          NHANH_NGUON: ${{ github.head_ref }}
+        run: |
+          if [ "$NHANH_NGUON" = "dev" ]; then
+            echo "OK: PR đến từ nhánh dev."
+            exit 0
+          fi
+
+          case "$NHANH_NGUON" in
+            hotfix/*)
+              echo "OK: PR hotfix — được phép vào thẳng main."
+              echo "::warning::Nhớ merge ngược hotfix về dev sau khi xong."
+              exit 0
+              ;;
+          esac
+
+          echo "::error::PR vào main chỉ được đến từ 'dev' hoặc 'hotfix/*'."
+          echo ""
+          echo "  Nhánh nguồn hiện tại : $NHANH_NGUON"
+          echo ""
+          echo "  Cách xử lý:"
+          echo "    1. Đóng PR này"
+          echo "    2. Mở PR từ $NHANH_NGUON vào dev"
+          echo "    3. Sau khi đã test trên dev, mở PR dev -> main"
+          echo ""
+          echo "  Xem mục 'Quy trình làm việc với Git' trong README."
+          exit 1

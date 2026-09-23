@@ -1,0 +1,271 @@
+<!-- File hướng dẫn DÙNG CHUNG cho mọi coding agent.
+     Claude Code đọc qua CLAUDE.md (import @AGENTS.md).
+     Codex và các agent khác đọc trực tiếp file này.
+     Sửa ở ĐÂY, không sửa CLAUDE.md. -->
+
+# PTIT One — Quản lý đăng ký tín chỉ đa cơ sở
+
+**Tên sản phẩm chính thức: PTIT One.** Dùng thống nhất tên này trong giao diện
+và tài liệu dự án.
+
+**Cập nhật phạm vi ngày 24/09/2026 theo yêu cầu nhóm:** Phần 1 làm UI/UX và
+nghiệp vụ với một database tập trung; Phần 2 phân tán lập kế hoạch sau.
+Được dựng `apps/api` và nối chức năng Phần 1 trước cổng G3 của lịch cũ.
+Frontend ở `apps/web`, backend ở `apps/api`; nhóm đã thống nhất cấu trúc này.
+Mọi hướng dẫn chạy, cấu hình và tính năng mới dùng hai đường dẫn trên.
+Backend chia module nghiệp vụ: `auth`, `student`, `course`, `enrollment`,
+`grade`, `timetable`; `health` phục vụ liveness, `shared` chứa kỹ thuật dùng chung.
+Trong mỗi module, thêm `controller/service/repository/dto/model` khi có code;
+`policy` dành cho quy tắc thuần phức tạp. Không dựng lại bốn tầng chung
+`domain/application/infrastructure/interfaces` ở package gốc.
+Controller nghiệp vụ gọi service; SQL nằm trong repository. `model/policy`
+không import Spring/JDBC. Module gọi API công khai của nhau, không truy cập
+repository nội bộ của module khác; không phụ thuộc vòng. `shared` không
+import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
+Khung API hiện chưa kết nối DB; xem `docs/PTIT-One-Backend-Khoi-Dong.md`.
+Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
+điều kiện để skeleton hoặc Phần 1 khởi động.
+
+Đồ án **Cơ sở dữ liệu phân tán**. SQL Server, nhiều cơ sở, phân mảnh ngang +
+nhân bản một chiều + giao dịch phân tán + truy vấn phân tán.
+
+**Thiết kế đã CHỐT.** Nguồn sự thật duy nhất: `docs/PTIT-One-Thiet-Ke.md`.
+Trước khi sinh code, đọc mục **0.1b** (năm yêu cầu bắt buộc) và **0.1**
+(bảng quyết định D1–D16). Đề xuất khác thiết kế thì nêu ra để nhóm quyết,
+đừng tự đổi.
+
+## Ràng buộc tầng CSDL — sai là hỏng bài
+
+| Quy tắc | Chi tiết |
+|---|---|
+| **Vị từ phân mảnh dẫn xuất** | `DangKyHocPhan ⋉ LopHocPhan` — **KHÔNG** phải `⋉ SinhVien`. `Diem` dẫn xuất bậc 2 qua `DangKyHocPhan`. Đây là lỗi đã từng mắc, đừng lặp lại |
+| **Trigger ở Subscriber** | **BẮT BUỘC** `CREATE TRIGGER … NOT FOR REPLICATION`. Thiếu nó thì trigger chặn chính Distribution Agent và replication chết với triệu chứng không liên quan |
+| **Chống vượt sức chứa** | `UPDATE LopHocPhan SET SoLuongDaDangKy = SoLuongDaDangKy + 1 WHERE MaLopHP = … AND SoLuongDaDangKy < SoLuongToiDa;` rồi kiểm `@@ROWCOUNT`. **Cấm** `SELECT COUNT` rồi `IF` — đó là race condition |
+| **Chống vượt trần tín chỉ** | Cùng kỹ thuật, nhưng ở **Home**, trên **`SinhVienHocKy`** (khóa kép `MaSinhVien`+`MaHocKy`) — **KHÔNG** phải bộ đếm phẳng trên `SinhVien`. Cộng vào `SoTinChiDangGiuCho` ngay khi tạo yêu cầu `DANG_XU_LY`; chỉ trả lại khi có **kết quả dứt khoát** |
+| **Tuần tự hoá TRƯỚC khi kiểm** | `sp_getapplock` theo (`MaSinhVien`,`MaHocKy`) **trước** mọi phép kiểm tín chỉ/trùng lịch/trùng môn. Khoá lúc cộng bộ đếm là **quá muộn** — hai request đã cùng vượt qua bước kiểm rồi |
+| **Chống trùng môn** | Unique **filtered** index trên `DangKyMonHoc(MaSinhVien, MaHocKy, MaMonHoc)` `WHERE TrangThai IN ('DANG_XU_LY','DA_DANG_KY','DANG_HUY')`. `UNIQUE(MaSinhVien, MaLopHP)` ở Host **không** chặn được hai lớp khác nhau của cùng một môn |
+| **Trùng lịch** | Lưu `LichHocMirror` tại Home **ngay khi ghi nhận yêu cầu**, không đợi Host duyệt — nếu không, hai yêu cầu `DANG_XU_LY` cùng khung giờ sẽ cùng lọt |
+| **Hủy đăng ký** | `DANG_XU_LY → DANG_HUY → DA_HUY`. Tín chỉ **chỉ trả khi Host xác nhận**. Ở Host, cả ba việc (đổi `DA_HUY`, xoá ghi danh, trả chỗ) phải nằm trong **một** giao dịch, và khoá bằng `sp_getapplock` theo `MaYeuCau` — vì dòng kết quả có thể **chưa tồn tại** |
+| **Từ vựng trạng thái — dùng ĐÚNG bộ này** | `DANG_XU_LY` · `DA_DANG_KY` · `TU_CHOI` · `DANG_HUY` · `DA_HUY`. ⚠️ **Không** dùng `DA_DUYET` hay `CHO_DUYET` — filtered index lọc theo đúng các tên trên, ghi sai tên là ràng buộc **im lặng không áp dụng** |
+| **Liên cơ sở chỉ cho lớp trực tuyến** | v1: `HinhThucHoc = 'TRUC_TUYEN'`. Home kiểm, và **Host tự kiểm lại** vì Host mới sở hữu lớp |
+| **Bộ đếm do ứng dụng sở hữu** | Không trigger nào được cập nhật `SoLuongDaDangKy` — nếu không sẽ nhảy 2 mỗi lần đăng ký |
+| **Thứ tự khóa** | Luôn `LopHocPhan` trước, `DangKyHocPhan` sau — ở **mọi** luồng, kể cả hủy đăng ký. Đảo ở một chỗ là sinh deadlock ngẫu nhiên |
+| **Không dùng `MERGE`** | Dùng `UPDATE` trước, `INSERT` sau, có `UPDLOCK, HOLDLOCK`. `MERGE` của SQL Server không tự lấy khóa phù hợp |
+| **Không dùng `IDENTITY`** | Chọn khóa **theo từng aggregate** (mục C9). Nhúng mã cơ sở vào khóa **chỉ khi** cơ sở là một phần ngữ nghĩa của thực thể — `LopHocPhan` thì đúng, `SinhVien` thì không |
+| **Giao dịch phân tán** | `SET XACT_ABORT ON` là bắt buộc. Chỉ dùng cho **chuyển cơ sở sinh viên**, tuyệt đối không cho đăng ký học phần |
+| **Subscriber chỉ đọc** | `DENY INSERT/UPDATE/DELETE` trên bảng nhân bản. `DENY` là lớp chính, trigger là lớp phụ |
+
+## Ràng buộc tầng ứng dụng
+
+| Quy tắc | Chi tiết |
+|---|---|
+| **Một giao dịch = một site** | `@Transactional` **không bao giờ** trải hai DataSource. `AbstractRoutingDataSource` phân giải khóa một lần; đổi site giữa chừng sẽ ghi nhầm site hoặc mất tính nguyên tử **mà không ném lỗi**. Ghép nhiều site bằng saga, không bằng transaction |
+| **Cơ sở lấy từ JWT đã ký** | **Tuyệt đối không** tin tham số client gửi lên (`?campus=HN`). Đó là lỗ hổng leo thang đặc quyền |
+| **JdbcTemplate cho đường nóng** | Đăng ký, truy vấn chéo site, benchmark — cần thấy chính xác SQL và đọc `@@ROWCOUNT`. JPA chỉ dùng cho CRUD danh mục nếu thật sự cần |
+| **Phần 2: đúng 3 port phân tán, chưa dựng ở Phần 1** | `CrossSiteQuery`, `GlobalReport`, `CatalogHealth`. `SiteContext`, `RoutingDataSource`, `OutboxWorker` là class cụ thể, không phải interface |
+| **`initialization-fail-timeout: -1`** | Bắt buộc, để ứng dụng vẫn khởi động khi một site đang tắt. Thiếu nó là hỏng kịch bản demo tắt site |
+| **Thứ tự Outbox** | Upsert vào mirror **TRƯỚC**, đánh dấu `SENT` **SAU**. Đảo thứ tự là mất sự kiện vĩnh viễn |
+| **Outbox chỉ cho sinh viên khách** | Sinh viên có cơ sở nhà trùng site thì điểm đã nằm đúng chỗ, không phát sự kiện |
+
+## Quy ước đặt tên
+
+- **Bảng và cột: tiếng Việt không dấu** (`SinhVien`, `MaCoSoNha`) — giảng viên đọc lược đồ
+- **Code, interface, biến: tiếng Anh** (`CrossSiteQuery`, `SiteContext`)
+- **Read model mang hậu tố `Mirror`** (`BangDiemMirror`) — nhìn tên là biết không phải nguồn sự thật
+- Commit theo Conventional Commits rút gọn, có thêm loại `db:` — xem README
+
+## Không được làm
+
+Microservices · Kafka/RabbitMQ · Redis · Kubernetes · nhân bản hai chiều hoặc
+merge replication · 2PC cho đăng ký học phần · phân mảnh dọc · port thứ tư ·
+thêm bảng CRUD không phục vụ một khái niệm phân tán nào.
+
+## Frontend — đầu tư nghiêm túc
+
+UI/UX **được ưu tiên**, không phải phần làm cho có. Nhóm có vai riêng phụ trách
+ứng dụng nên frontend chạy song song, không lấy giờ của người làm hạ tầng CSDL.
+
+- Dùng thoải mái component library (shadcn/ui…), design system, animation
+- **Đã cài sẵn skill thiết kế** — dùng chúng, đừng tự chế lại:
+  `ui-ux-pro-max` (7 skill: `design`, `design-system`, `ui-styling`, `brand`,
+  `slides`, `banner-design`) và `taste-skill` (13 skill: `minimalist-skill`,
+  `brutalist-skill`, `soft-skill`, `redesign-skill`, `image-to-code-skill`…)
+- **UI là việc làm chung giữa người và agent** — nhóm nêu hướng thẩm mỹ và
+  ràng buộc nghiệp vụ, agent gọi skill thiết kế để dựng. Không coi UI là
+  phần phụ giao khoán cho một phía
+- **Thiết kế và dựng UI bắt đầu được từ tuần 1** — mockup, design system và
+  các màn hình tĩnh không phụ thuộc schema hay API
+- Ràng buộc duy nhất còn lại: **không để frontend làm chậm Phần F**
+  (cài đặt vật lý). Đó là chuyện lịch, không phải chuyện chất lượng UI
+
+## Thứ tự ưu tiên
+
+Phần **in đậm** trong tài liệu thiết kế là bắt buộc theo đề bài (~75% điểm).
+Phần ➕ chỉ làm sau khi phần bắt buộc đã xong và đã chụp đủ screenshot.
+**Cổng chặn cuối tuần 4.** Không viết code ứng dụng trước khi cài đặt vật lý
+đã PASS.
+
+## Git
+
+`feature/* → dev → main`, không push thẳng. `dev` cần PR nhưng 0 approval;
+`main` cần 1 approval của CODEOWNERS. Chi tiết ở README.
+
+## CodeGraph — dùng trước khi grep
+
+Repo này có `.codegraph/`. Khi cần hiểu hoặc định vị code, **ưu tiên CodeGraph
+trước `grep`/`find`/đọc file**:
+
+```bash
+codegraph explore "<tên hàm, tên bảng, hoặc câu hỏi>"
+```
+
+Một lệnh trả về source có đánh số dòng của các symbol liên quan **kèm đường gọi
+giữa chúng**, gồm cả dynamic dispatch mà grep không lần ra được. Với Claude Code
+còn có MCP tool `codegraph_explore` làm cùng việc đó.
+
+Sau mỗi đợt thêm code: `codegraph sync`.
+
+⚠️ Hiện index còn rỗng vì repo mới chỉ có tài liệu. CodeGraph bắt đầu có giá trị
+từ khi có `db/*.sql` và `apps/api/`.
+
+
+---
+
+<!-- rtk-instructions v2 -->
+# RTK (Rust Token Killer) - Token-Optimized Commands
+
+## Golden Rule
+
+**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
+
+**Important**: Even in command chains with `&&`, use `rtk`:
+```bash
+# ❌ Wrong
+git add . && git commit -m "msg" && git push
+
+# ✅ Correct
+rtk git add . && rtk git commit -m "msg" && rtk git push
+```
+
+## RTK Commands by Workflow
+
+### Build & Compile (80-90% savings)
+```bash
+rtk cargo build         # Cargo build output
+rtk cargo check         # Cargo check output
+rtk cargo clippy        # Clippy warnings grouped by file (80%)
+rtk tsc                 # TypeScript errors grouped by file/code (83%)
+rtk lint                # ESLint/Biome violations grouped (84%)
+rtk prettier --check    # Files needing format only (70%)
+rtk next build          # Next.js build with route metrics (87%)
+```
+
+### Test (60-99% savings)
+```bash
+rtk cargo test          # Cargo test failures only (90%)
+rtk go test             # Go test failures only (90%)
+rtk jest                # Jest failures only (99.5%)
+rtk vitest              # Vitest failures only (99.5%)
+rtk playwright test     # Playwright failures only (94%)
+rtk pytest              # Python test failures only (90%)
+rtk rake test           # Ruby test failures only (90%)
+rtk rspec               # RSpec test failures only (60%)
+rtk test <cmd>          # Generic test wrapper - failures only
+```
+
+### Git (59-80% savings)
+```bash
+rtk git status          # Compact status
+rtk git log             # Compact log (works with all git flags)
+rtk git diff            # Compact diff (80%)
+rtk git show            # Compact show (80%)
+rtk git add             # Ultra-compact confirmations (59%)
+rtk git commit          # Ultra-compact confirmations (59%)
+rtk git push            # Ultra-compact confirmations
+rtk git pull            # Ultra-compact confirmations
+rtk git branch          # Compact branch list
+rtk git fetch           # Compact fetch
+rtk git stash           # Compact stash
+rtk git worktree        # Compact worktree
+```
+
+Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
+
+### GitHub (26-87% savings)
+```bash
+rtk gh pr view <num>    # Compact PR view (87%)
+rtk gh pr checks        # Compact PR checks (79%)
+rtk gh run list         # Compact workflow runs (82%)
+rtk gh issue list       # Compact issue list (80%)
+rtk gh api              # Compact API responses (26%)
+```
+
+### JavaScript/TypeScript Tooling (70-90% savings)
+```bash
+rtk pnpm list           # Compact dependency tree (70%)
+rtk pnpm outdated       # Compact outdated packages (80%)
+rtk pnpm install        # Compact install output (90%)
+rtk npm run <script>    # Compact npm script output
+rtk npx <cmd>           # Compact npx command output
+rtk prisma              # Prisma without ASCII art (88%)
+```
+
+### Files & Search (60-75% savings)
+```bash
+rtk ls <path>           # Tree format, compact (65%)
+rtk read <file>         # Code reading with filtering (60%)
+rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
+rtk find <pattern>      # Find grouped by directory (70%)
+```
+
+### Analysis & Debug (70-90% savings)
+```bash
+rtk err <cmd>           # Filter errors only from any command
+rtk log <file>          # Deduplicated logs with counts
+rtk json <file>         # JSON structure without values
+rtk deps                # Dependency overview
+rtk env                 # Environment variables compact
+rtk summary <cmd>       # Smart summary of command output
+rtk diff                # Ultra-compact diffs
+```
+
+### Infrastructure (85% savings)
+```bash
+rtk docker ps           # Compact container list
+rtk docker images       # Compact image list
+rtk docker logs <c>     # Deduplicated logs
+rtk kubectl get         # Compact resource list
+rtk kubectl logs        # Deduplicated pod logs
+```
+
+### Network (65-70% savings)
+```bash
+rtk curl <url>          # Compact HTTP responses (70%)
+rtk wget <url>          # Compact download output (65%)
+```
+
+### Meta Commands
+```bash
+rtk gain                # View token savings statistics
+rtk gain --history      # View command history with savings
+rtk discover            # Analyze Claude Code sessions for missed RTK usage
+rtk proxy <cmd>         # Run command without filtering (for debugging)
+rtk init                # Add RTK instructions to CLAUDE.md
+rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
+```
+
+## Token Savings Overview
+
+| Category | Commands | Typical Savings |
+|----------|----------|-----------------|
+| Tests | vitest, playwright, cargo test | 90-99% |
+| Build | next, tsc, lint, prettier | 70-87% |
+| Git | status, log, diff, add, commit | 59-80% |
+| GitHub | gh pr, gh run, gh issue | 26-87% |
+| Package Managers | pnpm, npm, npx | 70-90% |
+| Files | ls, read, grep, find | 60-75% |
+| Infrastructure | docker, kubectl | 85% |
+| Network | curl, wget | 65-70% |
+
+Overall average: **60-90% token reduction** on common development operations.
+<!-- /rtk-instructions -->

@@ -50,3 +50,6 @@ desktop.ini
 *.log
 *.tmp
 tmp/
+
+# ---- CodeGraph: index cục bộ từng máy, không commit ----
+.codegraph/

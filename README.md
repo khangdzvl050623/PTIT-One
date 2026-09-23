@@ -1,4 +1,12 @@
-# UISPTITv2 — Quản lý đăng ký tín chỉ đa cơ sở
+# PTIT One — Quản lý đăng ký tín chỉ đa cơ sở
+
+**Khung ứng dụng hiện tại:** frontend ở [apps/web](apps/web/README.md),
+backend ở [apps/api](apps/api/README.md). Chạy riêng Vite 5173 và API 8080;
+Vite đã có proxy `/api`. Backend mới có `/api/health`, chưa nối DB hoặc auth.
+Theo quyết định ngày 24/09/2026, Phần 1 làm nghiệp vụ trên một DB tập trung
+trước; xem [phạm vi khung backend và nhánh tiếp theo](docs/PTIT-One-Backend-Khoi-Dong.md).
+Backend chia module nghiệp vụ; xem [cấu trúc và quy tắc đặt code](apps/api/README.md#cấu-trúc-theo-module).
+Các phần kiến trúc phân tán bên dưới là mục tiêu tiếp theo của đồ án.
 
 > Đồ án cuối kỳ môn **Cơ sở dữ liệu phân tán (CSDLPT)**
 > Hệ thống đăng ký tín chỉ cho một trường đại học có nhiều cơ sở đào tạo, xây trên **SQL Server** với phân mảnh ngang, phân mảnh dẫn xuất, nhân bản một chiều và truy vấn phân tán.
@@ -20,25 +28,37 @@ Một trường có nhiều cơ sở đào tạo đặt tại các tỉnh/thành
 
 ## Kiến trúc
 
+```mermaid
+flowchart TB
+    U["Sinh viên · Giảng viên · Admin<br/>Laptop hoặc điện thoại 4G"]
+    PUB["URL HTTPS công khai<br/>Cloudflare Tunnel"]
+    API["SRV-HCM · Spring Boot<br/>React đã build + REST API<br/>Xác thực · SiteContext · Định tuyến"]
+
+    subgraph VPN["Mạng riêng VPN — CHỈ các máy chủ tham gia"]
+        MASTER[("PTITONE_MASTER<br/>Danh mục + DanhBaNguoiDung<br/>Publisher · Distributor")]
+        HCM[("PTITONE_HCM<br/>Mảnh vận hành HCM")]
+        HN[("PTITONE_HN<br/>Mảnh vận hành HN")]
+        DN[("PTITONE_DN<br/>Mảnh vận hành ĐN")]
+    end
+
+    U -->|"HTTPS 443"| PUB
+    PUB -->|"tunnel về localhost:8080"| API
+
+    API -->|"JDBC 1433"| HCM
+    API -->|"JDBC 1433"| HN
+    API -->|"JDBC 1433"| DN
+    API -->|"chỉ quản trị danh mục"| MASTER
+
+    MASTER ==>|"Replication"| HCM
+    MASTER ==>|"Replication"| HN
+    MASTER ==>|"Replication"| DN
+
+    HCM -.->|"Linked Server · báo cáo"| HN
+    HCM -.->|"Linked Server · báo cáo"| DN
+    HCM <-.->|"MS DTC · 2PC chuyển cơ sở"| HN
 ```
-              ┌──────────────────────────────────────────┐
-              │  UIS_MASTER — VAI TRÒ MASTER             │
-              │  Publisher · Distributor                 │
-              │  CoSo · Khoa · CTDT · MonHoc · HocKy     │
-              │  DanhBaSinhVien                          │
-              └────┬──────────────┬──────────────┬───────┘
-                   │              │              │
-          Transactional Replication một chiều (~vài giây)
-                   ▼              ▼              ▼
-      ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
-      │    UIS_HCM     │ │    UIS_HN      │ │    UIS_DN      │
-      │  Subscriber    │ │  Subscriber    │ │  Subscriber    │
-      │  + mảnh vận    │ │  + mảnh vận    │ │  + mảnh vận    │
-      │    hành riêng  │ │    hành riêng  │ │    hành riêng  │
-      └────────────────┘ └────────────────┘ └────────────────┘
-              └──── Linked Server hình sao ────┘
-                    (CHỈ cho thống kê toàn hệ thống)
-```
+
+> **Người dùng chỉ biết một URL HTTPS. API biết Home/Host và chọn database. VPN chỉ nối các máy chủ với nhau. Database không bao giờ xuất hiện trước người dùng.**
 
 **Hai chế độ ghi** — đây là điểm cốt lõi của thiết kế:
 
@@ -51,18 +71,269 @@ Hệ thống **không** phải single-master. Ghi được phân hoạch theo m�
 
 ---
 
+## ⭐ Năm yêu cầu bắt buộc
+
+Đây là danh sách **phải có** — thiếu một mục là mất điểm nặng. Mọi thứ khác trong dự án đều là phần thêm.
+
+| # | Yêu cầu | Hiện thực ở đâu | Mục |
+|---|---|---|---|
+| 1 | **1 phương pháp phân mảnh** | Phân mảnh ngang theo cơ sở *(có thêm dẫn xuất bậc 1 và bậc 2)* | C3 |
+| 2 | **1 phương pháp replication** | Transactional Replication một chiều `PTITONE_MASTER` → Subscriber | D1 |
+| 3 | **1 distributed transaction** | **2PC / MS DTC cho chuyển cơ sở sinh viên** — nguyên tử trên 3 CSDL | **D8** |
+| 4 | **1 tình huống concurrency** | 100 luồng tranh 30 chỗ khi đăng ký học phần | D4 |
+| 5 | **1 distributed query** | `OPENQUERY` thống kê toàn hệ thống qua Linked Server | D2 |
+
+### Vì sao có cả 2PC lẫn Saga
+
+Hệ thống dùng **hai cơ chế khác nhau cho hai nghiệp vụ khác nhau** — và giải thích được vì sao mỗi cái nằm ở chỗ của nó:
+
+| | **Chuyển cơ sở sinh viên** | **Đăng ký liên cơ sở** |
+|---|---|---|
+| Cơ chế | **Distributed transaction (2PC)** | **Saga + idempotent receiver** |
+| Tần suất | Vài lần mỗi kỳ | 32.000 lượt/ngày cao điểm |
+| Tranh chấp | Không | Cao — tranh một dòng lớp |
+| Trạng thái trung gian an toàn | **Không có** — sinh viên không thể "nửa ở HCM nửa ở HN" | Có — `DANG_XU_LY`, và tín chỉ được giữ chỗ trong lúc chờ |
+
+Benchmark **B5** đo cả hai trên cùng một nghiệp vụ để chứng minh lựa chọn này bằng số liệu.
+
+---
+
 ## Kỹ thuật phân tán áp dụng
 
 | Kỹ thuật | Áp dụng cho |
 |---|---|
 | **Phân mảnh ngang** | `SinhVien`, `GiangVien`, `TaiKhoan`, `DotDangKy`, `LopHocPhan` |
 | **Phân mảnh ngang dẫn xuất** | `DangKyHocPhan` (bậc 1, `⋉ LopHocPhan`) · `Diem` (bậc 2) |
-| **Nhân bản một chiều** | Danh mục dùng chung + **danh bạ định vị** `DanhBaSinhVien` |
-| **Linked Server** | Chỉ cho thống kê toàn hệ thống — `OPENQUERY` / `EXEC … AT` |
+| **Nhân bản một chiều** | Danh mục dùng chung + **danh bạ định vị** `DanhBaNguoiDung` |
+| **Giao dịch phân tán (2PC / MS DTC)** | **Chuyển cơ sở sinh viên** — nguyên tử trên 3 CSDL |
+| **Linked Server** | Hai công dụng: **báo cáo tổng hợp** (chỉ đọc, `OPENQUERY`) và **giao dịch phân tán chuyển cơ sở** (có ghi, login riêng) |
 | **Tối ưu truy vấn phân tán** | Aggregate pushdown / semi-join, có benchmark đo bằng số liệu |
 | **Xử lý tương tranh** | `UPDATE … WHERE SoLuongDaDangKy < SoLuongToiDa` + 4 lớp ràng buộc |
-| **Saga + Outbox** | Đăng ký liên cơ sở, thay cho distributed transaction / 2PC |
+| **Saga + Outbox** | Đăng ký liên cơ sở — nơi 2PC sẽ giữ lock qua mạng và làm sụp thông lượng |
 | **Ba mức trong suốt** | Fragmentation · Location · Replication transparency |
+
+---
+
+## Toàn cảnh luồng hoạt động
+
+### Năm loại kết nối — và chỉ năm
+
+| # | Kết nối | Giao thức · cổng | Mục đích |
+|---|---|---|---|
+| 1 | Người dùng → API | **HTTPS 443** | Mọi nghiệp vụ của SV/GV/Admin |
+| 2 | API → CSDL | **JDBC/TDS 1433** qua VPN | Đọc/ghi nghiệp vụ, saga, duyệt catalog site khác |
+| 3 | Master → Subscriber | **Replication** qua VPN | Đồng bộ danh mục + danh bạ |
+| 4 | Reporting Node → site | **Linked Server** qua VPN | Báo cáo của Admin (đọc) **và** giao dịch phân tán chuyển cơ sở (ghi, login riêng) |
+| 5 | Site ↔ Site | **MS DTC — TCP 135 + RPC động 49152–65535** | **Giao dịch phân tán** (chuyển cơ sở) |
+
+⚠️ Loại 5 **không đi qua cổng 1433** — đây là hạ tầng riêng và là chỗ dễ quên nhất khi mở firewall.
+⚠️ **Linked Server không bao giờ phục vụ đăng nhập, đăng ký hay xem điểm.** Nó có đúng hai công dụng: báo cáo tổng hợp (chỉ đọc) và giao dịch phân tán chuyển cơ sở (có ghi, bằng một login riêng chỉ có quyền trên 2 bảng).
+
+### 1. Mở API ra Internet hoạt động thế nào
+
+Máy chạy API nằm sau modem gia đình, không có IP công khai. Điện thoại 4G không thể gọi thẳng `192.168.1.10:8080`. Tunnel giải quyết bằng cách **mở kết nối từ trong ra**:
+
+```mermaid
+sequenceDiagram
+    participant P as Điện thoại 4G
+    participant CF as Cloudflare
+    participant API as Spring Boot localhost:8080
+    participant DB as SQL Server trong VPN
+
+    API->>CF: Chủ động mở tunnel đi RA
+    Note over API,CF: Không cần mở port router<br/>Không cần IP tĩnh
+    P->>CF: HTTPS tới URL công khai
+    CF->>API: Chuyển request qua tunnel
+    API->>DB: JDBC 1433 qua VPN
+    DB-->>API: Dữ liệu
+    API-->>CF: JSON
+    CF-->>P: HTTPS response
+```
+
+**Internet chỉ nhìn thấy HTTPS 443 của Cloudflare.** Cổng 1433 chỉ mở trên interface VPN, không bao giờ forward trên modem. Không public SSMS, SMB hay SQL Server Agent.
+
+### 2. Đăng nhập — bài toán con gà và quả trứng
+
+Muốn biết định tuyến vào CSDL nào thì phải biết người dùng thuộc cơ sở nào; muốn biết điều đó thì phải đọc CSDL. Danh bạ nhân bản chính là lời giải:
+
+```mermaid
+sequenceDiagram
+    participant U as Người dùng
+    participant API as Spring Boot API
+    participant DIR as DanhBaNguoiDung<br/>replica cục bộ
+    participant SITE as CSDL cơ sở tương ứng
+
+    U->>API: POST /api/auth/login
+    API->>DIR: Tra TenDangNhap
+    Note over DIR: Đọc từ replica của site NÀO CŨNG ĐƯỢC<br/>vì chúng giống hệt nhau
+    DIR-->>API: MaCoSo · LoaiNguoiDung · TrangThai
+    API->>SITE: SiteContext = MaCoSo<br/>đọc TaiKhoan
+    SITE-->>API: MatKhauHash · VaiTro
+    API->>API: Kiểm tra mật khẩu
+    API-->>U: JWT chứa sub · role · homeCampus
+    Note over API,U: Request sau đọc claim từ JWT ĐÃ KÝ<br/>TUYỆT ĐỐI không tin tham số client gửi lên
+```
+
+Danh bạ phủ **mọi vai trò**, không riêng sinh viên — nhờ vậy giảng viên và Admin không phải tự chọn cơ sở lúc đăng nhập, và Admin Master có chỗ ở hợp lệ (`TaiKhoanMaster` trong `PTITONE_MASTER`).
+
+### 3. Đăng ký học phần cùng cơ sở — không 2PC, không Linked Server
+
+```mermaid
+sequenceDiagram
+    participant SV as Sinh viên HN
+    participant API as API
+    participant HN as PTITONE_HN
+
+    SV->>API: POST /api/dang-ky
+    API->>API: JWT → homeCampus = HN
+    API->>HN: BEGIN TRAN
+    HN->>HN: UPDATE sức chứa CÓ ĐIỀU KIỆN<br/>WHERE SoLuongDaDangKy < SoLuongToiDa
+    alt ROWCOUNT = 0
+        HN-->>API: Lớp đã đầy → ROLLBACK
+    else Còn chỗ
+        HN->>HN: INSERT DangKyHocPhan
+        HN->>HN: COMMIT
+        HN-->>API: Thành công
+    end
+    API-->>SV: Kết quả
+```
+
+Toàn bộ giao dịch nằm trong `PTITONE_HN` → không thể vượt sức chứa, và bấm hai lần bị chặn bởi `UNIQUE(MaSinhVien, MaLopHP)`.
+
+### 4. Đăng ký liên cơ sở — Saga, không 2PC
+
+```mermaid
+sequenceDiagram
+    participant SV as Sinh viên HCM
+    participant API as API
+    participant HOME as PTITONE_HCM · Home
+    participant HOST as PTITONE_HN · Host
+
+    SV->>API: POST /api/dang-ky lớp của HN
+    API->>HOME: sp_getapplock (MaSinhVien, MaHocKy)<br/>TUẦN TỰ HOÁ TRƯỚC khi kiểm
+    API->>HOME: Kiểm tín chỉ theo kỳ · trùng môn · trùng lịch · tiên quyết
+    API->>HOME: Ghi 4 bảng trong 1 giao dịch<br/>YeuCau + DangKyMonHoc + LichHocMirror + giữ tín chỉ
+    API->>HOST: runAt HN qua JDBC
+    HOST->>HOST: Tra KetQuaXuLyYeuCau theo MaYeuCau
+    alt Đã xử lý trước đó
+        HOST-->>API: Trả NGUYÊN kết quả cũ
+    else Chưa xử lý
+        HOST->>HOST: UPDATE sức chứa + INSERT đăng ký
+        HOST->>HOST: INSERT KetQuaXuLyYeuCau<br/>lưu CẢ khi từ chối
+        HOST-->>API: Kết quả
+    end
+    API->>HOME: DA_DANG_KY / TU_CHOI + ghi snapshot lớp
+    API-->>SV: Trạng thái
+```
+
+**Mất mạng sau khi Host đã ghi nhận?** Home vẫn giữ `DANG_XU_LY`, worker gửi lại cùng `MaYeuCau`, Host tra `KetQuaXuLyYeuCau` và trả đúng kết quả cũ — **không tăng sĩ số lần hai**.
+**Host đang tắt?** Sinh viên thấy "đang chờ cơ sở HN", không khoá tài nguyên nào ở Home.
+
+### 5. ⭐ Chuyển cơ sở sinh viên — GIAO DỊCH PHÂN TÁN (yêu cầu bắt buộc số 3)
+
+Đây là luồng duy nhất mà **API không điều phối** — nó chỉ gọi một stored procedure, còn SQL Server tự lo 2 pha qua MS DTC:
+
+```mermaid
+sequenceDiagram
+    participant AD as Admin Master
+    participant API as API
+    participant SP as sp_ChuyenCoSoSinhVien
+    participant OLD as PTITONE_HCM · cơ sở cũ
+    participant NEW as PTITONE_HN · cơ sở mới
+    participant M as PTITONE_MASTER
+
+    AD->>API: POST /api/chuyen-co-so
+    API->>SP: EXEC — API chỉ GỌI, không điều phối
+    SP->>SP: Kiểm tiền điều kiện<br/>không còn DANG_XU_LY · Outbox đã xả
+    SP->>SP: SET XACT_ABORT ON<br/>BEGIN DISTRIBUTED TRANSACTION
+    SP->>NEW: INSERT SinhVien + TaiKhoan qua Linked Server
+    SP->>OLD: DELETE SinhVien + TaiKhoan
+    SP->>M: UPDATE DanhBaNguoiDung
+    alt Cả ba site OK
+        SP->>SP: COMMIT — MS DTC hai pha
+        SP-->>API: Thành công
+    else Bất kỳ site nào lỗi
+        SP->>SP: ROLLBACK TOÀN BỘ
+        Note over OLD,M: Sinh viên NGUYÊN VẸN ở cơ sở cũ<br/>Danh bạ KHÔNG đổi · không có trạng thái nửa vời
+        SP-->>API: Thất bại
+    end
+    API-->>AD: Kết quả
+```
+
+**Khác biệt với saga:** saga để lại trạng thái trung gian cần bù trừ; 2PC thì **hoặc xong hết, hoặc như chưa từng xảy ra**.
+
+### 6. Nhập điểm và Outbox
+
+```mermaid
+sequenceDiagram
+    participant GV as Giảng viên HN
+    participant API as API
+    participant HN as PTITONE_HN
+    participant W as OutboxWorker
+    participant HCM as PTITONE_HCM
+
+    GV->>API: PUT /api/lop/.../diem
+    API->>HN: BEGIN TRAN
+    HN->>HN: UPDATE Diem
+    HN->>HN: INSERT OutboxSuKien<br/>CHỈ cho sinh viên KHÁCH
+    HN->>HN: COMMIT
+    HN-->>API: OK
+    API-->>GV: Đã lưu điểm
+
+    W->>HN: Đọc Outbox PENDING
+    W->>HCM: Upsert BangDiemMirror<br/>chỉ ghi đè nếu Version mới hơn
+    W->>HN: Đánh dấu SENT
+    Note over W,HN: Thứ tự này quyết định tính đúng đắn<br/>upsert TRƯỚC, đánh dấu SAU
+```
+
+Sinh viên có cơ sở nhà **trùng** site đang nhập điểm thì `Diem` đã nằm đúng chỗ — không cần event. Với tỉ lệ liên cơ sở ~2%, điều này cắt ~98% lượng Outbox.
+
+### 7. Đọc thời khóa biểu và bảng điểm — thuần cục bộ
+
+```mermaid
+flowchart LR
+    SV["Sinh viên HCM"] --> API["GET /api/lich-hoc/me<br/>GET /api/diem/me"]
+    API --> L1["Lớp tại HCM<br/>DangKyHocPhan + LopHocPhan"]
+    API --> L2["Lớp liên cơ sở<br/>snapshot trong YeuCauHocLienCoSo"]
+    API --> L3["Điểm lớp HN/ĐN<br/>BangDiemMirror"]
+    L1 --> R["Kết quả hợp nhất"]
+    L2 --> R
+    L3 --> R
+    R --> SV
+    R -.->|"CHỈ khi bấm Làm mới"| HN["PTITONE_HN — dữ liệu tươi"]
+```
+
+**Không fan-out mặc định.** HN tắt thì sinh viên vẫn xem được, kèm nhãn *"đồng bộ từ HN lúc 14:32"*. Mirror lo **tính sẵn sàng**, fan-out lo **độ tươi**.
+
+### 8. Báo cáo toàn hệ thống — nơi duy nhất dùng Linked Server
+
+```mermaid
+flowchart LR
+    AD["Admin Master"] --> API["API báo cáo"]
+    API --> RN["Global Reporting Node<br/>PTITONE_HCM"]
+    RN --> H["PTITONE_HCM — cục bộ"]
+    RN -.->|"OPENQUERY"| HN["PTITONE_HN"]
+    RN -.->|"OPENQUERY"| DN["PTITONE_DN"]
+    H --> RS["Kết quả tổng hợp"]
+    HN --> RS
+    DN --> RS
+    RS --> AD
+```
+
+`GROUP BY` chạy **tại từng site**, chỉ kết quả rút gọn đi qua mạng. Sinh viên và giảng viên không bao giờ kích hoạt được Linked Server.
+
+### 9. Khi một máy tắt thì chức năng nào còn chạy
+
+| Sự cố | Kết quả |
+|---|---|
+| **`PTITONE_MASTER` tắt** | ✅ Đăng nhập, đăng ký, xem lịch, nhập điểm **vẫn chạy** bằng replica. Chỉ mất: sửa danh mục, nhân bản thay đổi mới, báo cáo tổng hợp |
+| **`PTITONE_HN` tắt** | HCM và ĐN chạy bình thường; sinh viên HN không thao tác được (tài khoản nằm tại HN) |
+| HN tắt khi SV HCM đăng ký lớp HN | Yêu cầu giữ `DANG_XU_LY`, worker retry sau |
+| HN tắt khi SV HCM xem lịch / điểm | ✅ Vẫn xem được từ snapshot và mirror, có thể hơi cũ |
+| **Máy API tắt** | ❌ Toàn bộ website ngừng — **điểm chết đơn lẻ của kiến trúc một API** |
+| Tunnel tắt | Không vào được từ Internet; LAN/VPN vẫn gọi API bình thường |
+
+> `PTITONE_MASTER` là **SPOF của control plane, không phải SPOF của data plane** — đó là đánh đổi được chấp nhận có chủ đích.
 
 ---
 
@@ -90,14 +361,16 @@ Bấm *"đổi sang four-part"* — cùng câu hỏi, hiện ngay **84.213 dòng
 ## Cấu trúc repo
 
 ```
-uisptitv2/
+PTIT-One/
+├── AGENTS.md                       ← quy ước dự án — MỌI agent (Claude, Codex…) đọc file này
+├── CLAUDE.md                       ← chỉ 1 dòng: @AGENTS.md
 ├── docs/
-│   ├── UISPTITv2-Thiet-Ke-v2.md   ← TÀI LIỆU DUY NHẤT của dự án
+│   ├── PTIT-One-Thiet-Ke.md   ← TÀI LIỆU DUY NHẤT của dự án
 │   ├── bao-cao/                    ← bản Word nộp thầy
 │   ├── diagrams/                   ← ERD, lược đồ phân mảnh/ánh xạ/định vị
 │   └── screenshots/                ← ảnh cài đặt từng bước (chụp từ tuần 1)
 ├── db/
-│   ├── 00-create-databases.sql     ← UIS_MASTER · UIS_HCM · UIS_HN · UIS_DN
+│   ├── 00-create-databases.sql     ← PTITONE_MASTER · PTITONE_HCM · PTITONE_HN · PTITONE_DN
 │   ├── 01-schema-master.sql        02-schema-site.sql
 │   ├── 03-roles-grants.sql         04-triggers.sql
 │   ├── 05-linked-server.sql        06-replication/
@@ -110,15 +383,28 @@ uisptitv2/
 
 ---
 
+## Hướng dẫn cho coding agent
+
+Quy tắc dự án nằm ở **[`AGENTS.md`](AGENTS.md)** — Codex và các agent khác đọc trực tiếp file này. Claude Code **không tự nạp** file tên `AGENTS.md`, nên [`CLAUDE.md`](CLAUDE.md) chỉ chứa một dòng `@AGENTS.md` để import.
+
+> **Sửa quy tắc dự án thì sửa `AGENTS.md`.** File riêng của từng agent chỉ giữ cấu hình đặc thù của agent đó.
+
+Kiểm chứng import đã nạp: mở phiên Claude Code mới rồi gõ **`/context`**, xem mục *Memory files*. Muốn biết chính xác file nào được nạp và vì sao thì dùng hook **`InstructionsLoaded`**.
+*(Hỏi Claude một quy tắc trong file rồi thấy trả lời đúng **không** chứng minh được gì — nó có thể tự đọc file sau khi nghe câu hỏi.)*
+
+---
+
 ## Bắt đầu từ đâu
 
-Toàn bộ thiết kế nằm trong **một tài liệu duy nhất**: [`docs/UISPTITv2-Thiet-Ke-v2.md`](docs/UISPTITv2-Thiet-Ke-v2.md)
+Toàn bộ thiết kế nằm trong **một tài liệu duy nhất**: [`docs/PTIT-One-Thiet-Ke.md`](docs/PTIT-One-Thiet-Ke.md)
 
 | Bạn đang cần… | Đọc mục |
 |---|---|
-| Nắm nhanh dự án trong 5 phút | **0.1** bảng quyết định · **0.2** X-Ray · **C0** hai chế độ ghi |
+| Nắm nhanh dự án trong 5 phút | Mục **Toàn cảnh luồng hoạt động** ngay trong README này |
+| Hiểu chi tiết một quyết định | **0.1** bảng quyết định · **0.2** X-Ray · **C0** hai chế độ ghi |
 | Viết báo cáo mục 2.1 / 2.2.1 / 2.2.2 | **Phần A** / **B** / **C** |
 | Làm cài đặt vật lý (mục 3 đề bài) | **Phần F** chi tiết · **I5** checklist tick nhanh |
+| ⭐ Biết đâu là phần **không được phép thiếu** | **0.1b** — năm yêu cầu bắt buộc |
 | Tra nhanh một bảng | **I6** danh sách bảng |
 | Biết còn gì chưa chốt | **I4** việc còn treo |
 | Lo về máy móc, chi phí, uptime | **I2b** vận hành máy chủ |
@@ -131,7 +417,7 @@ Toàn bộ thiết kế nằm trong **một tài liệu duy nhất**: [`docs/UIS
 |---|---|
 | CSDL | **SQL Server Developer Edition** — bắt buộc. Express không làm được Publisher và không có SQL Server Agent |
 | Máy | 2–4 máy Windows 10/11 · 8GB RAM · 20GB đĩa trống |
-| Mạng | Radmin VPN (hoặc Tailscale) |
+| Mạng | Radmin VPN (hoặc Tailscale) — **chỉ nối các máy chủ**, thiết bị người dùng không tham gia |
 | Backend | JDK 17+ · Maven |
 | Frontend | Node 20+ |
 | **Chi phí hạ tầng** | **0đ** — chạy hoàn toàn trên máy của nhóm |
@@ -163,9 +449,9 @@ Thứ tự việc:
 1. Cài SQL Server Developer trên từng máy, bật **Mixed Mode**, mở **TCP 1433**, collation `Vietnamese_CI_AS`
 2. Nối các máy bằng VPN, thêm entry vào `hosts` (replication lưu **tên máy**, không lưu IP)
 3. Bật **SQL Server Agent**, đặt `Automatic`, và xử lý tài khoản chạy Agent trong môi trường workgroup
-4. Tạo 4 database: `UIS_MASTER`, `UIS_HCM`, `UIS_HN`, `UIS_DN`
+4. Tạo 4 database: `PTITONE_MASTER`, `PTITONE_HCM`, `PTITONE_HN`, `PTITONE_DN`
 5. Chạy script trong `db/` theo thứ tự số
-6. Tạo **Linked Server**, rồi **Publication** trên `UIS_MASTER` và các **Subscription**
+6. Tạo **Linked Server**, rồi **Publication** trên `PTITONE_MASTER` và các **Subscription**
 
 > 📖 Chi tiết từng bước, kèm cái bẫy ở mỗi bước: **Phần F** trong tài liệu thiết kế.
 > ✅ Bản tick nhanh để vừa làm vừa đánh dấu: **mục I5**.
@@ -195,19 +481,19 @@ Thêm driver SQL Server và JWT vào `pom.xml`:
 uis:
   sites:
     MASTER:
-      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=UIS_MASTER;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=PTITONE_MASTER;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
     HCM:
-      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=UIS_HCM;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-HCM:1433;databaseName=PTITONE_HCM;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
     HN:
-      url: "jdbc:sqlserver://SRV-HN:1433;databaseName=UIS_HN;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-HN:1433;databaseName=PTITONE_HN;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
     DN:
-      url: "jdbc:sqlserver://SRV-DN:1433;databaseName=UIS_DN;encrypt=true;trustServerCertificate=true"
+      url: "jdbc:sqlserver://SRV-DN:1433;databaseName=PTITONE_DN;encrypt=true;trustServerCertificate=true"
       username: uis_app
       password: ${UIS_DB_PASSWORD}
 
@@ -279,9 +565,60 @@ export default defineConfig({
 npm run dev                     # http://localhost:5173
 ```
 
-> ⚠️ **Giữ frontend tối giản.** Không shadcn/ui, không state library, không router phức tạp — chỉ `fetch` + `useState` + bảng và form. Barem chấm ở tầng CSDL; mỗi giờ dành cho UI là một giờ không dành cho replication đang gãy.
+> ⭐ **UI/UX được đầu tư nghiêm túc.** Nhóm có vai riêng phụ trách ứng dụng nên frontend chạy song song, không lấy giờ của người làm hạ tầng CSDL. Dùng thoải mái shadcn/ui, design system, animation.
+>
+> Thiết kế và dựng màn hình **bắt đầu được từ tuần 1** — mockup và component tĩnh không phụ thuộc schema hay API, nên đây là phần song song hoá tốt nhất trong cả dự án.
+>
+> Ràng buộc duy nhất: **không để frontend làm chậm Phần F** (cài đặt vật lý). Đó là chuyện lịch, không phải chuyện chất lượng UI.
 
-### 4. Biến môi trường
+### 4. Truy cập từ máy khác
+
+Một UIS thật thì sinh viên gọi API qua HTTPS từ bất kỳ đâu — nhưng **CSDL của nó không bao giờ mở ra internet**, nó nằm trong mạng nội bộ của trường. **VPN trong dự án này chính là mạng nội bộ đó.** Thứ cần thêm chỉ là lối vào công khai cho tầng API.
+
+```
+Sinh viên (bất kỳ đâu)  ──HTTPS──►  Tầng API  ──VPN──►  CSDL các cơ sở
+                                    (công khai)          (luôn kín)
+```
+
+**Năm loại kết nối trong hệ thống:**
+
+| Kết nối | Giao thức · cổng | Mục đích |
+|---|---|---|
+| Người dùng → API | HTTPS 443 | Mọi nghiệp vụ |
+| API → CSDL | JDBC/TDS 1433 qua VPN | Đọc/ghi nghiệp vụ |
+| Master → Subscriber | Replication qua VPN | Đồng bộ danh mục + danh bạ |
+| Reporting Node → site | Linked Server qua VPN | Báo cáo Admin (đọc) + chuyển cơ sở (ghi) |
+| Site ↔ Site | **MS DTC — TCP 135 + RPC động** | **Giao dịch phân tán** (chuyển cơ sở) |
+
+⚠️ **Thiết bị người dùng không tham gia VPN.** Chỉ máy chủ nối VPN với nhau; người dùng chỉ thấy một URL HTTPS.
+
+| Tình huống | Cách | Địa chỉ |
+|---|---|---|
+| Demo trong phòng, cùng wifi | Mở firewall cổng 8080 trên máy chạy API | `http://192.168.x.x:8080` |
+| Nhóm làm ở nhà, khác địa điểm | Mọi người vào cùng mạng VPN | `http://26.x.x.x:8080` |
+| **Bất kỳ đâu, qua internet** | Tunnel miễn phí trên máy chạy API | `https://<tên>.trycloudflare.com` |
+
+```bash
+cloudflared tunnel --url http://localhost:8080
+```
+
+Một lệnh là có URL HTTPS công khai — không cần IP tĩnh, không mở port router, không tốn tiền. Máy chạy API vẫn ở trong VPN để với tới CSDL.
+
+**Ba cái bẫy khi chạy nhiều máy:**
+
+1. **Vite chỉ nghe `127.0.0.1`** → máy khác không vào được frontend. Đặt `server: { host: true }`, và proxy phải trỏ về **IP máy chạy API**, không phải `localhost`
+2. **Windows Firewall chặn cổng 8080** — chỉ khi truy cập qua **LAN hoặc VPN**. ⚠️ Dùng Cloudflare Tunnel trên cùng máy thì **không cần** lệnh này, vì `cloudflared` gọi `localhost`:
+   ```powershell
+   New-NetFirewallRule -DisplayName "UIS API 8080" -Direction Inbound `
+     -Protocol TCP -LocalPort 8080 -Action Allow
+   ```
+3. **CORS** — không phát sinh nếu gộp frontend vào backend, hoặc đi qua proxy Vite
+
+> ⭐ **Khuyến nghị cho demo: gộp frontend vào backend.** `npm run build` rồi chép `dist/*` vào `apps/api/src/main/resources/static/`. Một server, một cổng, một URL — không CORS, không proxy, không phải chạy hai tiến trình.
+
+⚠️ **Nếu mở ra internet:** mật khẩu CSDL mạnh · `.env` không bao giờ commit (repo đang công khai) · không để lộ Swagger/Actuator · **cổng 1433 chỉ mở trên interface VPN, không bao giờ forward trên modem** · tunnel chỉ bật lúc demo, **không phải cổng vào production** (URL ngẫu nhiên, không WAF, không rate-limit).
+
+### 5. Biến môi trường
 
 Tạo `apps/api/.env` (đã được `.gitignore` chặn — **không bao giờ commit**):
 
@@ -296,7 +633,9 @@ Commit kèm một file `.env.example` chỉ có tên biến, không có giá tr�
 
 ## Trạng thái
 
-**Giai đoạn hiện tại:** thiết kế đã chốt, chưa bắt đầu cài đặt.
+✅ **THIẾT KẾ ĐÃ CHỐT** — chưa bắt đầu cài đặt.
+
+Mọi thay đổi thiết kế từ đây phải qua thảo luận nhóm và ghi vào bảng quyết định (mục 0.1 của tài liệu thiết kế).
 
 Nguyên tắc thi công: **không viết dòng code ứng dụng nào trước khi phần cài đặt vật lý đã PASS và đã chụp đủ screenshot.**
 
@@ -305,7 +644,8 @@ Việc còn treo — xem mục **I4**:
 - [ ] File Excel phân công đề tài của giảng viên
 - [ ] Tài liệu hướng dẫn Replication của giảng viên
 - [ ] Số liệu quy mô thật (thay giả định trong bảng tần suất)
-- [ ] Chốt số cơ sở và kiểu instance — cuối tuần 1, sau spike replication
+- [ ] Chốt số cơ sở và kiểu instance — cuối tuần 1, sau spike
+- [ ] ⭐ Xác nhận năm yêu cầu bắt buộc với giảng viên, nhất là yêu cầu 3 (giao dịch phân tán)
 - [ ] Chốt người giữ máy chủ từng site + lịch buổi làm việc cố định
 
 ---
@@ -314,10 +654,10 @@ Việc còn treo — xem mục **I4**:
 
 | Tuần | Trọng tâm | |
 |---|---|---|
-| 1 | Phân tích · ERD · bảng tần suất · **spike replication (cổng chặn)** | Bắt buộc |
+| 1 | Phân tích · ERD · bảng tần suất · **spike replication + MS DTC (cổng chặn)** | Bắt buộc |
 | 2 | Thiết kế phân mảnh/ánh xạ/định vị · schema · seed dữ liệu | Bắt buộc |
-| 3 | **Cài đặt vật lý** — VPN · Linked Server · Publication | Bắt buộc |
-| 4 | Trigger · phân quyền · transaction · test tương tranh | Bắt buộc |
+| 3 | **Cài đặt vật lý** — VPN · **MS DTC** · Linked Server · Publication | Bắt buộc |
+| 4 | Trigger · phân quyền · transaction · test tương tranh · **giao dịch phân tán** | Bắt buộc |
 | 5 | Ứng dụng nền tảng | Mở rộng |
 | 6 | Đăng ký liên cơ sở — saga · outbox · projection | Mở rộng |
 | 7 | X-Ray · benchmark · kịch bản sự cố | Mở rộng |
@@ -363,6 +703,19 @@ bench/benchmark        docs/phan-b             docs/phan-c
 2. **Mọi thay đổi phải đi qua Pull Request.** Không có ngoại lệ, kể cả sửa một dòng.
 3. **Tự test kỹ trên máy mình trước khi merge.** Chạy được, không lỗi, không làm hỏng phần người khác — trách nhiệm của người mở PR.
 4. **Không merge PR khi còn conflict.**
+
+### Repo đang bật gì
+
+Bảo vệ nhánh dùng **Rulesets** (Settings → Rules → Rulesets), không dùng branch protection kiểu cũ:
+
+| Ruleset | Áp cho | Rule đang bật |
+|---|---|---|
+| `main - can approval cua owner` | `refs/heads/main` | Bắt buộc PR · **1 approval** · **CODEOWNERS** phải duyệt · gỡ approve khi push thêm · cấm xoá nhánh · cấm force-push |
+| `dev - bat buoc PR, khong can approval` | `refs/heads/dev` | Bắt buộc PR · **0 approval** (tự merge sau khi test) · cấm xoá nhánh · cấm force-push |
+
+Cả hai ruleset đều có **bypass cho vai trò Admin** ở chế độ *Always* — owner vẫn push thẳng được khi thật sự cần. Đây là lối thoát hiểm, **không phải cách làm việc hằng ngày**: mọi thay đổi bình thường vẫn đi qua PR.
+
+> ⚠️ **Vì sao owner cần bypass:** GitHub không cho tự approve PR của chính mình. Khi chỉ có owner làm việc, PR `dev → main` sẽ không ai duyệt được. Bypass gỡ bế tắc đó. Khi nhóm đã có đủ người, hãy để thành viên khác approve cho đúng quy trình.
 
 ### Mức duyệt khác nhau giữa hai nhánh
 
@@ -475,7 +828,7 @@ git merge --abort
 
 ### ⚠️ Ba chỗ dễ conflict nhất của dự án này
 
-**1. `docs/UISPTITv2-Thiet-Ke-v2.md` — nguy hiểm nhất.**
+**1. `docs/PTIT-One-Thiet-Ke.md` — nguy hiểm nhất.**
 Đây là tài liệu duy nhất, gần 1.900 dòng, và **cả 5 người đều viết báo cáo từ nó**. Cách tránh:
 
 - **Chia theo mục, không chia theo file.** Mỗi người chỉ sửa mục được phân công (người làm Phần B không đụng Phần C)

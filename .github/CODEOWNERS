@@ -1,4 +1,60 @@
-# Owner duyệt cho toàn bộ repo.
-# Approval của thành viên khác KHÔNG thay thế được approval của owner
-# đối với PR vào nhánh main.
-* @khangdzvl050623
+# ============================================================
+#  CODEOWNERS — ai phải duyệt phần nào
+# ============================================================
+#
+#  Nhánh main bật "Require review from Code Owners", nên PR vào main
+#  chỉ merge được khi có approval của người được liệt kê dưới đây.
+#
+#  ⚠️ ĐIỀU KIỆN BẮT BUỘC: người được ghi ở đây phải là collaborator
+#     có quyền write TRỞ LÊN, VÀ đã BẤM CHẤP NHẬN lời mời.
+#     Nếu chưa accept, GitHub ÂM THẦM bỏ qua — không báo lỗi gì cả.
+#
+#  Kiểm tra ai còn treo lời mời:
+#     gh api repos/khangdzvl050623/uisptitv2/invitations \
+#        --jq '.[] | {invitee: .invitee.login, quyen: .permissions}'
+#
+#  Cú pháp: khớp từ TRÊN XUỐNG, dòng KHỚP CUỐI CÙNG sẽ thắng.
+#  Nên đặt quy tắc chung ở trên, quy tắc riêng ở dưới.
+# ============================================================
+
+# --- Mặc định: owner duyệt mọi thứ ---
+*                       @khangdzvl050623
+
+
+# ============================================================
+#  KHI CÓ THÊM THÀNH VIÊN — bỏ dấu # và điền username GitHub
+#  Chia theo đúng bảng phân vai ở mục H của tài liệu thiết kế.
+# ============================================================
+
+# --- Tầng CSDL: phần nặng điểm nhất, nên có 2 người duyệt ---
+# /db/                  @khangdzvl050623 @ha-tang-csdl-1
+# /db/06-replication/   @khangdzvl050623 @ha-tang-csdl-1
+
+# --- Tài liệu và báo cáo: ~30% điểm ---
+# /docs/                @ban-tai-lieu
+# /docs/diagrams/       @ban-so-do
+
+# --- Ứng dụng ---
+# /apps/api/            @ban-ung-dung
+# /apps/web/            @ban-ung-dung
+# /bench/               @ha-tang-csdl-2
+
+# --- Cấu hình repo và CI: chỉ owner ---
+# /.github/             @khangdzvl050623
+
+
+# ============================================================
+#  GHI NHỚ
+#
+#  • GitHub KHÔNG cho tự approve PR của chính mình.
+#    Khi chỉ có một codeowner, PR vào main sẽ không ai duyệt được
+#    -> phải dùng bypass của Admin.
+#    Thêm codeowner thứ hai là cách gỡ ĐÚNG vấn đề này.
+#
+#  • Khi đã có codeowner thứ hai, nên hạ bypass của Admin từ
+#    "Always" xuống "Pull requests only":
+#    Settings -> Rules -> Rulesets -> main -> Bypass list
+#
+#  • File này được đọc từ NHÁNH ĐÍCH của PR.
+#    Sửa xong phải merge vào main mới có hiệu lực.
+# ============================================================

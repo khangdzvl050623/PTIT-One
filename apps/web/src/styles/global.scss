@@ -1,0 +1,117 @@
+// Style toàn cục: token màu (custom property), reset, kiểu chữ mặc định.
+// Giao diện chỉ có light mode — không khai báo nhánh prefers-color-scheme.
+// Style riêng của từng component đi vào file `PascalCase.module.scss` của chính
+// component đó.
+@use './tokens' as tokens;
+
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --ptit-red: #d32f2f;
+  --ptit-red-dark: #a51818;
+  --ptit-red-border: #7f1d1d;
+  --ptit-footer-from: #c2410c;
+  --ptit-footer-via: #991b1b;
+  --ptit-footer-to: #7f1d1d;
+
+  // Chữ đặt trên nền đỏ thương hiệu
+  --ptit-on-brand: #fff;
+  --ptit-on-brand-body: rgba(255, 255, 255, 0.9);
+  --ptit-on-brand-soft: #fee2e2;
+  --ptit-on-brand-muted: #fecaca;
+
+  // Trang cổng thông tin: panel, dòng thông báo, ô nhập liệu
+  --portal-bg: linear-gradient(180deg, #b0c4de 0%, #cbd5e1 100%);
+  --panel-bg: #fff;
+  --panel-border: #cbd5e1;
+  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --panel-header-from: #d93838;
+  --panel-header-to: #a81919;
+  --panel-header-hover-from: #bd2121;
+  --panel-header-hover-to: #850f0f;
+  --notice-border: #eceff1;
+  --notice-hover-bg: #fff8f8;
+  --notice-text: #1e293b;
+  --notice-meta: #64748b;
+  --new-badge: #ea580c;
+  --accent-red: #b91c1c;
+  --callout-border: #dc2626;
+  --callout-inner-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  --field-border: #cbd5e1;
+  --field-icon-bg: #f1f5f9;
+  --field-icon-text: #64748b;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: tokens.$breakpoint-tablet) {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: tokens.$breakpoint-tablet) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: tokens.$breakpoint-tablet) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
