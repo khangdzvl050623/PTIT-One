@@ -5,6 +5,7 @@ backend ở [apps/api](apps/api/README.md). Chạy riêng Vite 5173 và API 8080
 Vite đã có proxy `/api`. Backend mới có `/api/health`, chưa nối DB hoặc auth.
 Theo quyết định ngày 24/09/2026, Phần 1 làm nghiệp vụ trên một DB tập trung
 trước; xem [phạm vi khung backend và nhánh tiếp theo](docs/PTIT-One-Backend-Khoi-Dong.md).
+Backend chia module nghiệp vụ; xem [cấu trúc và quy tắc đặt code](apps/api/README.md#cấu-trúc-theo-module).
 Các phần kiến trúc phân tán bên dưới là mục tiêu tiếp theo của đồ án.
 
 > Đồ án cuối kỳ môn **Cơ sở dữ liệu phân tán (CSDLPT)**

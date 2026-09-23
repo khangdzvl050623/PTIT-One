@@ -15,13 +15,29 @@ backend được dựng sớm theo yêu cầu này, không chờ cổng G3 trong
 Nhánh dựng trên commit `33b7016` của `FrontEnd` sau khi fetch. `dev` tại thời điểm
 bắt đầu còn ở `f480b7d`, nên so sánh nhánh này với `dev` sẽ thấy cả lịch sử
 frontend và các commit nền mà `dev` chưa nhận. Phần backend mới được giới hạn
-trong commit `feat: them khung backend Spring Boot va proxy API`.
+trong commit `feat: them khung backend Spring Boot va proxy API`; các commit
+sau chuẩn hóa vị trí frontend và chuyển backend sang module nghiệp vụ.
 
 Khi review, dùng `FrontEnd...feature/api-skeleton` để xem backend bổ sung và
 việc chuyển frontend về `apps/web`. Commit di chuyển chỉ đổi vị trí file;
 commit sau cập nhật đường dẫn và tên package.
 Người quản lý repo quyết định nhập nhánh frontend trước hay nhận toàn bộ qua
 PR nhánh này vào `dev`; không cherry-pick lại những commit đã có sau khi merge.
+
+## Khung backend theo module
+
+Theo quyết định mới nhất của nhóm, backend chia thành `auth`, `student`,
+`course`, `enrollment`, `grade`, `timetable`, cùng `health` và `shared`.
+Các tầng controller/service/repository/dto/model nằm bên trong module khi
+triển khai, thay cho bốn tầng dùng chung ở package gốc.
+
+Hiện chỉ `health/controller/HealthController` và `health/dto/HealthResponse`
+có chức năng thực tế; các module nghiệp vụ là khung được chú thích. Hợp đồng
+`GET /api/health`, cổng 8080 và proxy Vite không đổi. Chưa nối DB hoặc auth.
+Sau khi cập nhật nhánh, chạy `mvnw.cmd clean verify` tại `apps/api` để loại
+class cũ khỏi `target` trước khi kiểm tra cấu trúc mới.
+
+Xem [cách đặt code và quy tắc phụ thuộc](../apps/api/README.md#cấu-trúc-theo-module).
 
 ## Cập nhật máy đang dùng thư mục frontend cũ
 
