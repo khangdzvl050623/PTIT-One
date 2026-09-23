@@ -1,11 +1,11 @@
 # fe-ptitone
 
-Vue 3 + TypeScript + Vite. Frontend của **PTIT One**.
+React 19 + TypeScript + Vite + SCSS Modules. Frontend của **PTIT One**.
 
-> ⚠️ Tài liệu thiết kế đã chốt (`docs/PTIT-One-Thiet-Ke.md`, mục J2) ghi frontend
-> là React + Vite tại `apps/web`. Thư mục này lệch cả hai điểm đó theo quyết
-> định của nhóm: giữ Vue 3, giữ vị trí `fe-ptitone/` ở gốc repo. Nếu đổi lại
-> quyết định này, cập nhật ghi chú ở đây và ở J2.
+> Tài liệu thiết kế (`docs/PTIT-One-Thiet-Ke.md`, mục J2) ghi frontend là
+> **React + Vite**. Công nghệ ở đây đã theo đúng J2; chỉ khác vị trí: giữ
+> `fe-ptitone/` ở gốc repo thay vì `apps/web` theo quyết định của nhóm.
+> Nếu đổi vị trí, cập nhật ghi chú ở đây và ở J2.
 
 ```bash
 npm install
@@ -15,27 +15,31 @@ npm run build
 
 ## Kiến trúc: Feature-Sliced (rút gọn)
 
-Ba tầng, phụ thuộc **một chiều**: `app → features → shared`.
+Ba tầng, phụ thuộc **một chiều**: `app → pages → features → shared`.
 **Feature không import lẫn nhau. `shared` không import feature.**
 
 ```
 src/
 ├── app/
 │   ├── router/        định tuyến, route guard theo vai trò
-│   ├── providers/      plugin toàn cục (Pinia, i18n... khi cần)
+│   ├── providers/      provider toàn cục (router, error boundary...)
 │   └── layouts/          khung trang: layout mặc định, layout admin, layout auth
 │
+├── pages/              màn hình — HomePage (cổng thông tin), PlaceholderPage (logo mặc định), NotFoundPage
+│
 ├── shared/
-│   ├── ui/             design system: Button · Table · Field · Dialog · Badge
+│   ├── ui/             design system: đã có Logo · Icon · Panel — còn Button · Table · Field · Dialog · Badge
 │   ├── api/             client fetch duy nhất — gắn JWT · map lỗi · bóc _xray
-│   ├── composables/      useAuth · useSite · useAsync
+│   ├── hooks/            useAuth · useSite · useAsync
 │   ├── lib/                format ngày · tiết học · điểm
-│   ├── config/               nav, định danh trường/cơ sở
+│   ├── config/               định danh trường/cơ sở
 │   ├── constants/              route names, copy tĩnh
 │   └── types/                   type dùng chung toàn app
 │
 ├── features/
-│   ├── auth/            đăng nhập · giữ JWT
+│   ├── auth/            đăng nhập · giữ JWT   (đã có LoginForm)
+│   ├── thong-bao/         thông báo + học phí trang chủ (NoticeSpotlight · NoticeList · NoticeRow)
+│   ├── thong-ke/               thống kê truy cập (AccessStats)
 │   ├── lich-hoc/         thời khoá biểu hợp nhất
 │   ├── dang-ky/            tìm lớp · đăng ký · trạng thái chỗ trống
 │   ├── lien-co-so/           duyệt lớp site khác · gửi yêu cầu · theo dõi DANG_XU_LY / DANG_HUY
@@ -49,10 +53,21 @@ src/
 └── styles/                 _tokens.scss (màu, spacing, breakpoint) · _type.scss (type scale, dạng mixin)
 ```
 
-Mỗi feature có `components/` (UI riêng của feature) và `composables/`
+Mỗi feature có `components/` (UI riêng của feature) và `hooks/`
 (state/logic riêng của feature), cộng `index.ts` làm barrel export công khai —
 phần còn lại của app chỉ import qua barrel đó, không đào sâu vào nội bộ
 feature.
+
+Component đặt tên `PascalCase.tsx`, style đi kèm `PascalCase.module.scss`
+(CSS Modules). Giá trị màu/khoảng cách/cỡ chữ lấy từ token trong `styles/`,
+không viết thẳng số vào component.
+
+**Chỉ light mode.** Không khai báo `prefers-color-scheme: dark` — token màu
+đặt một lần ở `:root` trong `global.scss`. Khi nào cần dark mode thì thêm nhánh
+ghi đè token, không sửa từng component.
+
+Dữ liệu mẫu của màn hình đặt trong `features/<tên>/data/` (chưa nối API) —
+component không nhúng sẵn mảng dữ liệu hay chuỗi hiển thị dài.
 
 ## Quy ước
 
@@ -61,7 +76,9 @@ feature.
 | API client là adapter duy nhất | `shared/api` — không component nào gọi `fetch` trực tiếp |
 | Overlay X-Ray xuyên suốt | `features/xray` đọc `_xray` từ **mọi** response, feature khác không cần biết |
 | Design tokens | `styles/` — khai báo một chỗ, không lặp giá trị trong từng component |
-| Ảnh tĩnh | import qua `assets/*.ts`, không đường dẫn chuỗi rải rác |
+| Import nội bộ | alias `@/...` (khai báo ở `vite.config.ts` + `tsconfig.app.json`), không leo `../..` |
+| Ảnh tĩnh | import qua `assets/index.ts`, không đường dẫn chuỗi rải rác |
+| Màu/nền logo | `Logo` nhận `variant="tile"` khi nền phía sau đậm (header/footer đỏ) |
 
 Xem thêm mục **J2. Frontend** và **J4. Thứ tự dựng** trong
 `docs/PTIT-One-Thiet-Ke.md` để biết feature nào dựng được từ tuần 1 (không

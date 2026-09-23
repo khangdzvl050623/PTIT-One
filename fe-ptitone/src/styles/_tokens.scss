@@ -1,6 +1,49 @@
-// Design tokens: màu, spacing, breakpoint, chiều cao header — khai báo một chỗ duy nhất.
-// Màu dùng custom property (biến CSS) trong global.scss vì cần đổi theo
-// prefers-color-scheme lúc chạy — biến $scss ở đây chỉ cho giá trị cố định
-// lúc build, ví dụ breakpoint.
+// Design tokens: màu, spacing, breakpoint, cỡ chữ — khai báo một chỗ duy nhất.
+// Màu dùng custom property (biến CSS) trong global.scss để component đổi màu
+// theo theme sau này; biến $scss ở đây chỉ cho giá trị cố định lúc build,
+// ví dụ breakpoint, spacing, cỡ chữ.
+//
+// Dùng trong component:
+//   @use '@/styles/tokens' as tokens;
+//   @media (max-width: tokens.$breakpoint-mobile) { ... }
 
+// Breakpoint
 $breakpoint-tablet: 1024px;
+$breakpoint-compact: 768px;
+$breakpoint-mobile: 640px;
+
+// Layout
+$layout-max-width: 1360px;
+$home-spotlight-width: 270px;
+
+// Type scale (các cỡ chữ dùng lặp lại giữa nhiều component)
+$font-size-2xs: 10px;
+$font-size-xs: 11px;
+$font-size-sm: 13px;
+$font-size-md: 15px;
+$font-size-lg: 20px;
+$font-size-xl: 24px;
+$font-size-2xl: 34px;
+
+// Spacing scale
+$space-2xs: 2px;
+$space-xs: 4px;
+$space-sm: 6px;
+$space-md: 8px;
+$space-lg: 12px;
+$space-xl: 16px;
+$space-2xl: 24px;
+$space-3xl: 32px;
+
+// Bo góc
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 16px; // rounded-2xl
+
+// Logo (ảnh gốc 79×96, tỉ lệ dọc)
+$logo-height-sm: 32px;
+$logo-height-md: 44px;
+$logo-height-lg: 80px;
+
+// Chuyển động
+$transition-fast: 0.2s;

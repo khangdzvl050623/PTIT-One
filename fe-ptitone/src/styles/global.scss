@@ -1,6 +1,7 @@
 // Style toàn cục: token màu (custom property), reset, kiểu chữ mặc định.
-// Style riêng của từng component đi vào <style module lang="scss"> của chính
-// component đó — xem src/components/HelloWorld.vue làm ví dụ.
+// Giao diện chỉ có light mode — không khai báo nhánh prefers-color-scheme.
+// Style riêng của từng component đi vào file `PascalCase.module.scss` của chính
+// component đó.
 @use './tokens' as tokens;
 
 :root {
@@ -9,12 +10,42 @@
   --bg: #fff;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --ptit-red: #d32f2f;
+  --ptit-red-dark: #a51818;
+  --ptit-red-border: #7f1d1d;
+  --ptit-footer-from: #c2410c;
+  --ptit-footer-via: #991b1b;
+  --ptit-footer-to: #7f1d1d;
+
+  // Chữ đặt trên nền đỏ thương hiệu
+  --ptit-on-brand: #fff;
+  --ptit-on-brand-body: rgba(255, 255, 255, 0.9);
+  --ptit-on-brand-soft: #fee2e2;
+  --ptit-on-brand-muted: #fecaca;
+
+  // Trang cổng thông tin: panel, dòng thông báo, ô nhập liệu
+  --portal-bg: linear-gradient(180deg, #b0c4de 0%, #cbd5e1 100%);
+  --panel-bg: #fff;
+  --panel-border: #cbd5e1;
+  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --panel-header-from: #d93838;
+  --panel-header-to: #a81919;
+  --panel-header-hover-from: #bd2121;
+  --panel-header-hover-to: #850f0f;
+  --notice-border: #eceff1;
+  --notice-hover-bg: #fff8f8;
+  --notice-text: #1e293b;
+  --notice-meta: #64748b;
+  --new-badge: #ea580c;
+  --accent-red: #b91c1c;
+  --callout-border: #dc2626;
+  --callout-inner-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  --field-border: #cbd5e1;
+  --field-icon-bg: #f1f5f9;
+  --field-icon-text: #64748b;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -22,7 +53,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -32,22 +63,6 @@
 
   @media (max-width: tokens.$breakpoint-tablet) {
     font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
 }
 
@@ -95,14 +110,8 @@ code {
   background: var(--code-bg);
 }
 
-#app {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+#root {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }

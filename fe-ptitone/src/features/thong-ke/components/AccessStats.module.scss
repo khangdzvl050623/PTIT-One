@@ -1,0 +1,47 @@
+@use '@/styles/tokens' as tokens;
+
+.wrap {
+  text-align: right;
+  user-select: none;
+}
+
+.title {
+  margin: 0 0 tokens.$space-xs;
+  font-size: tokens.$font-size-sm;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--accent-red);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-2xs;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: tokens.$space-md;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-text);
+}
+
+.icon {
+  color: var(--accent-red);
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.value {
+  width: 40px;
+  font-family: var(--sans);
+  text-align: right;
+  color: var(--text-h);
+}

@@ -1,0 +1,84 @@
+@use '@/styles/tokens' as tokens;
+
+.spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+  min-width: 0;
+  padding-right: tokens.$space-lg;
+  border-right: 1px solid var(--notice-border);
+
+  @media (max-width: tokens.$breakpoint-compact) {
+    padding-right: 0;
+    padding-bottom: tokens.$space-lg;
+    border-right: none;
+    border-bottom: 1px solid var(--notice-border);
+  }
+}
+
+/* Quy đổi từ template Tailwind gốc:
+   border-[3px] border-red-600 rounded-2xl p-4 bg-white shadow-inner relative my-1 */
+$icon-top: -12px; // -top-3
+$icon-left: 40px; // left-10
+
+.callout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: tokens.$space-xs 0; // my-1
+  padding: tokens.$space-xl; // p-4
+  border: 3px solid var(--callout-border);
+  border-radius: tokens.$radius-lg; // rounded-2xl
+  background: var(--panel-bg);
+  box-shadow: var(--callout-inner-shadow);
+}
+
+.calloutIcon {
+  position: absolute;
+  top: $icon-top;
+  left: $icon-left;
+  padding: 0 tokens.$space-xs; // px-1
+  color: var(--callout-border);
+  background: var(--panel-bg);
+  box-sizing: content-box;
+  transform: rotate(-12deg);
+}
+
+.calloutTitle {
+  margin: tokens.$space-lg 0 tokens.$space-xs; // mt-3 mb-1
+  font-size: tokens.$font-size-xl; // text-2xl
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.05em; // tracking-wider
+  color: var(--callout-border);
+  user-select: none;
+}
+
+.meta {
+  font-size: tokens.$font-size-xs;
+  font-weight: 500;
+  color: var(--notice-meta);
+  text-align: right;
+}
+
+.title {
+  font-size: tokens.$font-size-sm;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--accent-red);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.excerpt {
+  margin: 0;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.55;
+  color: var(--notice-meta);
+  text-align: justify;
+}

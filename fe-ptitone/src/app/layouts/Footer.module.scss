@@ -1,0 +1,41 @@
+@use '@/styles/tokens' as tokens;
+
+.footer {
+  margin-top: auto;
+  padding: tokens.$space-md tokens.$space-xl;
+  font-size: tokens.$font-size-xs;
+  color: var(--ptit-on-brand-body);
+  border-top: 1px solid var(--ptit-red-border);
+  background: linear-gradient(
+    to bottom,
+    var(--ptit-footer-from) 0%,
+    var(--ptit-footer-via) 60%,
+    var(--ptit-footer-to) 100%
+  );
+  box-sizing: border-box;
+}
+
+.inner {
+  max-width: tokens.$layout-max-width;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: tokens.$space-lg;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-2xs;
+}
+
+.line {
+  margin: 0;
+}
+
+.version {
+  margin: 0;
+  font-size: tokens.$font-size-2xs;
+  color: var(--ptit-on-brand-muted);
+}

@@ -1,0 +1,81 @@
+@use '@/styles/tokens' as tokens;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-md;
+}
+
+.field {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+  border-radius: tokens.$radius-sm;
+
+  &:focus-within {
+    border-color: var(--accent-red);
+  }
+}
+
+.fieldIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  font-size: tokens.$font-size-sm;
+  color: var(--field-icon-text);
+  background: var(--field-icon-bg);
+  border-right: 1px solid var(--field-border);
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  padding: tokens.$space-xs tokens.$space-md;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  color: var(--text-h);
+  background: transparent;
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: tokens.$space-sm;
+  padding: tokens.$space-sm tokens.$space-lg;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  color: var(--ptit-on-brand);
+  background: linear-gradient(
+    to bottom,
+    var(--panel-header-from) 0%,
+    var(--panel-header-to) 100%
+  );
+  border: 1px solid var(--ptit-red-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: background tokens.$transition-fast;
+
+  &:hover {
+    background: linear-gradient(
+      to bottom,
+      var(--panel-header-hover-from) 0%,
+      var(--panel-header-hover-to) 100%
+    );
+  }
+}
+
+.message {
+  margin: 0;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.45;
+  color: var(--notice-meta);
+}

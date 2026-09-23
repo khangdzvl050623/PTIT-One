@@ -1,0 +1,30 @@
+@use '@/styles/tokens' as tokens;
+
+.logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: tokens.$space-2xs tokens.$space-xs;
+  border-radius: tokens.$radius-sm;
+  background: var(--ptit-on-brand);
+  box-sizing: border-box;
+}
+
+.sm {
+  height: tokens.$logo-height-sm;
+}
+
+.md {
+  height: tokens.$logo-height-md;
+}
+
+.lg {
+  height: tokens.$logo-height-lg;
+}
