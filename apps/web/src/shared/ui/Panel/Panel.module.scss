@@ -1,0 +1,36 @@
+@use '@/styles/tokens' as tokens;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--panel-bg);
+  border-radius: tokens.$radius-sm tokens.$radius-sm 0 0;
+  box-shadow: var(--panel-shadow);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-sm;
+  margin: 0;
+  padding: tokens.$space-sm tokens.$space-xl;
+  font-size: tokens.$font-size-sm;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--ptit-on-brand);
+  background: linear-gradient(
+    to bottom,
+    var(--panel-header-from) 0%,
+    var(--panel-header-to) 100%
+  );
+  border-bottom: 1px solid var(--ptit-red-border);
+  border-top-left-radius: tokens.$radius-sm;
+  border-top-right-radius: tokens.$radius-sm;
+}
+
+.body {
+  flex: 1;
+  padding: tokens.$space-lg;
+  background: var(--panel-bg);
+}

@@ -1,0 +1,46 @@
+@use '@/styles/tokens' as tokens;
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: tokens.$space-sm;
+  padding: tokens.$space-3xl tokens.$space-xl;
+  text-align: center;
+}
+
+.code {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: tokens.$font-size-2xl;
+  font-weight: 600;
+  color: var(--ptit-red);
+}
+
+.title {
+  margin: 0;
+  font-size: tokens.$font-size-lg;
+  color: var(--text-h);
+}
+
+.text {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  color: var(--text);
+}
+
+.link {
+  margin-top: tokens.$space-md;
+  padding: tokens.$space-sm tokens.$space-lg;
+  border-radius: tokens.$radius-sm;
+  font-size: tokens.$font-size-sm;
+  font-weight: 500;
+  color: var(--ptit-on-brand);
+  background: var(--ptit-red);
+  text-decoration: none;
+  transition: background tokens.$transition-fast;
+
+  &:hover {
+    background: var(--ptit-red-dark);
+  }
+}

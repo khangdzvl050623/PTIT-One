@@ -1,0 +1,61 @@
+@use '@/styles/tokens' as tokens;
+
+.topBar {
+  width: 100%;
+  color: var(--ptit-on-brand);
+  background: linear-gradient(to bottom, var(--ptit-red) 0%, var(--ptit-red-dark) 100%);
+  border-bottom: 1px solid var(--ptit-red-border);
+  padding: tokens.$space-xs tokens.$space-xl;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.inner {
+  max-width: tokens.$layout-max-width;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$space-lg;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-md;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.siteName {
+  font-size: tokens.$font-size-xs;
+  font-weight: 500;
+  color: var(--ptit-on-brand-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    display: none;
+  }
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-lg;
+  flex-shrink: 0;
+}
+
+.navLink {
+  font-size: tokens.$font-size-sm;
+  font-weight: 500;
+  color: var(--ptit-on-brand);
+  text-decoration: none;
+  transition: color tokens.$transition-fast;
+
+  &:hover {
+    color: var(--ptit-on-brand-soft);
+  }
+}

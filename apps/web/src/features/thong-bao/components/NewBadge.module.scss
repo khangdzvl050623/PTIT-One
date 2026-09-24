@@ -1,0 +1,11 @@
+@use '@/styles/tokens' as tokens;
+
+.badge {
+  display: inline-block;
+  margin-left: tokens.$space-xs;
+  font-size: tokens.$font-size-2xs;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--new-badge);
+  text-shadow: 0 0 1px currentColor;
+}

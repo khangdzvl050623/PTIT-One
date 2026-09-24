@@ -8,6 +8,24 @@
 **Tên sản phẩm chính thức: PTIT One.** Dùng thống nhất tên này trong giao diện
 và tài liệu dự án.
 
+**Cập nhật phạm vi ngày 24/09/2026 theo yêu cầu nhóm:** Phần 1 làm UI/UX và
+nghiệp vụ với một database tập trung; Phần 2 phân tán lập kế hoạch sau.
+Được dựng `apps/api` và nối chức năng Phần 1 trước cổng G3 của lịch cũ.
+Frontend ở `apps/web`, backend ở `apps/api`; nhóm đã thống nhất cấu trúc này.
+Mọi hướng dẫn chạy, cấu hình và tính năng mới dùng hai đường dẫn trên.
+Backend chia module nghiệp vụ: `auth`, `student`, `course`, `enrollment`,
+`grade`, `timetable`; `health` phục vụ liveness, `shared` chứa kỹ thuật dùng chung.
+Trong mỗi module, thêm `controller/service/repository/dto/model` khi có code;
+`policy` dành cho quy tắc thuần phức tạp. Không dựng lại bốn tầng chung
+`domain/application/infrastructure/interfaces` ở package gốc.
+Controller nghiệp vụ gọi service; SQL nằm trong repository. `model/policy`
+không import Spring/JDBC. Module gọi API công khai của nhau, không truy cập
+repository nội bộ của module khác; không phụ thuộc vòng. `shared` không
+import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
+Khung API hiện chưa kết nối DB; xem `docs/PTIT-One-Backend-Khoi-Dong.md`.
+Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
+điều kiện để skeleton hoặc Phần 1 khởi động.
+
 Đồ án **Cơ sở dữ liệu phân tán**. SQL Server, nhiều cơ sở, phân mảnh ngang +
 nhân bản một chiều + giao dịch phân tán + truy vấn phân tán.
 
@@ -44,7 +62,7 @@ Trước khi sinh code, đọc mục **0.1b** (năm yêu cầu bắt buộc) và
 | **Một giao dịch = một site** | `@Transactional` **không bao giờ** trải hai DataSource. `AbstractRoutingDataSource` phân giải khóa một lần; đổi site giữa chừng sẽ ghi nhầm site hoặc mất tính nguyên tử **mà không ném lỗi**. Ghép nhiều site bằng saga, không bằng transaction |
 | **Cơ sở lấy từ JWT đã ký** | **Tuyệt đối không** tin tham số client gửi lên (`?campus=HN`). Đó là lỗ hổng leo thang đặc quyền |
 | **JdbcTemplate cho đường nóng** | Đăng ký, truy vấn chéo site, benchmark — cần thấy chính xác SQL và đọc `@@ROWCOUNT`. JPA chỉ dùng cho CRUD danh mục nếu thật sự cần |
-| **Đúng 3 port, không hơn** | `CrossSiteQuery`, `GlobalReport`, `CatalogHealth`. `SiteContext`, `RoutingDataSource`, `OutboxWorker` là class cụ thể, không phải interface |
+| **Phần 2: đúng 3 port phân tán, chưa dựng ở Phần 1** | `CrossSiteQuery`, `GlobalReport`, `CatalogHealth`. `SiteContext`, `RoutingDataSource`, `OutboxWorker` là class cụ thể, không phải interface |
 | **`initialization-fail-timeout: -1`** | Bắt buộc, để ứng dụng vẫn khởi động khi một site đang tắt. Thiếu nó là hỏng kịch bản demo tắt site |
 | **Thứ tự Outbox** | Upsert vào mirror **TRƯỚC**, đánh dấu `SENT` **SAU**. Đảo thứ tự là mất sự kiện vĩnh viễn |
 | **Outbox chỉ cho sinh viên khách** | Sinh viên có cơ sở nhà trùng site thì điểm đã nằm đúng chỗ, không phát sự kiện |

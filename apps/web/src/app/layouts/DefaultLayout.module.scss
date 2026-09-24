@@ -1,0 +1,17 @@
+@use '@/styles/tokens' as tokens;
+
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--portal-bg);
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: tokens.$layout-max-width;
+  margin: 0 auto;
+  padding: tokens.$space-lg tokens.$space-md;
+  box-sizing: border-box;
+}

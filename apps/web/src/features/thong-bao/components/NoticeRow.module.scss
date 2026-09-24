@@ -1,0 +1,49 @@
+@use '@/styles/tokens' as tokens;
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  padding: tokens.$space-sm tokens.$space-xs;
+  border-bottom: 1px solid var(--notice-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--notice-hover-bg);
+  }
+}
+
+.text {
+  min-width: 0;
+}
+
+.chevron {
+  margin-right: tokens.$space-xs;
+  font-size: tokens.$font-size-xs;
+  font-weight: 900;
+  color: var(--accent-red);
+}
+
+.link {
+  font-size: tokens.$font-size-sm;
+  line-height: 1.45;
+  color: var(--notice-text);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--accent-red);
+    text-decoration: underline;
+  }
+}
+
+.meta {
+  flex-shrink: 0;
+  padding-left: tokens.$space-md;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+  white-space: nowrap;
+}

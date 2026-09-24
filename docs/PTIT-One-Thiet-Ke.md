@@ -41,7 +41,7 @@
 | **F** — Cài đặt vật lý | F1 VPN · F2 link mạng · F3 SQL Server · F4 Agent · **F4b ⭐ MS DTC** · F5 Linked Server · F6 Publication · F7 thử giao tác |
 | **G** — Kiểm thử & đo đạc | G1 seed · G2 benchmark · G3 tương tranh · G4 sự cố · G5 2PC vs saga · G6 phân mảnh dọc · G7 deadlock |
 | **H** — Lộ trình | 8 tuần + phân vai 5 người |
-| **J** — Khung mã nguồn ➕ | J1 backend Hexagonal · J2 frontend Feature-Sliced · J3 CSDL `db/` · J4 thứ tự dựng |
+| **J** — Khung mã nguồn ➕ | J1 backend theo module nghiệp vụ · J2 frontend Feature-Sliced · J3 CSDL `db/` · J4 thứ tự dựng |
 | **I** — Phụ lục | I1 repo · I2 plan B · I2b vận hành máy chủ · I3 rủi ro · I4 việc còn treo · **I5 checklist tick nhanh** · **I6 danh sách bảng** · I7 nguồn tham khảo |
 
 ---
@@ -64,6 +64,9 @@
 
 | Mã | Quyết định | Chốt |
 |---|---|---|
+| D22 | Tổ chức backend theo module nghiệp vụ | Một Spring Boot; `auth/student/course/enrollment/grade/timetable`, thêm `health` và `shared`. Các tầng controller/service/repository/dto/model nằm trong từng module khi triển khai; bỏ bốn tầng chung ở gốc. Xem J1 |
+| D21 | Cấu trúc ứng dụng thống nhất ngày 24/09/2026 | Frontend ở `apps/web`, backend ở `apps/api`. Việc chuyển thư mục giữ nguyên UI, alias và proxy `/api`; xem [hướng dẫn cập nhật máy khác](PTIT-One-Backend-Khoi-Dong.md#cập-nhật-máy-đang-dùng-thư-mục-frontend-cũ) |
+| D20 | Thứ tự triển khai cập nhật ngày 24/09/2026 | Theo yêu cầu nhóm: Phần 1 là UI/UX và nghiệp vụ trên một database tập trung; dựng backend sớm. Phần 2 phân tán lập kế hoạch sau. Khung hiện tại chưa nối DB; xem [ghi chú backend](PTIT-One-Backend-Khoi-Dong.md). Lịch/cổng chặn cũ không áp dụng để trì hoãn Phần 1 |
 | D1 | Đăng ký liên cơ sở (Home/Host) | ✅ Làm |
 | D2 | Master cho dữ liệu tham chiếu | ✅ **Database `PTITONE_MASTER` riêng biệt, đặt trên hạ tầng SRV-HCM** — Master là một *vai trò*, không phải một cơ sở (xem C0) |
 | **D14** | **Tách Master khỏi CSDL vận hành** | ✅ **Có.** `PTITONE_MASTER` là Publisher; cả ba CSDL vận hành (`PTITONE_HCM`, `PTITONE_HN`, `PTITONE_DN`) đều là Subscriber → topology **đối xứng hoàn toàn** |
@@ -1076,10 +1079,21 @@ Một lệnh, có ngay URL HTTPS công khai. Không cần IP tĩnh, không mở 
 
 ## C8. Abstraction boundary — **3 port, không hơn** ➕
 
-Kiến trúc theo **Ports & Adapters (Hexagonal)**. Ba interface là **port** ở tầng `application`; bản cài đặt dùng SQL Server là **adapter** ở tầng `infrastructure`.
+**Phạm vi: kế hoạch Phần 2.** Backend tổ chức theo module nghiệp vụ (J1).
+Ports & Adapters chỉ dùng tại ba điểm thay thế dưới đây, chưa triển khai ở
+skeleton Phần 1. Port đặt trong module sử dụng nó; adapter đặt gần phần
+truy cập dữ liệu của module, không dựng lại bốn tầng chung ở gốc.
+
+| Port | Package dự kiến | Triển khai dự kiến |
+|---|---|---|
+| `CrossSiteQuery` | `shared/site/port` | `shared/site/adapter` |
+| `GlobalReport` | `report/port` | `report/repository` |
+| `CatalogHealth` | `course/port` | `course/repository` |
+
+`CatalogHealth` kiểm đồng bộ danh mục, khác endpoint HTTP liveness trong `health`.
 
 ```java
-// application/port/
+// Cac port thuoc package tuong ung trong bang tren (Phan 2).
 interface CrossSiteQuery {           // đọc chéo site theo từng người dùng
     <T> List<T> fanOut(Set<String> sites, SiteReader<T> reader);
 }
@@ -2445,99 +2459,87 @@ TUẦN 8  ── Hoàn thiện
 
 ## J1. Backend — `apps/api`
 
-### Kiến trúc: Ports & Adapters (Hexagonal), modular monolith
+### Kiến trúc: modular monolith, chia nghiệp vụ trước rồi phân tầng
 
-Bốn tầng, **phụ thuộc chỉ đi vào trong**:
+**Quyết định ngày 24/09/2026:** một backend Spring Boot, Phần 1 dùng một DB
+tập trung. Chia module theo nghiệp vụ để giao việc và kiểm soát phạm vi thay
+đổi. Thay bốn package tầng chung bằng controller/service/repository/dto/model
+trong từng module. Quy tắc thuần phức tạp có thể đặt trong `policy`.
 
-```
-interfaces  ──►  application  ──►  domain
-                      ▲
-infrastructure  ──────┘   (cài đặt các PORT do application định nghĩa)
-```
-
-`domain` **không import** Spring, JDBC, hay bất cứ thứ gì của hạ tầng. Đó là điều kiện để quy tắc nghiệp vụ kiểm thử được mà không cần CSDL.
-
-### Cây thư mục
-
-```
+```text
 apps/api/src/main/java/vn/ptit/one/
-│
 ├── PtitOneApplication.java
-│
-├── shared/                      ── hạ tầng dùng chung, không thuộc nghiệp vụ nào
-│   ├── site/
-│   │   ├── SiteContext              ThreadLocal + runAt(site, action)
-│   │   ├── SiteRoutingDataSource    AbstractRoutingDataSource
-│   │   ├── SiteRegistry             đọc bảng CoSo — KHÔNG hardcode danh sách site
-│   │   └── MaCoSo                   value object
-│   ├── xray/
-│   │   ├── XRayTrace                gom bước theo request scope
-│   │   ├── XRayFilter               mở/đóng trace, gắn vào response
-│   │   └── TracingDataSourceProxy   bọc DataSource, ghi (site, sql, rows, ms)
-│   ├── outbox/
-│   │   ├── OutboxEvent · OutboxRepository
-│   │   └── OutboxWorker             @Scheduled — upsert TRƯỚC, đánh SENT SAU
-│   └── error/
-│       ├── DomainException · MaLoi
-│       └── GlobalExceptionHandler
-│
-├── domain/                      ── quy tắc thuần, không phụ thuộc hạ tầng
-│   ├── sinhvien/                    SinhVien · TrangThaiSinhVien
-│   ├── hocphan/                     LopHocPhan · SucChua · DangKyHocPhan
-│   ├── diem/                        Diem · CongThucDiem · NguongDat
-│   ├── liencoso/                    YeuCauLienCoSo · TrangThaiYeuCau
-│   └── policy/                      TranTinChi · TienQuyet · TrungLich
-│
-├── application/                 ── use case + PORT
-│   ├── port/
-│   │   ├── CrossSiteQuery           đọc chéo site theo người dùng
-│   │   ├── GlobalReport             tổng hợp toàn hệ thống
-│   │   └── CatalogHealth            lastSyncedAt / isStale
-│   ├── dangky/
-│   │   ├── DangKyHocPhanService     luồng cùng cơ sở — 1 giao dịch cục bộ
-│   │   └── DangKyLienCoSoSaga       ⭐ điều phối saga
-│   ├── diem/                        NhapDiemService · DongBoDiemService
-│   ├── chuyencoso/                  ChuyenCoSoService — CHỈ gọi stored proc 2PC
-│   ├── danhmuc/                     QuanLyDanhMucService (ghi vào DS_MASTER)
-│   └── baocao/                      BaoCaoTongHopService
-│
-├── infrastructure/              ── ADAPTER cài đặt các PORT
-│   ├── persistence/                 *JdbcRepository theo từng aggregate
-│   ├── crosssite/                   FanOutCrossSiteQuery
-│   ├── report/
-│   │   ├── LinkedServerGlobalReport     ← dùng cho môn học (OPENQUERY)
-│   │   └── BackendMergeGlobalReport     ← đối chứng benchmark B3
-│   ├── health/                      TracerTokenCatalogHealth
-│   ├── security/                    JwtService · SiteContextFilter
-│   └── config/                      DataSourceConfig · SecurityConfig · FlywayConfig
-│
-└── interfaces/rest/             ── Controller + DTO + mapper
+├── auth/                  tài khoản, đăng nhập và quyền truy cập
+├── student/               hồ sơ sinh viên
+├── course/                môn, lớp học phần và quan hệ tiên quyết
+├── enrollment/            đăng ký và hủy đăng ký
+├── grade/                 nhập, công bố và xem điểm
+├── timetable/             lịch học và lịch giảng dạy
+├── health/
+│   ├── controller/        HealthController
+│   └── dto/               HealthResponse
+└── shared/
+    ├── config/            cấu hình kỹ thuật dùng chung
+    └── exception/         hợp đồng lỗi và xử lý lỗi chung
 ```
 
-### Mẫu thiết kế — và chỗ dùng
+**Trạng thái hiện tại:** chỉ `health` có endpoint hoạt động. Các module còn
+lại là khung `package-info.java`; chưa có auth, SQL hoặc nghiệp vụ. Cây ví dụ
+dưới đây là quy ước khi bắt đầu viết một chức năng, không phải code đã hoàn tất:
 
-| Mẫu | Ở đâu | Giải quyết gì |
+```text
+enrollment/
+├── controller/            nhận request, gọi service, trả response
+├── service/               điều phối đăng ký và ranh giới giao dịch
+├── repository/            SQL/JDBC và ánh xạ dữ liệu
+├── dto/                   request/response
+├── model/                 đối tượng, trạng thái nghiệp vụ
+└── policy/                xét tiên quyết, tín chỉ, trùng lịch khi cần
+```
+
+Chỉ thêm package khi có code cần đặt vào. Không sinh service/interface rỗng
+cho mọi module. `entity` chỉ thêm khi dùng JPA thực sự; Phần 1 ưu tiên JDBC.
+
+### Quy tắc phụ thuộc và quyền sở hữu
+
+| Quy tắc | Cách áp dụng |
+|---|---|
+| HTTP đi qua service nghiệp vụ | Controller không chứa SQL hoặc điều phối đăng ký. Liveness trả DTO trực tiếp vì không có nghiệp vụ/DB |
+| Service điều phối | Xác thực quyền nghiệp vụ, lấy dữ liệu, gọi quy tắc thuần, gọi repository và đặt ranh giới giao dịch |
+| Model/policy độc lập | Java thuần, không import Spring/JDBC, controller hoặc repository; nhận dữ liệu cần thiết làm tham số |
+| Repository thuộc module | Module khác gọi service/facade công khai đã chỉ định; không truy cập repository hoặc bảng thuộc module khác qua SQL riêng |
+| Không có phụ thuộc vòng | Luồng phối hợp có một module điều phối; thống nhất contract trước khi hai người triển khai |
+| Shared chỉ chứa kỹ thuật dùng chung | Không import module nghiệp vụ. Lỗi nghiệp vụ riêng đặt trong module sở hữu |
+| Một giao dịch có phạm vi rõ | Phần 1 dùng một DataSource; nhiều service cùng luồng có thể tham gia một giao dịch. Phần 2 một giao dịch cục bộ chỉ thuộc một site |
+
+Ví dụ đăng ký: `enrollment` điều phối, lấy dữ liệu môn/tiên quyết qua API của
+`course`, kết quả học tập qua API của `grade` và lịch qua API của `timetable`.
+`course` sở hữu đồ thị tiên quyết và kiểm chu trình; `enrollment` dùng quan hệ
+đó để xét sinh viên đủ điều kiện. Các module cung cấp dữ liệu không gọi ngược
+vào `enrollment` trong luồng này. Contract và bảo vệ tương tranh phải được chốt
+trước khi triển khai; việc chia package chưa tự đảm bảo tính nguyên tử.
+
+### Mẫu thiết kế và phạm vi áp dụng
+
+| Mẫu/nguyên tắc | Vị trí dự kiến | Phạm vi |
 |---|---|---|
-| **Ports & Adapters** | `application/port` ↔ `infrastructure` | Cô lập công nghệ bắt buộc của môn học |
-| **Repository** | `infrastructure/persistence`, một lớp mỗi aggregate | Gom SQL về một chỗ, dễ trỏ vào lúc bảo vệ |
-| **Saga (điều phối)** | `DangKyLienCoSoSaga` | Nhất quán nhiều site không cần 2PC |
-| **Idempotent Receiver** | `KetQuaXuLyYeuCau` ở Host | Retry tất định, lưu **cả** kết quả từ chối |
-| **Transactional Outbox** | `shared/outbox` | Chống mất sự kiện khi ghi hai nơi |
-| **Read Model / Projection** | `BangDiemMirror`, snapshot lớp | Tách đường đọc khỏi nguồn sự thật |
-| **Routing DataSource + Context Object** | `shared/site` | Location Transparency |
-| **Strategy** | `GlobalReport` có **2** cài đặt | Đổi chiến lược truy vấn phân tán để đo B3 |
-| **Proxy / Decorator** | `TracingDataSourceProxy` | Thu thập X-Ray mà không sửa repository |
-| **Template Method** *(nhẹ)* | `OutboxWorker` | Cùng vòng lặp cho mọi loại sự kiện |
+| Modular monolith | Module nghiệp vụ và API công khai giữa các module | Khung hiện tại; chưa thêm thư viện Spring Modulith |
+| Service layer | `<module>/service` | Phần 1, tạo khi có use case |
+| Repository | `<module>/repository` | Phần 1 khi nối JDBC; SQL tập trung theo module |
+| Quy tắc nghiệp vụ thuần | `<module>/model`, `<module>/policy` | Kiểm tiên quyết, giới hạn tín chỉ, tính điểm; test không cần DB |
+| Ports & Adapters tại điểm thay thế | Ba port ở C8, thuộc module sử dụng chúng | Kế hoạch Phần 2, chưa dựng trong skeleton |
+| Saga / idempotent receiver | Luồng đăng ký liên cơ sở trong `enrollment` | Phần 2; không dùng 2PC cho đăng ký học phần |
+| Transactional Outbox / projection | Luồng đồng bộ điểm của `grade`, worker kỹ thuật dùng chung khi cần | Phần 2; upsert trước, đánh dấu SENT sau |
+| Routing DataSource / context | `shared/site` | Phần 2; một giao dịch cục bộ = một site |
+| Strategy cho báo cáo | `report/port/GlobalReport` và các triển khai trong `report/repository` | Phần 2, đối chứng Linked Server với backend merge |
+| Proxy/Decorator để truy vết | `shared/xray` | Phần 2; thu thập trace mà không rải mã đo vào repository |
 
-⚠️ **Không dùng:** Factory chồng Factory · Abstract Factory · Visitor · `DatabaseProvider` · `RepositoryFactory` · plugin system. Không có nhu cầu thật nào trong dự án gọi chúng ra.
+Các package Phần 2 ở bảng trên chỉ là định hướng, chưa tạo. Giữ ba port C8
+khi triển khai phân tán, không tạo thêm `DatabaseProvider`, `RepositoryFactory`
+hoặc interface cho mỗi class. Phân tán cần thiết kế lại phạm vi giao dịch,
+đồng bộ và xử lý lỗi; không chỉ đổi tên package hoặc đổi DataSource.
 
-### Ba ranh giới không được vượt
-
-| # | Ranh giới | Vi phạm thì sao |
-|---|---|---|
-| 1 | `domain` không import Spring/JDBC | Mất khả năng test quy tắc nghiệp vụ không cần CSDL |
-| 2 | Một `@Transactional` = **một site** | Ghi nhầm site hoặc mất nguyên tử, **không ném lỗi** |
-| 3 | `interfaces` không gọi thẳng `infrastructure` | Controller lệ thuộc SQL, hết đường thay adapter |
+Hướng dẫn chạy và quy ước đặt code: [apps/api/README.md](../apps/api/README.md).
 
 ---
 
@@ -2664,6 +2666,10 @@ db/
 
 ## J4. Thứ tự dựng — ai làm được gì song song
 
+> Lịch tuần dưới đây là lịch phân tán cũ, giữ để đối chiếu; không áp dụng
+> làm cổng chặn Phần 1. Thứ tự hiện tại: khung module → schema tập trung
+> → một DataSource → auth → nghiệp vụ; UI có thể làm song song.
+
 ```
 TUẦN 1–2   db/master + db/site + db/seed             ← hạ tầng CSDL 2
            apps/web: design system + màn hình tĩnh   ← ứng dụng (KHÔNG chờ API)
@@ -2672,8 +2678,8 @@ TUẦN 3     db/replication + db/crosssite             ← hạ tầng CSDL 1
 TUẦN 4     13-trigger · 14-role · 15-thutuc · 21-sp-chuyen-co-so
            ✅ hết tuần 4: NĂM YÊU CẦU BẮT BUỘC XONG
 
-TUẦN 5     apps/api: shared/site · domain · 3 port · persistence
-TUẦN 6     application/dangky (saga) · shared/outbox
+TUẦN 5     apps/api: module nghiệp vụ · shared/site · 3 port C8
+TUẦN 6     enrollment/service (saga) · grade (outbox)
 TUẦN 7     shared/xray · features/xray · bench/
 ```
 
@@ -2703,7 +2709,7 @@ PTIT-One/
 │   ├── 05-linked-server.sql        06-replication/
 │   └── 99-seed/
 ├── apps/
-│   ├── api/    vn/ptit/one/{domain,application,infrastructure,interfaces}
+│   ├── api/    vn/ptit/one/{auth,student,course,enrollment,grade,timetable,health,shared}
 │   └── web/    React + Vite
 └── bench/      sinh tải + kịch bản benchmark
 ```
