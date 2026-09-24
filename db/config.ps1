@@ -18,8 +18,8 @@
     # Plan B — tất cả một máy  : dùng named instance, ví dụ '.\SITE_HN'.
     # -----------------------------------------------------------------
     Servers = @{
-        MASTER = 'SRV-HCM'
-        HCM    = 'SRV-HCM'
+        MASTER = 'DESKTOP-85V5Q0S\PTITONE'
+        HCM    = 'DESKTOP-85V5Q0S\PTITONE'
         HN     = 'SRV-HN'
         DN     = 'SRV-DN'
     }
@@ -47,7 +47,7 @@
         # ⚠️ BẮT BUỘC là UNC share, KHÔNG để đường dẫn local.
         #    Share phải nằm trên máy chạy DISTRIBUTOR, và tài khoản chạy
         #    SQL Server Agent phải đọc/ghi được. Đây là lỗi số một giết các nhóm.
-        SnapshotFolder = '\\SRV-HCM\repldata'
+        SnapshotFolder = '\\DESKTOP-85V5Q0S\repldata'
 
         PublicationName = 'PUB_ThamChieu'
 
