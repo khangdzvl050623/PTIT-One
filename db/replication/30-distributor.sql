@@ -63,10 +63,15 @@ GO
       Replication lưu TÊN MÁY, không lưu IP. Nếu máy từng bị đổi tên thì
       @@SERVERNAME còn giữ tên cũ và replication sẽ hỏng theo cách rất khó truy.
    --------------------------------------------------------------------- */
-IF @@SERVERNAME IS NULL OR @@SERVERNAME <> CAST(SERVERPROPERTY('ServerName') AS SYSNAME)
+/* RAISERROR chi nhan HANG hoac BIEN lam tham so — khong nhan CAST(...)
+   hay DB_NAME(). Phai hoi ra bien truoc, neu khong script khong bien dich. */
+DECLARE @TenMayThat SYSNAME = CAST(SERVERPROPERTY('ServerName') AS SYSNAME);
+
+IF @@SERVERNAME IS NULL OR @@SERVERNAME <> @TenMayThat
 BEGIN
+    DECLARE @TenDangKy SYSNAME = @@SERVERNAME;
     RAISERROR(N'@@SERVERNAME (%s) khac ten may that (%s). Sua bang sp_dropserver / sp_addserver roi KHOI DONG LAI SQL Server.',
-              16, 1, @@SERVERNAME, CAST(SERVERPROPERTY('ServerName') AS NVARCHAR(128)));
+              16, 1, @TenDangKy, @TenMayThat);
     SET NOEXEC ON;
 END
 ELSE
@@ -78,7 +83,15 @@ GO
       Dùng local distributor: Distributor nằm ngay trên Publisher.
       Tách Distributor ra máy riêng là thêm một máy phải bật liên tục,
       không đổi lấy lợi ích nào ở quy mô này.
+
+   ⚠️ PHẢI ở database master. sp_adddistributor, sp_adddistributiondb và
+      sp_adddistpublisher đều yêu cầu chạy trong master (MS Learn). Từ khi
+      run.ps1 truyền -d $(DbMaster), kết nối KHÔNG còn mặc định vào master
+      nữa, nên phải USE tường minh ở đây.
    --------------------------------------------------------------------- */
+USE master;
+GO
+
 DECLARE @distributor SYSNAME = @@SERVERNAME;
 
 IF NOT EXISTS (SELECT 1 FROM sys.servers

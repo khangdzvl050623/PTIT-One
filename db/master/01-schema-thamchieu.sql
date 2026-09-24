@@ -24,8 +24,9 @@ GO
    --------------------------------------------------------------------- */
 IF DB_NAME() <> N'$(DbMaster)'
 BEGIN
+    DECLARE @DbHienTai SYSNAME = DB_NAME();
     RAISERROR(N'Script nay CHI chay tren $(DbMaster). Database hien tai: %s',
-              16, 1, DB_NAME());
+              16, 1, @DbHienTai);
     SET NOEXEC ON;
 END
 GO
