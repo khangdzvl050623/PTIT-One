@@ -70,6 +70,9 @@ Sau khi đổi, **khởi động lại Agent**.
 
 Mọi lệnh chạy từ thư mục `db/`, dùng runner để bơm cấu hình từ `config.ps1`:
 
+Cả nhóm dùng chung script và cấu hình toàn topology; `-On` chọn máy/database
+đích. Xem [ví dụ máy HCM kiêm Master và máy HN](../site/README.md#dùng-chung-script-giữa-máy-hcm-hn-và-dn).
+
 ```powershell
 # --- Bước 0: tạo database, chạy MỘT lần trên TỪNG MÁY CHỦ ---
 # Mỗi lần chạy tạo TẤT CẢ database mà config.ps1 gán cho máy đó.
@@ -94,8 +97,16 @@ Mọi lệnh chạy từ thư mục `db/`, dùng runner để bơm cấu hình t
 .\run.ps1 -Script replication\31-publication.sql -On MASTER
 
 # --- Bước 4: Subscription, chạy TỪ Master ---
-.\run.ps1 -Script replication\32-subscription.sql -On MASTER
+# Mặc định đăng ký cả ba site. Máy bạn học chưa lên thì chọn từng site:
+.\run.ps1 -Script replication\32-subscription.sql -On MASTER -Subscribers HCM
+# Khi HN/DN đã lên:
+# .\run.ps1 -Script replication\32-subscription.sql -On MASTER -Subscribers HN,DN
 ```
+
+> ⚠️ **Vì sao phải chọn site.** `sp_addsubscription` **không** kiểm tra máy
+> đích có tồn tại hay không. Đăng ký tới một server chưa lên vẫn "thành công"
+> ở mức metadata, rồi để lại một Distribution Agent job chạy lỗi liên tục và
+> làm Replication Monitor đỏ vì lý do chẳng liên quan gì tới publication.
 
 Muốn xem lệnh `sqlcmd` mà không thực thi: thêm `-WhatIf`.
 
@@ -127,6 +138,17 @@ không báo lỗi đỏ** — triệu chứng khó đoán nhất trong toàn b�
 ---
 
 ## 4. Kiểm chứng
+
+### ⭐ Muốn tự nhìn tận mắt: `db/tests/90-demo-nhan-ban.sql`
+
+Mở file đó trong SSMS rồi bôi đen từng khối bấm F5 — **không cần SQLCMD Mode,
+không cần chọn database**. Sáu phần: xem bảng nào nhân bản bảng nào không · thêm một dòng
+ở Master và nhìn nó tự sang HCM · đo độ trễ bằng tracer token · **chứng minh
+nhân bản là một chiều bằng cách sửa ở bản sao rồi xem Master ghi đè** · nhìn
+vào database `distribution` · dọn dẹp. File tự xoá dòng thử, chạy lại bao
+nhiêu lần cũng được.
+
+Đọc hiểu nhân bản bằng file này nhanh hơn đọc cả trang README này.
 
 ### Replication Monitor
 
@@ -235,11 +257,16 @@ dung lượng — nên vẫn là lựa chọn hợp lý, chỉ cần phát biể
 
 | File | Trạng thái |
 |---|---|
-| `30-distributor.sql` | ✅ Xong — không phụ thuộc schema. ⚠️ **Chưa chạy thật trên SQL Server**, mới kiểm `-WhatIf` và biến SQLCMD |
-| `31-publication.sql` | ✅ **Xong** — 9 article theo đúng thứ tự khoá ngoại, tự kiểm bảng tồn tại trước khi khai báo |
-| `32-subscription.sql` | ✅ **Xong** — 3 push subscription, cục bộ trước VPN sau, tự sinh lại snapshot, chặn ghi ngược. ⚠️ **Chưa chạy thật** |
-| `db/master/01..04` | ✅ **Xong** — 8 bảng tham chiếu + danh bạ + tài khoản Master + seed |
-| `39-go-*.sql` | ⏳ Chưa viết — script gỡ để chạy lại từ đầu |
+| `30-distributor.sql` | ✅ **Đã chạy thật** trên `DESKTOP-85V5Q0S\PTITONE` — local Distributor, snapshot folder UNC |
+| `31-publication.sql` | ✅ **Đã chạy thật** — `PUB_ThamChieu` với 9 article |
+| `32-subscription.sql` | ✅ **Đã chạy thật với `-Subscribers HCM`** — snapshot giao xong, 9/9 bảng khớp số dòng, tracer token 4 giây. HN/DN chờ máy thật |
+| `db/master/01..04` | ✅ **Đã chạy thật** — 8 bảng tham chiếu + danh bạ + tài khoản Master + seed mẫu |
+| `39-go-*.sql` | ✅ Đã viết 4 script gỡ theo từng tầng; giữ dữ liệu nghiệp vụ. **Chưa chạy thật** |
+
+⚠️ **Hai lỗi đã sửa khi chạy thật lần đầu** (chi tiết ở
+[`docs/PTIT-One-Setup-HCM.md`](../../docs/PTIT-One-Setup-HCM.md)):
+job Snapshot Agent bị dò bằng `LIKE '%Snapshot%'` nên **không bao giờ khớp**
+(tên job không chứa chữ đó), và `32` đăng ký cả ba site kể cả máy chưa tồn tại.
 
 **Đang chặn:** không còn gì chặn phần hạ tầng. File Excel phân công đề tài vẫn
 cần để xác nhận phạm vi, nhưng tên thực thể đã đủ ổn định để đi tiếp — nếu đề
@@ -247,3 +274,55 @@ tài lệch, khung phân mảnh giữ nguyên và chỉ đổi tên bảng.
 
 📖 Ngữ cảnh đầy đủ: mục **D1** (nhân bản), **F6** (các bước wizard),
 **I5** (checklist tick nhanh) trong `docs/PTIT-One-Thiet-Ke.md`.
+
+## 8. Gỡ cấu hình replication để dựng lại
+
+Chạy theo thứ tự dưới đây từ `db/`. Đây là thao tác **ngừng đồng bộ và gỡ
+cấu hình**, không phải xóa sạch dữ liệu nghiệp vụ. Cần quyền sysadmin để
+gỡ publication/Distributor. Dừng mọi thao tác cài đặt replication song song.
+
+```powershell
+# 1. Gỡ PUSH subscription và Distribution Agent tại Publisher
+#    -Subscribers giới hạn site cần gỡ; không truyền thì gỡ cả ba.
+.\run.ps1 -Script replication\39-go-subscription.sql -On MASTER
+
+# 2. Dọn metadata còn lại tại TỪNG Subscriber, sau bước 1 thành công
+.\run.ps1 -Script replication\39-go-subscriber.sql -On HCM
+.\run.ps1 -Script replication\39-go-subscriber.sql -On HN
+.\run.ps1 -Script replication\39-go-subscriber.sql -On DN
+
+# 3. Gỡ publication; chỉ tắt publish nếu database không còn publication khác
+.\run.ps1 -Script replication\39-go-publication.sql -On MASTER
+
+# 4. Tùy chọn: gỡ local Distributor và database distribution
+.\run.ps1 -Script replication\39-go-distributor.sql -On MASTER
+```
+
+Không chạy bằng cách sắp xếp wildcard `39-go-*`: thứ tự tên file không phải
+thứ tự phụ thuộc. Site offline thì dừng để xử lý, không bỏ qua bước dọn ở site.
+`39-go-subscriber` không tự kiểm được Publisher từ xa đã gỡ hay chưa, nên
+bước 1 phải hoàn tất trước khi chạy nó.
+
+Script chỉ nhắm publication và ba đích trong config; subscription ngoài
+config sẽ làm bước kiểm chứng báo lỗi. Distributor dùng kiểm tra chuẩn
+`@no_checks = 0`, từ chối khi còn database publish hoặc Publisher khác.
+Không xóa snapshot share, bảng tham chiếu hay bảng vận hành. Lỗi trả về
+được giữ nguyên, không bắt mọi lỗi rồi coi là thành công.
+
+Dựng lại bằng 30→31→32 (hoặc 31→32 nếu giữ Distributor). Nếu đã có schema
+`site/`, các FK vào bảng tham chiếu có thể chặn thao tác DROP của snapshot;
+cần phương án reinitialization/migration riêng trước khi áp lại snapshot.
+Các script này không tự tháo FK để ép snapshot chạy.
+
+Kiểm chứng offline: `powershell -NoProfile -File db/tests/Test-Scripts.ps1`
+từ gốc repo. **Chưa thực thi gỡ/cài trên SQL Server**. Runtime cần thử:
+gỡ đủ thứ tự, chạy lại khi đã gỡ, dừng giữa chừng rồi tiếp tục, bảo vệ
+publication khác, và dựng lại replication rồi kiểm tra end-to-end mục 4.
+
+Đối chiếu thủ tục theo Microsoft Learn:
+[gỡ push subscription](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-dropsubscription-transact-sql),
+[dọn Subscriber](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-subscription-cleanup-transact-sql),
+[gỡ publication](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-droppublication-transact-sql),
+[gỡ Publisher/Distributor](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-dropdistpublisher-transact-sql).
+
+Phần tiếp theo: [schema site và trạng thái 10–15](../site/README.md).

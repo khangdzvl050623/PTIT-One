@@ -187,9 +187,17 @@ GO
       Agent không ghi được vào share đó, job sẽ thất bại ở đây — xem
       db/replication/README.md muc 1.
    --------------------------------------------------------------------- */
+/* ⚠️ KHÔNG dò job bằng LIKE '%Snapshot%'. SQL Server đặt tên job Snapshot
+   Agent theo mẫu <Publisher>-<PublisherDB>-<Publication>-<n>, trong tên
+   KHÔNG có chữ "Snapshot" — chữ đó chỉ nằm ở category REPL-Snapshot.
+   Dò bằng LIKE sẽ luôn trượt, và hậu quả là snapshot không bao giờ được
+   sinh trong khi script vẫn báo thành công.
+   MSsnapshot_agents lưu thẳng tên publication nên tra chính xác. */
 DECLARE @job SYSNAME;
-SELECT TOP 1 @job = name FROM msdb.dbo.sysjobs
- WHERE name LIKE N'%$(PublicationName)%Snapshot%';
+SELECT TOP 1 @job = a.name
+  FROM distribution.dbo.MSsnapshot_agents a
+ WHERE a.publication  = N'$(PublicationName)'
+   AND a.publisher_db = N'$(DbMaster)';
 
 IF @job IS NOT NULL
 BEGIN

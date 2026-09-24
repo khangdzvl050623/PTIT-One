@@ -76,15 +76,32 @@ GO
 
 DECLARE @sub TABLE (
     ThuTu   INT,
+    Ma      VARCHAR(10),
     Srv     SYSNAME,
     Db      SYSNAME,
     GhiChu  NVARCHAR(50)
 );
 
-INSERT INTO @sub (ThuTu, Srv, Db, GhiChu) VALUES
-    (1, N'$(SrvHCM)', N'$(DbHCM)', N'cuc bo — cung instance'),
-    (2, N'$(SrvHN)',  N'$(DbHN)',  N'qua VPN'),
-    (3, N'$(SrvDN)',  N'$(DbDN)',  N'qua VPN');
+INSERT INTO @sub (ThuTu, Ma, Srv, Db, GhiChu) VALUES
+    (1, 'HCM', N'$(SrvHCM)', N'$(DbHCM)', N'cuc bo — cung instance'),
+    (2, 'HN',  N'$(SrvHN)',  N'$(DbHN)',  N'qua VPN'),
+    (3, 'DN',  N'$(SrvDN)',  N'$(DbDN)',  N'qua VPN');
+
+/* ⭐ CHỌN SUBSCRIBER CHO LẦN CHẠY NÀY — mặc định là cả ba.
+   run.ps1 -Subscribers HCM  →  chỉ đăng ký subscriber cục bộ.
+
+   ⚠️ Vì sao cần: sp_addsubscription KHÔNG kiểm tra máy đích có tồn tại
+   hay không. Đăng ký tới một server chưa lên vẫn "thành công" ở mức
+   metadata, rồi để lại một Distribution Agent job chạy lỗi liên tục và
+   làm Replication Monitor đỏ vì lý do không liên quan tới publication. */
+DELETE FROM @sub
+ WHERE Ma NOT IN (SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(N'$(SubList)', ','));
+
+IF NOT EXISTS (SELECT 1 FROM @sub)
+BEGIN
+    RAISERROR(N'Danh sach Subscriber rong. Kiem tra tham so -Subscribers cua run.ps1.', 16, 1);
+    SET NOEXEC ON;
+END
 
 DECLARE @srv SYSNAME, @db SYSNAME, @ghiChu NVARCHAR(50);
 
@@ -151,9 +168,16 @@ GO
 USE [$(DbMaster)];
 GO
 
+/* ⚠️ Tra job qua MSsnapshot_agents, KHONG dung LIKE '%Snapshot%'.
+   Ten job Snapshot Agent la <Publisher>-<PublisherDB>-<Publication>-<n>,
+   khong chua chu "Snapshot" — dung LIKE thi khong bao gio khop, snapshot
+   khong duoc sinh lai, va ca ba subscriber se RONG DU LIEU dung nhu canh
+   bao o dau muc 3 nay. */
 DECLARE @job SYSNAME;
-SELECT TOP 1 @job = name FROM msdb.dbo.sysjobs
- WHERE name LIKE N'%$(PublicationName)%Snapshot%';
+SELECT TOP 1 @job = a.name
+  FROM distribution.dbo.MSsnapshot_agents a
+ WHERE a.publication  = N'$(PublicationName)'
+   AND a.publisher_db = N'$(DbMaster)';
 
 IF @job IS NULL
     PRINT '  [!] Khong tim thay Snapshot Agent job — chay lai 31-publication.sql';

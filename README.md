@@ -8,6 +8,11 @@ trước; xem [phạm vi khung backend và nhánh tiếp theo](docs/PTIT-One-Bac
 Backend chia module nghiệp vụ; xem [cấu trúc và quy tắc đặt code](apps/api/README.md#cấu-trúc-theo-module).
 Các phần kiến trúc phân tán bên dưới là mục tiêu tiếp theo của đồ án.
 
+**Cài đặt database:** [hướng dẫn máy mới HN/ĐN](docs/PTIT-One-Cai-Dat-May-Moi.md),
+[nhật ký máy HCM/Master](docs/PTIT-One-Setup-HCM.md),
+[cấu hình topology](db/config.ps1) và [hướng dẫn replication](db/replication/README.md).
+Đây là tài liệu hạ tầng Master/site đã có; backend Phần 1 vẫn chưa nối DB.
+
 > Đồ án cuối kỳ môn **Cơ sở dữ liệu phân tán (CSDLPT)**
 > Hệ thống đăng ký tín chỉ cho một trường đại học có nhiều cơ sở đào tạo, xây trên **SQL Server** với phân mảnh ngang, phân mảnh dẫn xuất, nhân bản một chiều và truy vấn phân tán.
 
