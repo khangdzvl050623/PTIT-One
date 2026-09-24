@@ -56,6 +56,10 @@ Vite vẫn chạy cổng 5173 và proxy `/api` tới backend 8080.
 
 ## Nhánh nên làm tiếp
 
+Khung tạo DB CENTRAL và hướng dẫn bàn giao T1/T2/T5 đã có tại
+[db/central/README.md](../db/central/README.md). Khung mới chỉ tạo DB rỗng;
+schema/migration/seed và kết nối JDBC vẫn thuộc các nhánh tiếp theo bên dưới.
+
 Mỗi nhánh là một task, tạo từ `dev` đã được cập nhật và đi qua PR theo README.
 Danh sách này là đề xuất, chưa tạo các nhánh trống trên remote.
 

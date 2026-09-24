@@ -39,6 +39,8 @@ $scripts = @(
     # SSMS khong giu :setvar giua hai lan F5, con qua sqlcmd thi :setvar de
     # len -v — nen bien SQLCMD o day khong doi duoc dich, chi them rac roi.
     @{ Path = 'tests/90-demo-nhan-ban.sql'; Sites = @('HCM') }
+    @{ Path = 'central/00-create-database.sql'; Sites = @('CENTRAL'); Db = 'master'; CentralAction = 'CreateDatabase' }
+    @{ Path = 'central/tests/00-verify-database.sql'; Sites = @('CENTRAL'); Db = 'PTITONE_CENTRAL'; CentralAction = 'VerifyDatabase' }
 )
 
 # Khong file .sql nao duoc nam ngoai danh sach tren.
@@ -52,13 +54,17 @@ $caseCount = 0
 foreach ($script in $scripts) {
     $source = Get-Content -LiteralPath (Join-Path $dbRoot $script.Path) -Raw -Encoding UTF8
     foreach ($site in $script.Sites) {
-        $preview = (& (Join-Path $dbRoot 'run.ps1') -Script $script.Path -On $site -WhatIf 6>&1 | Out-String -Width 32767)
+        if ($script.CentralAction) {
+            $preview = (& (Join-Path $dbRoot 'central/run.ps1') -Action $script.CentralAction -ConfigPath (Join-Path $dbRoot 'central/config.example.psd1') -WhatIf 6>&1 | Out-String -Width 32767)
+        } else {
+            $preview = (& (Join-Path $dbRoot 'run.ps1') -Script $script.Path -On $site -WhatIf 6>&1 | Out-String -Width 32767)
+        }
         $expectDb = if ($script.Db) { $script.Db } else { $cfg.Databases[$site] }
         if ($preview -notmatch ('-d ' + [regex]::Escape($expectDb) + '(?:\s|$)')) {
             throw "Runner khong chon dung DB: $($script.Path) / $site"
         }
         $variables = @{}
-        foreach ($match in [regex]::Matches($preview, '-v ([A-Za-z][A-Za-z0-9]*)=([^\r\n]*?)(?= -v |\r?\n|$)')) {
+        foreach ($match in [regex]::Matches($preview, '-v ([A-Za-z][A-Za-z0-9]*)=([^\r\n]*?)(?= -v | -i |\r?\n|$)')) {
             $value = $match.Groups[2].Value.TrimEnd()
             if (-not ($value.StartsWith('"') -and $value.EndsWith('"'))) {
                 throw "Bien SQLCMD phai co dau nhay (dau phay/khoang trang): $($match.Groups[1].Value)"
@@ -97,4 +103,40 @@ $preview = (& (Join-Path $dbRoot 'run.ps1') -Script 'master/01-schema-thamchieu.
 if ($preview -notmatch ('-d ' + [regex]::Escape($cfg.Databases.MASTER) + '(?:\s|$)')) {
     throw 'Runner master/ sai database.'
 }
-Write-Output "PASS: $caseCount SQL/site cases + 5 runner regression cases. CHUA kiem chung SQL Server runtime."
+# CENTRAL rejects other database roles before any connection, including in preview.
+$centralRunner = Join-Path $dbRoot 'central/run.ps1'
+$centralConfigFile = Join-Path ([IO.Path]::GetTempPath()) ('ptitone-central-' + [guid]::NewGuid().ToString('N') + '.psd1')
+$centralCaseCount = 0
+try {
+    foreach ($invalidDatabase in @('master', 'PTITONE_MASTER', 'PTITONE_HCM', 'PTITONE_CENTRAL_OTHER-DB', "PTITONE_CENTRAL'; SELECT 1;--")) {
+        $safeLiteral = $invalidDatabase.Replace("'", "''")
+        $configText = "@{ SqlServer='localhost\PTITONE'; DatabaseName='$safeLiteral'; TrustServerCertificate=`$true }"
+        [IO.File]::WriteAllText($centralConfigFile, $configText)
+        $rejected = $false
+        try {
+            & $centralRunner -Action CreateDatabase -ConfigPath $centralConfigFile -WhatIf *> $null
+        } catch {
+            if ($_.Exception.Message -notmatch '^DatabaseName must be ') { throw }
+            $rejected = $true
+        }
+        if (-not $rejected) { throw "CENTRAL accepted invalid database: $invalidDatabase" }
+        $centralCaseCount++
+    }
+    [IO.File]::WriteAllText($centralConfigFile, "@{ SqlServer='tcp:VPN-HOST,15433'; DatabaseName='PTITONE_CENTRAL_T2'; TrustServerCertificate=`$false }")
+    foreach ($action in @('CreateDatabase', 'VerifyDatabase')) {
+        $preview = (& $centralRunner -Action $action -ConfigPath $centralConfigFile -WhatIf 6>&1 | Out-String -Width 32767)
+        $expectDatabase = if ($action -eq 'CreateDatabase') { 'master' } else { 'PTITONE_CENTRAL_T2' }
+        if ($preview -notmatch "-d $expectDatabase(?:\s|$)" -or
+            $preview -notmatch 'CentralDatabase="PTITONE_CENTRAL_T2"' -or
+            $preview -notmatch '-S "tcp:VPN-HOST,15433"' -or
+            $preview -notmatch ' -N ' -or $preview -match ' -C(?:\s|$)') {
+            throw "CENTRAL custom target/certificate settings not respected: $action"
+        }
+        $centralCaseCount++
+    }
+} finally {
+    if (Test-Path -LiteralPath $centralConfigFile) {
+        Remove-Item -LiteralPath $centralConfigFile -Force
+    }
+}
+Write-Output "PASS: $caseCount SQL/site cases + 5 existing runner cases + $centralCaseCount CENTRAL runner cases. CHUA kiem chung SQL Server runtime."
