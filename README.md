@@ -8,7 +8,11 @@ trước; xem [phạm vi khung backend và nhánh tiếp theo](docs/PTIT-One-Bac
 Backend chia module nghiệp vụ; xem [cấu trúc và quy tắc đặt code](apps/api/README.md#cấu-trúc-theo-module).
 Các phần kiến trúc phân tán bên dưới là mục tiêu tiếp theo của đồ án.
 
-**Cài đặt database:** [hướng dẫn máy mới HN/ĐN](docs/PTIT-One-Cai-Dat-May-Moi.md),
+**Database Phần 1:** [khung CENTRAL và hướng dẫn T1/T2/T5](db/central/README.md)
+cho DB cá nhân và DB tích hợp. Có script tạo DB rỗng; schema/seed và kết nối
+backend vẫn là các bước tiếp theo cần triển khai.
+
+**Database Phần 2:** [hướng dẫn máy mới HN/ĐN](docs/PTIT-One-Cai-Dat-May-Moi.md),
 [nhật ký máy HCM/Master](docs/PTIT-One-Setup-HCM.md),
 [cấu hình topology](db/config.ps1) và [hướng dẫn replication](db/replication/README.md).
 Đây là tài liệu hạ tầng Master/site đã có; backend Phần 1 vẫn chưa nối DB.
