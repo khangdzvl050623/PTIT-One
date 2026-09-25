@@ -98,6 +98,47 @@ powershell -NoProfile -File scripts/tests/Test-DevApi.ps1
 Cơ chế dựa trên [biến môi trường kế thừa của PowerShell](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables)
 và [cấu hình ngoài của Spring Boot](https://docs.spring.io/spring-boot/reference/features/external-config.html).
 
+## Nối database — profile `central`
+
+Mặc định API **không nối DB**: `DataSourceAutoConfiguration` bị loại trong
+`application.properties`, nên máy chưa cài SQL Server vẫn chạy được API để
+dựng frontend. Bật DB bằng profile `central`.
+
+Điền `apps/api/.env` rồi chạy `.\scripts\dev-api.ps1` từ gốc repo:
+
+```text
+SPRING_PROFILES_ACTIVE=central
+PTITONE_DB_URL=jdbc:sqlserver://localhost:14330;databaseName=PTITONE_CENTRAL;encrypt=true;trustServerCertificate=true
+PTITONE_DB_USERNAME=ptitone_api
+PTITONE_DB_PASSWORD=<mật khẩu riêng của bạn>
+PTITONE_MIGRATE_ON_START=false
+```
+
+Cổng trong URL là cổng TCP **thật** của instance, không mặc định 1433 —
+named instance thường dùng cổng động, xem
+[hướng dẫn cài Phần 1](../../docs/PTIT-One-Cai-Dat-Phan-1.md).
+
+Kiểm bằng endpoint riêng, **không** dùng `/api/health`:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/health/db
+```
+
+```json
+{ "status": "UP", "database": "PTITONE_CENTRAL", "login": "ptitone_api" }
+```
+
+Endpoint này hỏi thẳng SQL Server đang ở database nào và đăng nhập bằng tài
+khoản nào, thay vì đọc lại chính cấu hình của mình — cấu hình sai thì đọc lại
+cấu hình vẫn ra "đúng". Nối hỏng thì trả **503** kèm nguyên nhân, không trả UP giả.
+
+`/api/health` vẫn chỉ là liveness và **không** nói gì về DB. Ở profile mặc
+định, `/api/health/db` trả 404 đúng như thiết kế.
+
+Migration **tắt mặc định** để API không tự đổi schema của DB dùng chung.
+Nguồn SQL là `db/central/migrations/` của T2, được Maven đóng gói vào
+`classpath:db/migration`; không giữ bản DDL thứ hai trong `apps/api`.
+
 ## Kiểm tra và đóng gói
 
 ```powershell
