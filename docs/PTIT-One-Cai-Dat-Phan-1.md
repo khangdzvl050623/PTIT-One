@@ -165,6 +165,9 @@ Mở `http://localhost:5173`.
 | `npm ci` báo thiếu lockfile | Sai thư mục, phải ở `apps/web` |
 | `localhost:5173/api/...` trả 404 | API chưa chạy |
 | Collation khác `Vietnamese_CI_AS` | Không sửa được; gỡ instance cài lại hoặc báo TV1 |
+| `Login failed for user 'ptitone_api'` dù mật khẩu đúng | Login **bị khóa** do connection pool thử lại nhiều lần với mật khẩu sai. Kiểm: `SELECT LOGINPROPERTY('ptitone_api','IsLocked')`. Mở khóa: `ALTER LOGIN ptitone_api WITH PASSWORD = N'<mk>' UNLOCK;` |
+| Chạy `dev-api.ps1` xong không gõ được lệnh tiếp | Đúng vậy — nó giữ terminal khi app đang chạy. Gọi API ở **terminal thứ hai** |
+| `.env` điền rồi vẫn không nối được | Kiểm dán lặp tên biến: dòng phải là `PTITONE_DB_URL=jdbc:...`, không phải `PTITONE_DB_URL=PTITONE_DB_URL=jdbc:...` |
 
 # Chưa có gì
 
