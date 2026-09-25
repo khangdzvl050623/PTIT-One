@@ -1,24 +1,11 @@
 # PTIT One — cài và chạy Phần 1
 
-> Dành cho **Phần 1** (một database tập trung). Máy Master/site của phần phân
-> tán là chuyện khác: [hướng dẫn máy HN/ĐN](PTIT-One-Cai-Dat-May-Moi.md).
->
-> Cập nhật 25/09/2026. Phiên bản lấy từ `apps/api/pom.xml` và
-> `apps/web/package.json`. Ai nâng phiên bản trong repo thì sửa luôn file này.
+> Phần 1 dùng **một database tập trung**. Hạ tầng phân tán Master/site xem
+> [máy HN/ĐN](PTIT-One-Cai-Dat-May-Moi.md). Cập nhật 25/09/2026.
 
-## Cách làm việc: mỗi máy chạy đủ bộ
-
-**Không dùng VPS, không cần VPN.** Ai viết code thì cài cả ba tầng trên máy
-mình: SQL Server + API + web. Mỗi người một `PTITONE_CENTRAL` riêng, dùng
-chung migration và seed.
-
-Mất một buổi cài lần đầu. Đổi lại là không bao giờ phải chờ ai bật máy.
-
-Các DB cá nhân **không đồng bộ với nhau** — chúng là môi trường phát triển
-độc lập, không phải site phân tán. Ai đổi schema thì viết migration mới,
-người khác `git pull` rồi chạy lại trên DB của mình.
-
-## Ai cài gì
+Mỗi người cài đủ ba tầng trên máy mình: **SQL Server + API + web**. Không VPS,
+không VPN. Mỗi máy một `PTITONE_CENTRAL` riêng, dùng chung migration và seed —
+các DB này **không đồng bộ với nhau**, chúng chỉ là môi trường dev độc lập.
 
 | Người | SQL Server | JDK 21 | Node |
 |---|---|---|---|
@@ -29,420 +16,165 @@ người khác `git pull` rồi chạy lại trên DB của mình.
 | TV4 test | — | ✅ | — |
 | TV3 tài liệu | — | — | — |
 
-TV6 cài đủ bộ vì ghép API là việc hằng ngày. Không cài thì mỗi lần ghép phải
-nhờ người khác bật máy.
-
 ---
 
-# Phần A — Cài 4 thứ
+# Cài
 
-## A1. SQL Server 2019 Developer
+## 1. SQL Server 2019 Developer
 
-**T1 và mọi người cài giống hệt nhau.** Không có bản riêng cho T1. T1 chỉ làm
-thêm một việc ở mốc M1/M2: dựng DB tích hợp chung cho cả nhóm.
+Bộ cài có giao diện, phải bấm tay. Chỉ cần đúng **5 lựa chọn**, còn lại Next:
 
-> Đã có instance `PTITONE` trên máy rồi thì **bỏ qua mục này**, dùng lại.
-> Đừng cài đè.
+| Bước trong bộ cài | Chọn |
+|---|---|
+| Feature Selection | **chỉ** `Database Engine Services` |
+| Instance Configuration | Named instance: **`PTITONE`** |
+| Server Configuration | Database Engine = **Automatic** |
+| Collation → **Customize** | Windows designator **`Vietnamese`**, chỉ tích **Accent-sensitive** → phải ra **`Vietnamese_CI_AS`** |
+| Database Engine Configuration | bấm **Add Current User** |
 
-### Cài
+⚠️ Collation sai thì **không sửa được**, phải gỡ instance cài lại. Kiểm kỹ ô
+này trước khi bấm Next.
 
-**1.** Tải **SQL Server 2019 Developer Edition** (miễn phí). Bộ CAB gồm hai
-file `SQLServer2019-DEV-x64-ENU.exe` và `.box` — để **cạnh nhau**, chạy file
-`.exe` để giải nén, rồi mở `setup.exe` trong thư mục vừa giải nén.
-
-**2.** Chọn **Installation → New SQL Server stand-alone installation**.
-
-**3.** Edition: **Developer**.
-
-**4. Feature Selection: chỉ tích `Database Engine Services`.**
-Phần 1 không cần Replication, không cần Agent.
-
-> Máy nào chắc chắn sẽ làm site ở Phần 2 (HCM / HN / ĐN) thì tích luôn
-> **SQL Server Replication** ngay bây giờ — thêm sau phải chạy lại bộ cài.
-
-**5. Instance Configuration:** chọn **Named instance**, gõ `PTITONE` cho cả
-Instance name và Instance ID. Nhiều máy cùng đặt tên này không sao, vì tên
-máy khác nhau.
-
-**6. Server Configuration:** để SQL Server Database Engine = **Automatic**
-(tự chạy khi bật máy). Các dịch vụ khác để mặc định.
-
-**7. ⚠️ Collation — chỗ quan trọng nhất, sai là không sửa được.**
-Sang tab **Collation → Customize** → chọn **Windows collation designator**,
-designator = **`Vietnamese`**, và **chỉ tích `Accent-sensitive`**.
-Bấm OK, ô Collation phải hiện đúng:
-
-```
-Vietnamese_CI_AS
-```
-
-Sai chỗ này thì so sánh chuỗi tiếng Việt khác nhau giữa các máy, và lỗi sẽ
-hiện ra ở chỗ không ai ngờ tới. **Không đổi được sau khi cài** — phải gỡ
-instance cài lại.
-
-**8. Database Engine Configuration:** bấm **Add Current User** để tài khoản
-Windows của bạn thành quản trị. Windows Authentication là đủ cho Phần 1.
-
-**9. Data Directories:** máy có ổ D thì trỏ data/log/backup/TempDB sang D.
-Không có thì để mặc định.
-
-**10.** Bấm **Install**, đợi tới khi báo **Succeeded**.
-
-### Cài thêm hai thứ
-
-- **SSMS** (SQL Server Management Studio) — tải riêng, không nằm trong bộ cài trên.
-- **sqlcmd bản ODBC** — script của nhóm dùng tùy chọn của bản này. **Không
-  phải bản Go.** Thường đã có sẵn khi cài SSMS.
-
-### Kiểm tra cài đúng chưa
-
-Mở SSMS, kết nối `localhost\PTITONE`, Windows Authentication. Gặp cảnh báo
-chứng chỉ thì tích **Trust Server Certificate**. Mở New Query, chạy:
-
-```sql
-SELECT @@SERVERNAME                   AS TenServer,
-       SERVERPROPERTY('Edition')      AS Edition,
-       SERVERPROPERTY('Collation')    AS Collation;
-```
-
-Phải ra: tên máy kèm `\PTITONE` · `Developer Edition` · **`Vietnamese_CI_AS`**.
-
-Rồi mở PowerShell kiểm sqlcmd:
+Cài thêm **SSMS** (tải riêng). `sqlcmd` bản ODBC thường đi kèm SSMS.
 
 ```powershell
-sqlcmd -?
+sqlcmd -S "localhost\PTITONE" -E -Q "SELECT @@SERVERNAME, SERVERPROPERTY('Collation')"
 ```
 
-Ra bảng tùy chọn là được. Báo "không tìm thấy lệnh" thì cài lại sqlcmd rồi
-**mở terminal mới**.
+## 2. JDK 21
 
-## A2. JDK 21 — chỗ đã có người vấp
-
-Cài JDK 21, rồi đặt biến môi trường `JAVA_HOME` trỏ vào thư mục JDK đó.
-
-⚠️ `pom.xml` ghim Java 21. **JDK 17 build hỏng** với đúng dòng này:
-
-```
-Fatal error compiling: error: release version 21 not supported
-```
-
-Đã gặp thật trên máy đang giữ repo ngày 25/09/2026.
-
-Cái bẫy: **IDE vẫn có thể chạy ngon** vì nó dùng JDK riêng, trong khi Maven
-ngoài terminal lấy JDK trên PATH. Chạy được trong IDE không chứng minh máy
-cài đúng.
-
-Lệnh duy nhất đáng tin — nó in ra JDK mà **Maven thực sự dùng**:
-
-```powershell
-cd apps\api
-.\mvnw.cmd --version
-```
-
-Dòng `Java version:` phải là 21.x. Ra 17 thì sửa `JAVA_HOME`, **mở terminal
-mới** (terminal cũ giữ biến cũ).
-
-### Cài JDK 21 chưa đủ — phải đặt `JAVA_HOME`
-
-Tải JDK 21 về giải nén ra một thư mục (ví dụ `D:\jdk21`) thì Windows **không
-tự biết**. Phải đặt biến môi trường:
+Tải JDK 21 rồi giải nén ra `D:\jdk21` (chỗ khác cũng được, sửa đường dẫn bên
+dưới cho khớp). **Giải nén xong là chưa xong** — phải đặt biến môi trường:
 
 ```powershell
 [Environment]::SetEnvironmentVariable('JAVA_HOME','D:\jdk21','User')
+$env:JAVA_HOME = 'D:\jdk21'
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+java -version
 ```
 
-Rồi **mở terminal mới**. Kiểm lại bằng `.\mvnw.cmd --version`.
+Ra `21.x` là được. **Không cần cài Maven** — repo có sẵn wrapper.
 
-Đường dẫn trỏ vào thư mục **gốc** của JDK (thư mục có `bin\javac.exe`), không
-trỏ vào `bin`.
+<details>
+<summary>Muốn <code>java</code> dùng được ở mọi terminal về sau (cần cho <code>java -jar</code>)</summary>
 
-### Lỗi thứ hai: biên dịch một đằng, chạy một nẻo
-
-```
-UnsupportedClassVersionError: ... has been compiled by a more recent version
-of the Java Runtime (class file version 65.0), this version of the Java
-Runtime only recognizes class file versions up to 61.0
-```
-
-Đã gặp thật ngày 25/09/2026, ngay sau khi sửa được lỗi ở trên.
-
-Đọc hai con số là ra bệnh: **65.0 = Java 21**, **61.0 = Java 17**. Tức là
-class **đã biên dịch bằng 21** (một terminal hoặc IDE có JDK 21), nhưng JVM
-đem chạy lại là **17**. Maven thấy class mới hơn source nên **bỏ qua bước
-biên dịch**, rồi fork JVM 17 chạy class 21.
-
-Cách sửa: đặt `JAVA_HOME` như trên, mở terminal mới, rồi build **sạch** —
-chữ `clean` quan trọng, vì nó xoá đống class cũ đang gây nhiễu:
+Mở PowerShell **Run as administrator**:
 
 ```powershell
-.\mvnw.cmd clean verify
-```
-
-Ra `BUILD SUCCESS` là xong.
-
-### `JAVA_HOME` và `PATH` là hai việc khác nhau
-
-Sửa một cái **không** sửa cái kia. Đây là chỗ dễ tưởng đã xong mà chưa xong:
-
-| Biến | Ai đọc nó | Sai thì gặp gì |
-|---|---|---|
-| `JAVA_HOME` | Maven Wrapper (`mvnw.cmd`) | `release version 21 not supported` lúc build |
-| `PATH` | lệnh `java` gõ thẳng, `java -jar` | `UnsupportedClassVersionError` lúc chạy JAR |
-
-Chỉ cần `JAVA_HOME` là **build và chạy app qua `mvnw` đã ổn**. Còn `PATH` cần
-cho bước đóng gói demo (`java -jar`) và cho người chỉ chạy JAR chứ không build.
-
-Chèn JDK vào PATH phải chèn lên **đầu PATH mức Máy**, vì Windows quét từ trên
-xuống và Java cũ thường đã chiếm mấy dòng đầu (`...Oracle\Java\javapath`).
-Thêm vào PATH mức Người dùng không ăn thua — Windows ghép PATH Máy trước.
-
-Cách bấm tay: Start → `environment variables` → **Edit the system environment
-variables** → **Environment Variables…** → khung **DƯỚI** (`System variables`)
-→ `Path` → **Edit…** → **New**, gõ `D:\jdk21\bin` → bấm **Move Up** cho tới
-khi nó lên trên cùng → OK.
-
-### ⚠️ Đổi xong mà `java -version` vẫn báo bản cũ
-
-Chỗ tốn thời gian nhất, và **không phải do bạn làm sai**.
-
-Tiến trình nhận biến môi trường **từ tiến trình cha, đúng lúc nó được sinh
-ra**, rồi không bao giờ đọc lại. Mọi ứng dụng mở từ Start menu hay taskbar
-đều là con của `explorer.exe`. Nếu explorer đang chạy từ trước khi bạn đổi
-PATH thì nó giữ bản cũ — và **VS Code mở lại vẫn nhận bản cũ**, dù bản thân
-VS Code vừa khởi động mới tinh. Mở thêm tab terminal trong VS Code càng
-không giúp được gì.
-
-Ghi registry bằng lệnh (`Set-ItemProperty`) **không phát `WM_SETTINGCHANGE`**
-để báo cho ứng dụng đang chạy nạp lại; hộp thoại System Properties của Windows
-thì có phát. Vì vậy sửa bằng lệnh hay dính lỗi này hơn sửa bằng tay.
-
-Chọn một cách:
-
-```powershell
-# A. Khoi dong lai explorer — taskbar chop 1-2 giay roi tu hien lai.
-#    Sau do mo lai VS Code TU START MENU.
-Stop-Process -Name explorer -Force
-
-# B. Va tam cho rieng terminal dang mo — khong can restart gi.
-$env:Path = 'D:\jdk21\bin;' + $env:Path
-```
-
-Cách chắc chắn nhất vẫn là **khởi động lại máy**.
-
-### Kiểm ai đúng ai sai
-
-```powershell
-cd apps\api
-.\mvnw.cmd --version      # JDK cua Maven  -> phai 21
-java -version             # JDK tren PATH  -> phai 21
-(Get-Command java).Source # phai la D:\jdk21\bin\java.exe
-```
-
-Hai dòng đầu có thể ra **hai kết quả khác nhau**, và đó chính là manh mối:
-Maven 21 + PATH 17 nghĩa là `JAVA_HOME` đã đúng còn PATH thì chưa.
-
-> Đã kiểm ngày 25/09/2026 sau khi làm xong: `java -version` ra 21.0.12.1, và
-> `java -jar target\ptit-one-api-0.0.1-SNAPSHOT.jar` chạy được, `/api/health`
-> trả `{"service":"ptit-one-api","status":"UP"}`.
-
-**Không cần cài Maven.** Repo đã có Maven Wrapper.
-
-## A3. Node
-
-Cài Node LTS.
-
-> ⚠️ Kế hoạch ghi **Node 24**, nhưng máy đang giữ repo chạy **Node 22.13** và
-> web vẫn dựng được. Nhóm chọn một con số rồi ghi vào cả kế hoạch lẫn file
-> này — để hai số ở hai chỗ là cách chắc chắn sinh lỗi "máy tôi chạy được".
-
-## A4. Git
-
-Cài Git. Chưa vào được repo thì báo TV1.
-
----
-
-# Phần B — Dùng VS Code
-
-Không bắt ai dùng IntelliJ. VS Code làm được đủ cả backend lẫn frontend.
-
-## B1. Quy tắc vàng
-
-**Terminal là chuẩn, IDE chỉ là chỗ gõ chữ.**
-
-Dùng IDE nào cũng được, miễn `.\mvnw.cmd --version` ra JDK 21. IDE báo xanh mà
-terminal hỏng thì máy đó vẫn là máy hỏng.
-
-## B2. Java trong VS Code
-
-**1. Cài JDK 21 trước** (mục A2). VS Code không tự cài JDK.
-
-**2. Cài extension.** Ctrl+Shift+X, cài **Extension Pack for Java** (Microsoft).
-Repo đã có `.vscode/extensions.json` nên mở project lên VS Code sẽ tự gợi ý.
-
-**3. Chỉ cho VS Code dùng JDK 21.** Ctrl+Shift+P → gõ
-`Preferences: Open User Settings (JSON)` → thêm vào:
-
-```json
-"java.configuration.runtimes": [
-  {
-    "name": "JavaSE-21",
-    "path": "C:\\Program Files\\Java\\jdk-21",
-    "default": true
-  }
-]
-```
-
-Sửa `path` cho khớp máy mình. Dùng `\\` (hai gạch chéo) trong JSON.
-
-**4. Mở đúng thư mục.** File → Open Folder → chọn **`apps/api`**, không phải
-gốc repo. Extension Java tìm `pom.xml` ngay trong thư mục vừa mở.
-
-**5. Chạy.** Ctrl+` để mở terminal, rồi:
-
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-**Không cần cài Maven riêng** — extension tự ưu tiên `mvnw` của repo.
-
-## B3. Frontend trong VS Code
-
-File → Open Folder → **`apps/web`**. Ctrl+` rồi:
-
-```powershell
-npm ci
-npm run dev
-```
-
-Không có extension nào bắt buộc.
-
-## B4. Mở cả backend lẫn frontend cùng lúc
-
-File → **Add Folder to Workspace**, thêm cả `apps/api` và `apps/web`, rồi
-File → **Save Workspace As** để lần sau mở một phát ra cả hai.
-
-Mỗi thư mục có terminal riêng — chọn thư mục ở ô dropdown khi bấm New Terminal.
-
----
-
-# Phần C — Chạy
-
-Mọi lệnh chạy **tại gốc repo**, trừ chỗ ghi khác.
-
-## C1. Lấy repo
-
-```powershell
-git clone https://github.com/khangdzvl050623/PTIT-One.git
-cd PTIT-One
-```
-
-## C2. Tạo database
-
-Tạo file cấu hình riêng (Git đã bỏ qua file này):
-
-```powershell
-Copy-Item .\db\central\config.example.psd1 .\db\central\config.local.psd1
-```
-
-Mở `db\central\config.local.psd1`, sửa cho khớp máy mình:
-
-```powershell
-@{
-    SqlServer = 'localhost\PTITONE'
-    DatabaseName = 'PTITONE_CENTRAL'
-    TrustServerCertificate = $true
+$key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+$raw = (Get-Item $key).GetValue('Path','',[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+if ($raw -notmatch [regex]::Escape('D:\jdk21\bin')) {
+    Set-ItemProperty -LiteralPath $key -Name 'Path' -Value ('D:\jdk21\bin;' + $raw) -Type ExpandString
 }
 ```
 
-Chạy:
+Rồi **khởi động lại máy**. Đừng thay bằng
+`[Environment]::SetEnvironmentVariable` — nó làm hỏng `%SystemRoot%` trong PATH.
+</details>
+
+## 3. Node
+
+Cài Node LTS.
 
 ```powershell
+node --version
+```
+
+> Nhóm **chưa chốt** 22 hay 24. Kế hoạch ghi 24; máy đang giữ repo chạy 22.13
+> vẫn dựng được. Chốt rồi thì sửa vào đây và vào kế hoạch.
+
+## 4. Git
+
+```powershell
+git --version
+```
+
+## 5. VS Code — nếu không dùng IntelliJ
+
+```powershell
+code --install-extension vscjava.vscode-java-pack
+```
+
+Ctrl+Shift+P → `Preferences: Open User Settings (JSON)` → thêm:
+
+```json
+"java.configuration.runtimes": [
+  { "name": "JavaSE-21", "path": "D:\\jdk21", "default": true }
+]
+```
+
+Mở thư mục **`apps/api`**, không phải gốc repo — extension Java cần thấy
+`pom.xml` ngay trong thư mục vừa mở. Muốn mở cả hai thì File → **Add Folder
+to Workspace** thêm `apps/web`.
+
+---
+
+# Chạy
+
+```powershell
+# 1. Lay repo
+git clone https://github.com/khangdzvl050623/PTIT-One.git
+cd PTIT-One
+
+# 2. Tao database
+Copy-Item .\db\central\config.example.psd1 .\db\central\config.local.psd1
+#    Mo file vua copy, sua SqlServer neu instance cua ban khac 'localhost\PTITONE'
 .\db\central\run.ps1 -Action CreateDatabase
 .\db\central\run.ps1 -Action VerifyDatabase
 ```
 
-Phải thấy `ONLINE`, `Vietnamese_CI_AS`, RCSI = 1, `SIMPLE`.
-
-**0 bảng là đúng** — TV2 chưa có migration.
-
-## C3. Chạy API
-
 ```powershell
+# 3. Chay API — terminal 1
 cd apps\api
 .\mvnw.cmd spring-boot:run
 ```
 
-Terminal khác:
-
 ```powershell
-Invoke-RestMethod http://localhost:8080/api/health
-```
-
-Phải ra `{"service":"ptit-one-api","status":"UP"}`.
-
-API hiện **chưa đọc DB**, nên bước C2 chưa xong vẫn chạy được.
-
-## C4. Chạy web
-
-```powershell
+# 4. Chay web — terminal 2
 cd apps\web
 npm ci
 npm run dev
 ```
 
-Mở `http://localhost:5173`. Kiểm proxy: `http://localhost:5173/api/health`
-phải ra đúng JSON như C3.
-
-Dùng `npm ci` chứ không `npm install` — `ci` dựng đúng theo lockfile nên mọi
-máy giống nhau.
+Mở `http://localhost:5173`.
 
 ---
 
-# Phần D — Xong chưa
+# Xong chưa
 
 | Lệnh | Kết quả đúng |
 |---|---|
 | `.\mvnw.cmd --version` (tại `apps/api`) | `Java version: 21.x` |
-| `node --version` | v22 hoặc v24, theo số nhóm đã chốt |
 | `.\db\central\run.ps1 -Action VerifyDatabase` | ONLINE, `Vietnamese_CI_AS`, RCSI 1 |
 | `Invoke-RestMethod http://localhost:8080/api/health` | `status: UP` |
 | Mở `http://localhost:5173/api/health` | cùng JSON như trên |
 
-Đủ 5 dòng là máy bạn dựng lại được Phần 1 ở trạng thái hiện tại.
+**0 bảng trong CENTRAL là đúng** — TV2 chưa có migration.
 
-## Lỗi thường gặp
+# Lỗi thường gặp
 
 | Hiện tượng | Xử lý |
 |---|---|
-| `release version 21 not supported` | Maven đang dùng JDK 17. Sửa `JAVA_HOME`, mở terminal mới |
-| `UnsupportedClassVersionError ... 65.0 ... up to 61.0` | Class biên dịch bằng 21, JVM chạy là 17. Sửa `JAVA_HOME` rồi `.\mvnw.cmd clean verify` |
-| Đã tải JDK 21 mà `mvnw` vẫn báo 17 | Giải nén không đủ, phải đặt `JAVA_HOME` — xem mục A2 |
-| Đã sửa PATH mà `java -version` vẫn 17 | `explorer.exe` giữ biến cũ. `Stop-Process -Name explorer -Force` rồi mở lại VS Code từ Start, hoặc reboot |
-| Thoát VS Code mở lại vẫn không ăn | Mở lại VS Code chưa đủ — phải làm mới explorer, vì VS Code là con của nó |
-| `mvnw --version` ra 21 nhưng `java -version` ra 17 | Bình thường: `JAVA_HOME` đã đúng, `PATH` thì chưa. Build ổn, chỉ `java -jar` hỏng |
-| IDE chạy được, `mvnw.cmd` hỏng | IDE dùng JDK riêng. Tin terminal, không tin IDE |
-| Thiếu `config.local.psd1` | Chưa làm bước C2 |
-| Không thấy `sqlcmd` | Cài bản ODBC, mở terminal mới |
+| `release version 21 not supported` | Maven đang chạy JDK 17. Đặt `JAVA_HOME`, mở terminal mới |
+| `UnsupportedClassVersionError ... 65.0 ... up to 61.0` | Class build bằng 21, JVM chạy 17. Sửa `JAVA_HOME` rồi `.\mvnw.cmd clean verify` — bắt buộc có `clean` |
+| `mvnw --version` ra 21 nhưng `java -version` ra 17 | Không phải lỗi: `JAVA_HOME` đã đúng, `PATH` chưa. Build vẫn chạy, chỉ `java -jar` hỏng |
+| Sửa PATH rồi mà `java -version` vẫn 17 | `explorer.exe` giữ biến cũ, nên VS Code mở lại vẫn nhận biến cũ. `Stop-Process -Name explorer -Force` rồi mở lại VS Code từ Start, hoặc reboot |
+| IDE chạy được, `mvnw.cmd` hỏng | IDE dùng JDK riêng. Tin terminal, đừng tin IDE |
+| Thiếu `config.local.psd1` | Chưa chạy bước `Copy-Item` |
 | `Login failed` khi tạo DB | Thử kết nối bằng chính tài khoản Windows đó trong SSMS trước |
-| `npm ci` báo thiếu lockfile | Đang sai thư mục, phải ở `apps/web` |
+| `npm ci` báo thiếu lockfile | Sai thư mục, phải ở `apps/web` |
 | `localhost:5173/api/...` trả 404 | API chưa chạy |
-| Collation máy mình khác `Vietnamese_CI_AS` | Không sửa được sau khi cài; tạo instance mới hoặc báo TV1 |
+| Collation khác `Vietnamese_CI_AS` | Không sửa được; gỡ instance cài lại hoặc báo TV1 |
 
-## Chưa có gì — đừng tưởng đã xong
+# Chưa có gì
 
-Chạy hết Phần C bạn có: SQL Server + CENTRAL **rỗng** + API skeleton + web +
-proxy thông. Chưa có schema, migration, seed, JDBC, đăng nhập, và mọi API
-nghiệp vụ (gọi thử trả 404 là **đúng**).
+Chạy hết phần trên bạn có: SQL Server + CENTRAL **rỗng** + API skeleton + web
++ proxy thông. **Chưa có** schema, migration, seed, JDBC, đăng nhập và mọi API
+nghiệp vụ — gọi thử trả 404 là **đúng**.
 
 **Tạo được database rỗng không phải là xong ENV-04 hay F00.**
 
-## Khi nào cần mạng chung
-
-Việc hằng ngày không cần. Chỉ cần ở mốc tích hợp M1/M2 (gặp mặt thì LAN là
-đủ) và ở **Phần 2** — lúc đó ba máy SQL Server ở ba cơ sở buộc phải nhìn thấy
-nhau qua VPN.
-
-## Liên quan
+---
 
 [Kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-Tuan-Theo-Chuc-Nang.md) ·
 [db/central](../db/central/README.md) ·
