@@ -26,12 +26,53 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-sqlserver</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
+        <!--
+            Nguồn migration DUY NHẤT là db/central/migrations của T2.
+            Đóng gói vào classpath:db/migration để Flyway đọc; KHÔNG giữ một
+            bản DDL thứ hai trong apps/api.
+
+            Khai báo <resources> làm mất mặc định, nên phải liệt kê lại
+            src/main/resources. Chỉ lấy *.sql — bootstrap, seed và file
+            .example không được vào migration.
+        -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../../db/central/migrations</directory>
+                <targetPath>db/migration</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>*.sql</include>
+                </includes>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
