@@ -142,6 +142,44 @@ cd apps\api
 Dòng `Java version:` phải là 21.x. Ra 17 thì sửa `JAVA_HOME`, **mở terminal
 mới** (terminal cũ giữ biến cũ).
 
+### Cài JDK 21 chưa đủ — phải đặt `JAVA_HOME`
+
+Tải JDK 21 về giải nén ra một thư mục (ví dụ `D:\jdk21`) thì Windows **không
+tự biết**. Phải đặt biến môi trường:
+
+```powershell
+[Environment]::SetEnvironmentVariable('JAVA_HOME','D:\jdk21','User')
+```
+
+Rồi **mở terminal mới**. Kiểm lại bằng `.\mvnw.cmd --version`.
+
+Đường dẫn trỏ vào thư mục **gốc** của JDK (thư mục có `bin\javac.exe`), không
+trỏ vào `bin`.
+
+### Lỗi thứ hai: biên dịch một đằng, chạy một nẻo
+
+```
+UnsupportedClassVersionError: ... has been compiled by a more recent version
+of the Java Runtime (class file version 65.0), this version of the Java
+Runtime only recognizes class file versions up to 61.0
+```
+
+Đã gặp thật ngày 25/09/2026, ngay sau khi sửa được lỗi ở trên.
+
+Đọc hai con số là ra bệnh: **65.0 = Java 21**, **61.0 = Java 17**. Tức là
+class **đã biên dịch bằng 21** (một terminal hoặc IDE có JDK 21), nhưng JVM
+đem chạy lại là **17**. Maven thấy class mới hơn source nên **bỏ qua bước
+biên dịch**, rồi fork JVM 17 chạy class 21.
+
+Cách sửa: đặt `JAVA_HOME` như trên, mở terminal mới, rồi build **sạch** —
+chữ `clean` quan trọng, vì nó xoá đống class cũ đang gây nhiễu:
+
+```powershell
+.\mvnw.cmd clean verify
+```
+
+Ra `BUILD SUCCESS` là xong.
+
 **Không cần cài Maven.** Repo đã có Maven Wrapper.
 
 ## A3. Node
@@ -312,6 +350,8 @@ máy giống nhau.
 | Hiện tượng | Xử lý |
 |---|---|
 | `release version 21 not supported` | Maven đang dùng JDK 17. Sửa `JAVA_HOME`, mở terminal mới |
+| `UnsupportedClassVersionError ... 65.0 ... up to 61.0` | Class biên dịch bằng 21, JVM chạy là 17. Sửa `JAVA_HOME` rồi `.\mvnw.cmd clean verify` |
+| Đã tải JDK 21 mà `mvnw` vẫn báo 17 | Giải nén không đủ, phải đặt `JAVA_HOME` — xem mục A2 |
 | IDE chạy được, `mvnw.cmd` hỏng | IDE dùng JDK riêng. Tin terminal, không tin IDE |
 | Thiếu `config.local.psd1` | Chưa làm bước C2 |
 | Không thấy `sqlcmd` | Cài bản ODBC, mở terminal mới |
