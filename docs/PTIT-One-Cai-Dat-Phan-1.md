@@ -41,6 +41,36 @@ Cài thêm **SSMS** (tải riêng). `sqlcmd` bản ODBC thường đi kèm SSMS.
 sqlcmd -S "localhost\PTITONE" -E -Q "SELECT @@SERVERNAME, SERVERPROPERTY('Collation')"
 ```
 
+## 1b. Mở đường cho API nối vào
+
+> Chỉ người **chạy backend** cần (TV5, TV6, TV1). TV2 chỉ viết schema thì bỏ qua.
+
+Cài xong SQL Server **vẫn chưa nối JDBC được**: mặc định instance **tắt TCP/IP**
+và **chỉ nhận tài khoản Windows**. Hai công tắc này không nằm trong bộ cài.
+
+**1. Bật TCP/IP và cố định cổng.** Win+R → gõ `SQLServerManager15.msc`
+(Configuration Manager không có trong Start menu của Windows 11):
+
+- `SQL Server Network Configuration` → `Protocols for PTITONE` → **TCP/IP** →
+  chuột phải → **Enable**
+- Chuột phải **TCP/IP** → **Properties** → tab **IP Addresses** → kéo xuống
+  cuối, mục **IPAll**:
+  - `TCP Dynamic Ports` → **xóa trắng**
+  - `TCP Port` → **14330**
+
+⚠️ **Đừng dùng 1433** nếu máy có instance `MSSQLSERVER` — nó sẽ tranh cổng sau
+mỗi lần khởi động máy, và lỗi trông như ngẫu nhiên.
+
+**2. Bật Mixed Mode.** SSMS → chuột phải server → **Properties** → **Security**
+→ **SQL Server and Windows Authentication mode**.
+
+Đây là bật thêm, không phải thay thế — vẫn dùng Windows Auth để quản trị.
+
+**3. Restart service** `SQL Server (PTITONE)` cho cả hai thay đổi có hiệu lực.
+Replication (nếu máy có) tự chạy lại.
+
+Tạo login cho API làm ở phần **Chạy → bước 2b**, sau khi đã có database.
+
 ## 2. JDK 21
 
 Tải JDK 21 rồi giải nén ra `D:\jdk21` (chỗ khác cũng được, sửa đường dẫn bên
@@ -123,10 +153,41 @@ Copy-Item .\db\central\config.example.psd1 .\db\central\config.local.psd1
 .\db\central\run.ps1 -Action VerifyDatabase
 ```
 
+### 2b. Tạo login cho API — chỉ người chạy backend
+
+Trong SSMS, **tự đặt mật khẩu của bạn**:
+
+```sql
+USE master;
+CREATE LOGIN ptitone_api WITH PASSWORD = N'<mat khau cua ban>',
+    CHECK_POLICY = ON, DEFAULT_DATABASE = PTITONE_CENTRAL;
+GO
+USE PTITONE_CENTRAL;
+CREATE USER ptitone_api FOR LOGIN ptitone_api WITH DEFAULT_SCHEMA = dbo;
+GO
+```
+
+Chưa cấp quyền bảng nào — cấp sau khi T2 có schema. Không cấp `db_owner`,
+không dùng `sa` chạy ứng dụng.
+
+**Kiểm bốn thứ bằng một lệnh** (TCP, Mixed Mode, login, mật khẩu):
+
+```powershell
+sqlcmd -S "tcp:localhost,14330" -U ptitone_api -d PTITONE_CENTRAL -Q "SELECT SUSER_NAME(), DB_NAME()"
+```
+
+Ra `ptitone_api` và `PTITONE_CENTRAL` là xong phần hạ tầng.
+**Lệnh này hỏng thì sửa ở đây, đừng mở Java ra đoán.**
+
+Rồi điền `apps/api/.env` — xem [hướng dẫn backend](../apps/api/README.md#nối-database--profile-central).
+
 ```powershell
 # 3. Chay API — terminal 1
 cd apps\api
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run          # skeleton, KHONG noi DB
+
+# ...hoac chay voi DB, tu goc repo, sau khi da dien .env:
+.\scripts\dev-api.ps1
 ```
 
 ```powershell
@@ -148,6 +209,8 @@ Mở `http://localhost:5173`.
 | `.\db\central\run.ps1 -Action VerifyDatabase` | ONLINE, `Vietnamese_CI_AS`, RCSI 1 |
 | `Invoke-RestMethod http://localhost:8080/api/health` | `status: UP` |
 | Mở `http://localhost:5173/api/health` | cùng JSON như trên |
+| *(chạy backend)* `sqlcmd -S "tcp:localhost,14330" -U ptitone_api -d PTITONE_CENTRAL -Q "SELECT SUSER_NAME()"` | `ptitone_api` |
+| *(chạy backend)* `Invoke-RestMethod http://localhost:8080/api/health/db` | `status: UP`, `login: ptitone_api` |
 
 **0 bảng trong CENTRAL là đúng** — TV2 chưa có migration.
 
