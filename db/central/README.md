@@ -48,8 +48,13 @@ db/central/
 │   └── 00-verify-database.sql  truy vấn chỉ đọc
 └── examples/
     ├── application-central.properties.example
-    └── .env.example           mẫu cấu hình cho T5, chưa được API nạp
+    └── .env.example           tham khảo tên biến DB; mẫu dev ở apps/api
 ```
+
+> 🚀 **Máy mới, chưa cài gì?** Đi theo
+> [hướng dẫn cài Phần 1](../../docs/PTIT-One-Cai-Dat-Phan-1.md) — một đường đi
+> duy nhất từ máy trắng tới chạy được cả SQL Server, API và web. Trang này là
+> phần chi tiết về DB; trang kia ghép cả ba tầng.
 
 ## 3. T1/T2: chuẩn bị SQL Server trên máy cá nhân
 
@@ -233,10 +238,16 @@ Mẫu tắt migration mặc định để API không tự thay schema DB chung. 
 phải profile dùng được ngay: thiếu dependency, migration và quyền thì chưa
 thể nghiệm thu. Không bật `baseline-on-migrate`/`clean` để xử lý lỗi tùy tiện.
 
-Spring Boot không tự nạp `apps/api/.env`. Nếu dùng file đó, T5 cần bổ sung
-cơ chế nạp biến hoặc nhập chúng trong cấu hình chạy của IDE. Mẫu `.env.example`
-chỉ có tên biến; giá trị thật giữ riêng. Sau khi đủ dependency/cấu hình,
-chạy `mvnw.cmd spring-boot:run` từ `apps/api` với môi trường đã cấp.
+Spring Boot không tự nạp `apps/api/.env`. Đã có `scripts/dev-api.ps1` nạp file
+này vào môi trường tiến trình rồi gọi Maven Wrapper. Copy
+`apps/api/.env.example` sang `apps/api/.env` nếu chưa có, điền giá trị riêng
+rồi chạy `.\scripts\dev-api.ps1` từ gốc repo. Biến tiến trình có sẵn được ưu
+tiên; giá trị rỗng được bỏ qua. Script không thực thi nội dung `.env` hay in
+giá trị ra log. Dùng `-ValidateOnly` để kiểm cú pháp mà không chạy ứng dụng.
+Xem [quy tắc nạp và cấu hình IntelliJ](../../apps/api/README.md#nạp-biến-môi-trường-khi-dev-t5).
+Chạy trực tiếp `mvnw.cmd spring-boot:run` hoặc nút Run của IDE vẫn cần cấp
+biến qua môi trường/run configuration. Loader chỉ hoàn tất cơ chế nạp biến;
+JDBC, profile `central`, migration và kiểm chứng ENV-05 vẫn cần triển khai.
 
 **Bàn giao ENV-05:** kết nối đúng DB; truy vấn bảng thật; transaction rollback
 đúng; sai mật khẩu/thiếu quyền báo lỗi; quyền nghiệp vụ được kiểm qua API;
