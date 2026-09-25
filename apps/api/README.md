@@ -18,7 +18,8 @@ Cài JDK 21, đặt `JAVA_HOME` vào thư mục JDK, rồi mở terminal tại `
 
 Lần đầu wrapper cần mạng để tải Maven/dependency. Không cần Maven cài toàn máy.
 Ứng dụng mặc định ở `http://localhost:8080`; có thể đổi cổng bằng biến môi trường
-`SERVER_PORT`. Skeleton không nạp file `.env` và không cần secret để chạy.
+`SERVER_PORT`. Chạy wrapper trực tiếp không nạp file `.env`; dùng script bên
+dưới nếu muốn nạp file. Skeleton không cần secret để chạy.
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/api/health
@@ -28,6 +29,74 @@ Kết quả: `{"service":"ptit-one-api","status":"UP"}`.
 Các endpoint nghiệp vụ chưa triển khai, ví dụ `/api/me`, trả 404.
 
 Trên Linux/macOS dùng `./mvnw` thay cho `.\mvnw.cmd`.
+
+## Nạp biến môi trường khi dev (T5)
+
+Tại gốc repo, tạo file riêng tư một lần, không chép đè file đã có:
+
+```powershell
+if (-not (Test-Path -LiteralPath .\apps\api\.env)) {
+    Copy-Item -LiteralPath .\apps\api\.env.example -Destination .\apps\api\.env
+}
+# Sửa .env bằng editor, rồi chạy:
+.\scripts\dev-api.ps1
+```
+
+Script dùng Windows PowerShell 5.1 hoặc PowerShell 7, tự chuyển về `apps/api`
+để gọi wrapper và trả lại thư mục/biến môi trường cũ khi kết thúc. Có thể gọi
+bằng đường dẫn tuyệt đối từ bất kỳ thư mục nào. JDK 21 vẫn cần được cấu hình
+qua `JAVA_HOME`/PATH. Không sửa biến môi trường User/Machine.
+
+```powershell
+# Chỉ kiểm cú pháp, không in giá trị, không chạy Maven hay kết nối DB:
+.\scripts\dev-api.ps1 -ValidateOnly
+# Nạp env rồi kiểm JDK mà Maven thực sự dùng:
+.\scripts\dev-api.ps1 -MavenArguments '--version'
+# Truyền nhiều đối số từ PowerShell:
+.\scripts\dev-api.ps1 -MavenArguments @('clean', 'verify')
+# File khác: đường dẫn tương đối tính từ thư mục terminal hiện tại:
+.\scripts\dev-api.ps1 -EnvFile .\apps\api\.env.local
+```
+
+Quy tắc nạp:
+
+- Biến đã có trong môi trường tiến trình được ưu tiên hơn `.env`; file không
+  ghi đè chúng. Dòng giá trị rỗng được bỏ qua, không xóa biến đã có.
+- Không có `.env` mặc định vẫn chạy skeleton bằng môi trường hiện tại.
+  Nếu chỉ định `-EnvFile` mà file không tồn tại thì dừng báo lỗi.
+- File UTF-8, mỗi dòng `NAME=value`; bỏ qua dòng trống và dòng bắt đầu bằng `#`.
+  Tên biến dùng chữ ASCII, số, `_`, không bắt đầu bằng số; không được trùng tên.
+- Có thể bọc giá trị trong `'...'` hoặc `"..."` để giữ khoảng trắng đầu/cuối.
+  Chỉ bỏ cặp nháy ngoài; `$`, `#`, `;`, `=`, `\`, `%` và backtick bên trong
+  được giữ nguyên. Không thay `${VAR}`, không giải mã `\n`, không thực thi lệnh.
+  Không hỗ trợ `export`, giá trị nhiều dòng hay chú thích cuối dòng.
+- Sai cú pháp dừng trước khi chạy Maven, chỉ báo số dòng, không in nội dung.
+  Script không log giá trị; tránh bật log debug/config của ứng dụng khi có secret.
+- Script trả mã thoát của Maven. `.env` và `.env.local` đã được Git bỏ qua;
+  chỉ commit `.env.example` không chứa giá trị thật.
+
+Ví dụ thử cơ chế nạp ngay với skeleton: ghi `SERVER_PORT=8081` trong `.env`,
+chạy script rồi gọi `http://localhost:8081/api/health`. Nếu terminal đã có
+`SERVER_PORT`, giá trị terminal được ưu tiên. Đổi proxy Vite nếu chạy web cùng.
+
+**Chạy bằng nút Run trong IntelliJ:** mở **Run → Edit Configurations**, chọn
+cấu hình chạy API, mở **Environment variables** (qua **Modify options** nếu
+đang ẩn). Nhập từng biến/giá trị bằng bảng editor, đặc biệt URL JDBC chứa dấu
+`;`. Đặt JRE/SDK 21 rồi Apply/Run. Nút Run không gọi `dev-api.ps1`, nên không
+tự nhận `.env` qua script; cách chung không phụ thuộc plugin của IDE.
+
+Các biến `PTITONE_DB_*`, migration và profile `central` trong mẫu chỉ chuẩn bị
+cho bước JDBC. Hiện chưa có dependency/profile DataSource; điền chúng chưa
+tạo kết nối DB hoặc chạy migration. Xem [bàn giao CENTRAL](../../db/central/README.md#7-t5-cấu-hình-backend-một-db).
+
+Kiểm thử loader offline (không cần JDK, Maven, DB hay mật khẩu thật):
+
+```powershell
+powershell -NoProfile -File scripts/tests/Test-DevApi.ps1
+```
+
+Cơ chế dựa trên [biến môi trường kế thừa của PowerShell](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables)
+và [cấu hình ngoài của Spring Boot](https://docs.spring.io/spring-boot/reference/features/external-config.html).
 
 ## Kiểm tra và đóng gói
 
