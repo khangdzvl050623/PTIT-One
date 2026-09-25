@@ -180,6 +180,71 @@ chữ `clean` quan trọng, vì nó xoá đống class cũ đang gây nhiễu:
 
 Ra `BUILD SUCCESS` là xong.
 
+### `JAVA_HOME` và `PATH` là hai việc khác nhau
+
+Sửa một cái **không** sửa cái kia. Đây là chỗ dễ tưởng đã xong mà chưa xong:
+
+| Biến | Ai đọc nó | Sai thì gặp gì |
+|---|---|---|
+| `JAVA_HOME` | Maven Wrapper (`mvnw.cmd`) | `release version 21 not supported` lúc build |
+| `PATH` | lệnh `java` gõ thẳng, `java -jar` | `UnsupportedClassVersionError` lúc chạy JAR |
+
+Chỉ cần `JAVA_HOME` là **build và chạy app qua `mvnw` đã ổn**. Còn `PATH` cần
+cho bước đóng gói demo (`java -jar`) và cho người chỉ chạy JAR chứ không build.
+
+Chèn JDK vào PATH phải chèn lên **đầu PATH mức Máy**, vì Windows quét từ trên
+xuống và Java cũ thường đã chiếm mấy dòng đầu (`...Oracle\Java\javapath`).
+Thêm vào PATH mức Người dùng không ăn thua — Windows ghép PATH Máy trước.
+
+Cách bấm tay: Start → `environment variables` → **Edit the system environment
+variables** → **Environment Variables…** → khung **DƯỚI** (`System variables`)
+→ `Path` → **Edit…** → **New**, gõ `D:\jdk21\bin` → bấm **Move Up** cho tới
+khi nó lên trên cùng → OK.
+
+### ⚠️ Đổi xong mà `java -version` vẫn báo bản cũ
+
+Chỗ tốn thời gian nhất, và **không phải do bạn làm sai**.
+
+Tiến trình nhận biến môi trường **từ tiến trình cha, đúng lúc nó được sinh
+ra**, rồi không bao giờ đọc lại. Mọi ứng dụng mở từ Start menu hay taskbar
+đều là con của `explorer.exe`. Nếu explorer đang chạy từ trước khi bạn đổi
+PATH thì nó giữ bản cũ — và **VS Code mở lại vẫn nhận bản cũ**, dù bản thân
+VS Code vừa khởi động mới tinh. Mở thêm tab terminal trong VS Code càng
+không giúp được gì.
+
+Ghi registry bằng lệnh (`Set-ItemProperty`) **không phát `WM_SETTINGCHANGE`**
+để báo cho ứng dụng đang chạy nạp lại; hộp thoại System Properties của Windows
+thì có phát. Vì vậy sửa bằng lệnh hay dính lỗi này hơn sửa bằng tay.
+
+Chọn một cách:
+
+```powershell
+# A. Khoi dong lai explorer — taskbar chop 1-2 giay roi tu hien lai.
+#    Sau do mo lai VS Code TU START MENU.
+Stop-Process -Name explorer -Force
+
+# B. Va tam cho rieng terminal dang mo — khong can restart gi.
+$env:Path = 'D:\jdk21\bin;' + $env:Path
+```
+
+Cách chắc chắn nhất vẫn là **khởi động lại máy**.
+
+### Kiểm ai đúng ai sai
+
+```powershell
+cd apps\api
+.\mvnw.cmd --version      # JDK cua Maven  -> phai 21
+java -version             # JDK tren PATH  -> phai 21
+(Get-Command java).Source # phai la D:\jdk21\bin\java.exe
+```
+
+Hai dòng đầu có thể ra **hai kết quả khác nhau**, và đó chính là manh mối:
+Maven 21 + PATH 17 nghĩa là `JAVA_HOME` đã đúng còn PATH thì chưa.
+
+> Đã kiểm ngày 25/09/2026 sau khi làm xong: `java -version` ra 21.0.12.1, và
+> `java -jar target\ptit-one-api-0.0.1-SNAPSHOT.jar` chạy được, `/api/health`
+> trả `{"service":"ptit-one-api","status":"UP"}`.
+
 **Không cần cài Maven.** Repo đã có Maven Wrapper.
 
 ## A3. Node
@@ -352,6 +417,9 @@ máy giống nhau.
 | `release version 21 not supported` | Maven đang dùng JDK 17. Sửa `JAVA_HOME`, mở terminal mới |
 | `UnsupportedClassVersionError ... 65.0 ... up to 61.0` | Class biên dịch bằng 21, JVM chạy là 17. Sửa `JAVA_HOME` rồi `.\mvnw.cmd clean verify` |
 | Đã tải JDK 21 mà `mvnw` vẫn báo 17 | Giải nén không đủ, phải đặt `JAVA_HOME` — xem mục A2 |
+| Đã sửa PATH mà `java -version` vẫn 17 | `explorer.exe` giữ biến cũ. `Stop-Process -Name explorer -Force` rồi mở lại VS Code từ Start, hoặc reboot |
+| Thoát VS Code mở lại vẫn không ăn | Mở lại VS Code chưa đủ — phải làm mới explorer, vì VS Code là con của nó |
+| `mvnw --version` ra 21 nhưng `java -version` ra 17 | Bình thường: `JAVA_HOME` đã đúng, `PATH` thì chưa. Build ổn, chỉ `java -jar` hỏng |
 | IDE chạy được, `mvnw.cmd` hỏng | IDE dùng JDK riêng. Tin terminal, không tin IDE |
 | Thiếu `config.local.psd1` | Chưa làm bước C2 |
 | Không thấy `sqlcmd` | Cài bản ODBC, mở terminal mới |
