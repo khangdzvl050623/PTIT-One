@@ -33,6 +33,9 @@ cho mỗi file SQL mới và kiểm chứng riêng trên SQL Server.
 - `V1__auth_slice.sql` — lát cắt auth (AUTH-02, TV5): `CoSo`, `DanhBaNguoiDung`,
   `TaiKhoan`, `TaiKhoanMaster`, `PhienDangNhap`, `TokenLamMoi`. Schema học vụ
   của T2 bắt đầu từ `V2`, không tạo lại các bảng trên.
+- `V2__hoc_vu_schema.sql` — schema học vụ: 7 bảng danh mục + 9 bảng vận hành,
+  CHECK/UNIQUE/chỉ mục, hợp nhất từ `db/master/01` + `db/site/10..12`. Bỏ
+  Mirror/Outbox/YeuCau/KetQua. FK chỉ có ở Phần 1 đánh dấu `[P1]` trong file.
 
 Tài khoản chạy migration cần `db_ddladmin` (hoặc cao hơn). Login chỉ có
 `CONNECT` sẽ báo `CREATE TABLE permission denied`.

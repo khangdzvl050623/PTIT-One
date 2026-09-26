@@ -10,6 +10,14 @@ Từ gốc repo, sau khi T1 đã tạo DB và cấu hình `config.local.psd1`:
 .\db\central\run.ps1 -Action VerifyDatabase
 ```
 
+`10-verify-hoc-vu.sql` kiểm 13 ca ghi sai bị chặn đúng constraint (sức chứa,
+trạng thái, trùng môn, trần tín chỉ, FK, thang điểm, lịch…) rồi ROLLBACK;
+cần V2 + hai seed:
+
+```powershell
+sqlcmd -S "localhost\PTITONE" -d PTITONE_CENTRAL -E -C -b -f 65001 -i db\central\tests\10-verify-hoc-vu.sql
+```
+
 T2 bổ sung test schema/seed/ràng buộc; T5 bổ sung test truy vấn, quyền và
 rollback qua JDBC trên SQL Server. Ca thay đổi dữ liệu chạy trên CENTRAL
 test riêng. Hủy/đăng ký đồng thời cần kiểm số chỗ, tín chỉ và chống trùng.
