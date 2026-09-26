@@ -27,3 +27,12 @@ Nghiệm thu: dựng trên DB trống; migrate lần hai không áp dụng lại
 cũ; thêm phiên bản mới giữ dữ liệu; ca sai FK/CHECK/UNIQUE bị từ chối; lỗi
 trong transaction rollback đúng. Bổ sung ca parse vào `db/tests/Test-Scripts.ps1`
 cho mỗi file SQL mới và kiểm chứng riêng trên SQL Server.
+
+## Đã có
+
+- `V1__auth_slice.sql` — lát cắt auth (AUTH-02, TV5): `CoSo`, `DanhBaNguoiDung`,
+  `TaiKhoan`, `TaiKhoanMaster`, `PhienDangNhap`, `TokenLamMoi`. Schema học vụ
+  của T2 bắt đầu từ `V2`, không tạo lại các bảng trên.
+
+Tài khoản chạy migration cần `db_ddladmin` (hoặc cao hơn). Login chỉ có
+`CONNECT` sẽ báo `CREATE TABLE permission denied`.

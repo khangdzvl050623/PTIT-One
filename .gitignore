@@ -37,9 +37,11 @@ yarn-error.log*
 *.iml
 # Loai NOI DUNG .vscode/, khong loai chinh thu muc — neu loai ca thu muc thi
 # dong "!" ben duoi vo hieu: git khong the giu lai file nam trong thu muc
-# da bi loai. Giu extensions.json de VS Code tu goi y extension cho ca nhom.
+# da bi loai. Giu extensions.json de VS Code tu goi y extension cho ca nhom,
+# va launch.json de F5 chay API voi apps/api/.env (file nay khong chua bi mat).
 .vscode/*
 !.vscode/extensions.json
+!.vscode/launch.json
 *.suo
 *.user
 .vs/

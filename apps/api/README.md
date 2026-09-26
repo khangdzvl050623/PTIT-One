@@ -149,6 +149,34 @@ java -jar target/ptit-one-api-0.0.1-SNAPSHOT.jar
 Smoke test khởi động server ở cổng ngẫu nhiên và gọi HTTP thật, không cần DB.
 `target/` được Git bỏ qua. JAR hiện chỉ phục vụ backend; chưa chứa frontend.
 
+`AuthFlowIntegrationTest` chạy luồng auth thật trên SQL Server, chỉ khi có
+`PTITONE_DB_URL` (DB đã migrate V1 + seed `10-auth-seed.sql`). Chạy kèm `.env`:
+`.\scripts\dev-api.ps1 -MavenArguments verify` từ gốc repo. Không có DB thì
+4 ca này hiện `skipped`, không phải pass.
+
+## Auth (A0)
+
+Cần `PTITONE_JWT_SECRET` trong `.env` khi chạy profile `central`. Contract đầy đủ
+ở [kế hoạch auth](../../docs/PTIT-One-Ke-Hoach-Auth.md#5-contract-api).
+
+| API | Ghi chú |
+|---|---|
+| `GET /api/auth/csrf` | Đặt cookie `XSRF-TOKEN`; mọi POST gửi lại qua header `X-XSRF-TOKEN` |
+| `POST /api/auth/login` | Đặt cookie `PTITONE_AT` (15') + `PTITONE_RT` (7 ngày, HttpOnly); đổi `XSRF-TOKEN` |
+| `GET /api/auth/me` | Danh tính từ DB + `expiresAt`, `accessExpiresAt` |
+| `POST /api/auth/refresh` | Rotate refresh; dùng lại token cũ = replay → thu hồi cả phiên |
+| `POST /api/auth/logout` | `204` sau khi thu hồi; xóa hai cookie |
+| `POST /api/auth/logout-all` | Tăng `PhienBanTaiKhoan`, thu hồi mọi phiên |
+
+Test tay: import `postman/PTIT-One-Auth.postman_collection.json`. Script của
+collection tự lấy và gắn CSRF cho mọi POST; endpoint mới thêm vào collection
+dùng được ngay. Không tắt CSRF trên server để tiện test.
+
+Frontend: chỉ **một** refresh tại một thời điểm (phối hợp giữa các tab). Hai
+refresh song song cùng token bị coi là replay và mất phiên. Module khác lấy người
+dùng bằng `@AuthenticationPrincipal AuthenticatedUser`; không nhận `role`,
+`campus`, `studentId` từ client.
+
 ## Kết nối frontend khi dev
 
 Frontend ở `apps/web`, cùng cấp với `apps/api`. Xem
@@ -157,7 +185,7 @@ Frontend ở `apps/web`, cùng cấp với `apps/api`. Xem
 Frontend nên gọi URL tương đối `/api/...`; không cần bật CORS rộng.
 
 Nếu đổi cổng backend, sửa đích proxy tương ứng trong `apps/web/vite.config.ts`.
-Form đăng nhập hiện tại vẫn là giao diện mẫu, chưa xác thực với API.
+Form đăng nhập hiện tại vẫn là giao diện mẫu, chưa nối với API auth (AUTH-05).
 
 ## Cấu trúc theo module
 
