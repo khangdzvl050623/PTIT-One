@@ -168,6 +168,10 @@ Cần `PTITONE_JWT_SECRET` trong `.env` khi chạy profile `central`. Contract �
 | `POST /api/auth/logout` | `204` sau khi thu hồi; xóa hai cookie |
 | `POST /api/auth/logout-all` | Tăng `PhienBanTaiKhoan`, thu hồi mọi phiên |
 
+Test tay: import `postman/PTIT-One-Auth.postman_collection.json`. Script của
+collection tự lấy và gắn CSRF cho mọi POST; endpoint mới thêm vào collection
+dùng được ngay. Không tắt CSRF trên server để tiện test.
+
 Frontend: chỉ **một** refresh tại một thời điểm (phối hợp giữa các tab). Hai
 refresh song song cùng token bị coi là replay và mất phiên. Module khác lấy người
 dùng bằng `@AuthenticationPrincipal AuthenticatedUser`; không nhận `role`,

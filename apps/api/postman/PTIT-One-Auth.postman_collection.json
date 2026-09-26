@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "PTIT One — Auth",
+    "description": "Test tay API auth. Script cấp collection tự lấy CSRF (GET /api/auth/csrf) khi chưa có cookie XSRF-TOKEN và gắn header X-XSRF-TOKEN cho mọi request ghi — endpoint mới thêm vào collection này không cần làm gì thêm.\n\nYêu cầu: API chạy profile central, DB đã migrate V1 + seed. Mật khẩu demo: PtitOne@2026. Bật cookie jar của Postman (mặc định bật) và cho phép domain localhost.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:8080" },
+    { "key": "password", "value": "PtitOne@2026" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Chỉ request ghi mới cần CSRF.",
+          "if (['GET', 'HEAD', 'OPTIONS'].includes(pm.request.method)) { return; }",
+          "",
+          "// Luôn đọc cookie mới nhất: login đổi XSRF-TOKEN, dùng mã cũ sẽ bị 403.",
+          "const token = pm.cookies.get('XSRF-TOKEN');",
+          "if (token) {",
+          "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: token });",
+          "  return;",
+          "}",
+          "pm.sendRequest(pm.collectionVariables.get('base') + '/api/auth/csrf', (err, res) => {",
+          "  if (err || res.code !== 200) {",
+          "    console.error('Không lấy được CSRF', err || res.code);",
+          "    return;",
+          "  }",
+          "  pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: res.json().token });",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Login SV (B26DCCN001)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"B26DCCN001\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{base}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Login GV (GVHCM001)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"GVHCM001\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{base}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Login Admin cơ sở (admin.hcm)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin.hcm\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{base}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Login Admin Master (admin.master)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin.master\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{base}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Login sai mật khẩu → 401",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"B26DCCN001\",\n  \"password\": \"sai-mat-khau\"\n}" },
+        "url": "{{base}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Login tài khoản chưa kích hoạt → 401",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"B26DCCN003\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{base}}/api/auth/login"
+      }
+    },
+    {
+      "name": "Me",
+      "request": { "method": "GET", "url": "{{base}}/api/auth/me" }
+    },
+    {
+      "name": "Refresh",
+      "request": { "method": "POST", "url": "{{base}}/api/auth/refresh" }
+    },
+    {
+      "name": "Logout",
+      "request": { "method": "POST", "url": "{{base}}/api/auth/logout" }
+    },
+    {
+      "name": "Logout all",
+      "request": { "method": "POST", "url": "{{base}}/api/auth/logout-all" }
+    },
+    {
+      "name": "Health DB (chỉ Admin)",
+      "request": { "method": "GET", "url": "{{base}}/api/health/db" }
+    },
+    {
+      "name": "CSRF (thường không cần gọi tay)",
+      "request": { "method": "GET", "url": "{{base}}/api/auth/csrf" }
+    }
+  ]
+}
