@@ -23,8 +23,9 @@ không import Spring/JDBC. Module gọi API công khai của nhau, không truy c
 repository nội bộ của module khác; không phụ thuộc vòng. `shared` không
 import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
 API đã nối `PTITONE_CENTRAL` qua profile `central` (một DataSource); profile
-mặc định không nối DB. Chưa có schema, xác thực và API nghiệp vụ — trạng thái
-thật ở `docs/PTIT-One-Backend-Khoi-Dong.md`.
+mặc định không nối DB. Đã có schema (`V1` auth + `V2` học vụ) và xác thực A0
+(đăng nhập, phiên, refresh có rotation, phân quyền theo vai trò). Chưa có API
+nghiệp vụ — trạng thái thật ở `docs/PTIT-One-Backend-Khoi-Dong.md`.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.
 
