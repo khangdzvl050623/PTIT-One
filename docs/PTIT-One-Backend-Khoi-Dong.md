@@ -20,7 +20,6 @@ Phân công và nghiệm thu: [kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-
 
 **Chưa có:**
 
-- Schema, migration, seed — `db/central/migrations/` mới chỉ có README (TV2).
 - Xác thực, phiên, quyền — chưa chốt contract F01, chưa chọn thư viện JWT.
 - Mọi API nghiệp vụ. Sáu module nghiệp vụ hiện chỉ có `package-info.java`;
   **chỉ `health` có code thật**. Gọi thử endpoint nghiệp vụ trả 404 là đúng.
