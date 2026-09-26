@@ -79,3 +79,10 @@
   line-height: 1.45;
   color: var(--notice-meta);
 }
+
+.error {
+  padding: tokens.$space-xs tokens.$space-sm;
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+  border-radius: tokens.$radius-sm;
+}

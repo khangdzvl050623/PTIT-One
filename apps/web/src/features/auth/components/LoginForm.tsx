@@ -17,9 +17,13 @@ export interface LoginFormProps {
    * thay vì giả báo đăng nhập thành công.
    */
   onSubmit?: (credentials: LoginCredentials) => void
+  /** Khoá nút trong lúc chờ server, tránh bấm lặp. */
+  pending?: boolean
+  /** Lý do đăng nhập hỏng, lấy từ `message` của API. */
+  errorMessage?: string | null
 }
 
-export function LoginForm({ onSubmit }: LoginFormProps) {
+export function LoginForm({ onSubmit, pending = false, errorMessage = null }: LoginFormProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -36,6 +40,9 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
     onSubmit({ username, password })
   }
 
+  /* Lỗi từ server được ưu tiên hơn ghi chú nội bộ của form. */
+  const notice = errorMessage ?? message
+
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <label className={styles.field}>
@@ -50,6 +57,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
           onChange={(event) => setUsername(event.target.value)}
           placeholder={LABELS.username}
           autoComplete="username"
+          disabled={pending}
           required
         />
       </label>
@@ -66,16 +74,26 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
           onChange={(event) => setPassword(event.target.value)}
           placeholder={LABELS.password}
           autoComplete="current-password"
+          disabled={pending}
           required
         />
       </label>
 
-      <button className={styles.submit} type="submit">
+      <button className={styles.submit} type="submit" disabled={pending}>
         <Icon name="signIn" size="12px" />
-        <span>{LABELS.loginSubmit}</span>
+        <span>{pending ? LABELS.loginSubmitting : LABELS.loginSubmit}</span>
       </button>
 
-      {message ? <p className={styles.message}>{message}</p> : null}
+      {/* aria-live để trình đọc màn hình đọc lỗi mà không cần chuyển focus. */}
+      {notice ? (
+        <p
+          className={errorMessage ? `${styles.message} ${styles.error}` : styles.message}
+          role={errorMessage ? 'alert' : undefined}
+          aria-live="polite"
+        >
+          {notice}
+        </p>
+      ) : null}
     </form>
   )
 }

@@ -1,0 +1,46 @@
+@use '@/styles/tokens' as tokens;
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-xs;
+}
+
+.name {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.role {
+  margin: 0 0 tokens.$space-sm;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+.link {
+  font-size: tokens.$font-size-sm;
+  color: var(--accent-red);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.signOut {
+  align-self: flex-start;
+  padding: 0;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent-red);
+    text-decoration: underline;
+  }
+}

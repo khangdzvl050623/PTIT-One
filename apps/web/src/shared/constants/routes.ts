@@ -4,6 +4,9 @@
  */
 export const ROUTES = {
   home: '/',
+  login: '/dang-nhap',
+  account: '/tai-khoan',
+  forbidden: '/khong-du-quyen',
   notFound: '*',
 } as const
 
