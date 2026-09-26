@@ -56,7 +56,7 @@ class AccountRecordTest {
     void sessionSnapshotRejectsRevokedExpiredOrStaleVersion() {
         Instant now = Instant.parse("2026-09-26T00:00:00Z");
         SessionSnapshot live = new SessionSnapshot(UUID.randomUUID(), "B26DCCN001", now.plusSeconds(60), null,
-                Role.SINH_VIEN, "HCM", "B26DCCN001", "HOAT_DONG", 2);
+                Role.SINH_VIEN, "HCM", "B26DCCN001", "HOAT_DONG", 2, 2);
 
         assertThat(live.accepts("B26DCCN001", 2, now)).isTrue();
         assertThat(live.accepts("B26DCCN001", 1, now)).as("version cũ sau logout-all").isFalse();
@@ -64,11 +64,43 @@ class AccountRecordTest {
         assertThat(live.accepts("B26DCCN001", 2, now.plusSeconds(60))).as("hết hạn").isFalse();
 
         SessionSnapshot revoked = new SessionSnapshot(live.sessionId(), "B26DCCN001", now.plusSeconds(60), now,
-                Role.SINH_VIEN, "HCM", "B26DCCN001", "HOAT_DONG", 2);
+                Role.SINH_VIEN, "HCM", "B26DCCN001", "HOAT_DONG", 2, 2);
         assertThat(revoked.accepts("B26DCCN001", 2, now)).isFalse();
 
         SessionSnapshot locked = new SessionSnapshot(live.sessionId(), "B26DCCN001", now.plusSeconds(60), null,
-                Role.SINH_VIEN, "HCM", "B26DCCN001", "NGUNG", 2);
+                Role.SINH_VIEN, "HCM", "B26DCCN001", "NGUNG", 2, 2);
         assertThat(locked.accepts("B26DCCN001", 2, now)).isFalse();
+    }
+
+    @Test
+    void refreshNeedsLiveSessionAndUnchangedVersion() {
+        Instant now = Instant.parse("2026-09-26T00:00:00Z");
+        UUID sid = UUID.randomUUID();
+        assertThat(snapshot(sid, now.plusSeconds(60), null, "HOAT_DONG", 1, 1).canRefresh(now)).isTrue();
+        assertThat(snapshot(sid, now.plusSeconds(60), null, "HOAT_DONG", 2, 1).canRefresh(now))
+                .as("logout-all đã tăng phiên bản").isFalse();
+        assertThat(snapshot(sid, now, null, "HOAT_DONG", 1, 1).canRefresh(now)).as("hết hạn tuyệt đối").isFalse();
+        assertThat(snapshot(sid, now.plusSeconds(60), now, "HOAT_DONG", 1, 1).canRefresh(now)).isFalse();
+        assertThat(snapshot(sid, now.plusSeconds(60), null, "NGUNG", 1, 1).canRefresh(now)).isFalse();
+    }
+
+    @Test
+    void usedRefreshTokenIsReplayNotMerelyExpired() {
+        Instant now = Instant.parse("2026-09-26T00:00:00Z");
+        UUID id = UUID.randomUUID();
+        RefreshTokenRecord fresh = new RefreshTokenRecord(id, id, now.plusSeconds(60), null, null);
+        RefreshTokenRecord used = new RefreshTokenRecord(id, id, now.plusSeconds(60), now, null);
+
+        assertThat(fresh.isUsable(now)).isTrue();
+        assertThat(fresh.isReplay()).isFalse();
+        assertThat(used.isUsable(now)).isFalse();
+        assertThat(used.isReplay()).isTrue();
+        assertThat(new RefreshTokenRecord(id, id, now, null, null).isUsable(now)).isFalse();
+    }
+
+    private static SessionSnapshot snapshot(UUID sid, Instant expiresAt, Instant revokedAt, String status,
+            int accountVersion, int versionAtCreate) {
+        return new SessionSnapshot(sid, "B26DCCN001", expiresAt, revokedAt, Role.SINH_VIEN, "HCM", "B26DCCN001",
+                status, accountVersion, versionAtCreate);
     }
 }

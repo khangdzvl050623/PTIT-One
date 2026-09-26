@@ -18,7 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 final class CookieBearerTokenResolver implements BearerTokenResolver {
 
     private static final Set<String> IGNORED_PATHS = Set.of(
-            "/api/auth/csrf", "/api/auth/login", "/api/auth/refresh");
+            "/api/auth/csrf", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout");
 
     @Override
     public String resolve(HttpServletRequest request) {

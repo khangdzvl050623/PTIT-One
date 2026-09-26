@@ -33,6 +33,14 @@ public class AccountRepository {
              WHERE d.TenDangNhap = ?
             """;
 
+    /* Phần 2: DanhBaNguoiDung là bảng nhân bản, MASTER sở hữu — câu này sẽ
+       phải chạy ở MASTER và có hiệu lực tại site sau độ trễ nhân bản. */
+    private static final String BUMP_VERSION = """
+            UPDATE dbo.DanhBaNguoiDung
+               SET PhienBanTaiKhoan = PhienBanTaiKhoan + 1, NgayCapNhat = SYSUTCDATETIME()
+             WHERE TenDangNhap = ?
+            """;
+
     private final JdbcTemplate jdbc;
 
     public AccountRepository(JdbcTemplate jdbc) {
@@ -41,6 +49,11 @@ public class AccountRepository {
 
     public Optional<AccountRecord> findByUsername(String username) {
         return jdbc.query(FIND_BY_USERNAME, (rs, rowNum) -> map(rs), username).stream().findFirst();
+    }
+
+    /** Làm mọi JWT đang lưu hành của tài khoản mất hiệu lực ở request kế tiếp. */
+    public int bumpVersion(String username) {
+        return jdbc.update(BUMP_VERSION, username);
     }
 
     private static AccountRecord map(ResultSet rs) throws SQLException {

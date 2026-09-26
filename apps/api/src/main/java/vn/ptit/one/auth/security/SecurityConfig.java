@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -53,11 +54,17 @@ public class SecurityConfig {
             .requestCache(AbstractHttpConfigurer::disable)
             .csrf(csrf -> csrf
                 .csrfTokenRepository(csrfTokenRepository)
-                .csrfTokenRequestHandler(csrfHandler))
+                .csrfTokenRequestHandler(csrfHandler)
+                /* Mặc định Spring xóa cookie CSRF mỗi lần "xác thực thành công" —
+                   với JWT stateless là MỌI request, nên request ghi kế tiếp luôn 403.
+                   Token CSRF được đổi thủ công đúng một lần lúc login (AuthController). */
+                .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                // Ba endpoint này tự xác định phiên qua cookie, không đòi access còn hạn.
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh",
+                        "/api/auth/logout").permitAll()
                 .requestMatchers("/error").permitAll()
                 // Lộ tên DB và login SQL — chỉ quản trị được xem.
                 .requestMatchers("/api/health/db").hasAnyRole(

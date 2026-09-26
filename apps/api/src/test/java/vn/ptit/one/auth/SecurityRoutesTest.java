@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.Role;
@@ -25,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * luồng thật trên SQL Server — xem AuthFlowIntegrationTest.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// Ghim profile mặc định: chạy qua .env thì SPRING_PROFILES_ACTIVE=central sẽ lọt vào.
+@ActiveProfiles("default")
 class SecurityRoutesTest {
 
     @LocalServerPort
