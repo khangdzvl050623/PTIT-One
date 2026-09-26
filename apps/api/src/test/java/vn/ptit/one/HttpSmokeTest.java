@@ -36,12 +36,15 @@ class HttpSmokeTest {
     }
 
     @Test
-    void unimplementedApiReturnsNotFoundInsteadOfFakeSuccess() throws Exception {
-        assertThat(get("/api/me").statusCode()).isEqualTo(404);
+    void protectedApiRejectsAnonymousWithJsonError() throws Exception {
+        HttpResponse<String> response = get("/api/me");
+
+        assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(response.body()).contains("\"code\":\"AUTH_SESSION_INVALID\"", "\"traceId\"");
     }
 
     /*
-     * Hai ca duoi chan hoi quy cho profile mac dinh: co JDBC tren classpath
+     * Ca duoi chan hoi quy cho profile mac dinh: co JDBC tren classpath
      * nhung KHONG duoc tu mo ket noi. Neu ai do go dong spring.autoconfigure.exclude
      * hoac ghi sai ten class (Boot 4 da doi package), build se do ngay o day
      * thay vi do tren may nguoi chua cai SQL Server.
@@ -53,8 +56,9 @@ class HttpSmokeTest {
     }
 
     @Test
-    void databaseHealthIsAbsentWithoutCentralProfile() throws Exception {
-        assertThat(get("/api/health/db").statusCode()).isEqualTo(404);
+    void databaseHealthIsLockedForAnonymous() throws Exception {
+        // Lộ tên DB và login SQL nên chỉ quản trị được xem (AUTH-03).
+        assertThat(get("/api/health/db").statusCode()).isEqualTo(401);
     }
 
     private HttpResponse<String> get(String path) throws Exception {
