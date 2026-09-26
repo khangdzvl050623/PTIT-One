@@ -1,3 +1,12 @@
-// Barrel export cho feature "auth" — đăng nhập, giữ JWT.
+// Barrel export cho feature "auth" — đăng nhập, phiên và chặn tuyến.
 export { LoginForm } from './components/LoginForm'
 export type { LoginCredentials, LoginFormProps } from './components/LoginForm'
+export { LoginPanel } from './components/LoginPanel'
+export type { LoginPanelProps } from './components/LoginPanel'
+export { RequireAuth } from './components/RequireAuth'
+export type { RequireAuthProps } from './components/RequireAuth'
+export { AuthProvider } from './model/AuthProvider'
+export { useAuth } from './model/AuthContext'
+export type { AuthContextValue } from './model/AuthContext'
+export { ROLES, ROLE_LABELS } from './model/types'
+export type { AuthStatus, Role, SessionUser } from './model/types'

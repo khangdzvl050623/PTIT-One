@@ -1,0 +1,48 @@
+@use '@/styles/tokens' as tokens;
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-sm;
+  font-size: tokens.$font-size-sm;
+}
+
+.term {
+  min-width: 140px;
+  color: var(--notice-meta);
+}
+
+.value {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-sm;
+  margin-top: tokens.$space-lg;
+}
+
+.action {
+  padding: tokens.$space-xs tokens.$space-md;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  color: var(--text-h);
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent-red);
+  }
+}

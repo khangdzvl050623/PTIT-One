@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 
+import { AuthProvider } from '@/features/auth'
+
 export interface AppProvidersProps {
   children: ReactNode
 }
@@ -10,5 +12,9 @@ export interface AppProvidersProps {
  * Thêm provider mới thì thêm ở đây, không rải rác trong từng màn hình.
  */
 export function AppProviders({ children }: AppProvidersProps) {
-  return <BrowserRouter>{children}</BrowserRouter>
+  return (
+    <BrowserRouter>
+      <AuthProvider>{children}</AuthProvider>
+    </BrowserRouter>
+  )
 }

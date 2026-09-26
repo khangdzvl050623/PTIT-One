@@ -1,0 +1,12 @@
+@use '@/styles/tokens' as tokens;
+
+.page {
+  display: flex;
+  justify-content: center;
+  padding-block: tokens.$space-xl;
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+}

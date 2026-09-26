@@ -1,4 +1,4 @@
-import { LoginForm } from '@/features/auth'
+import { LoginPanel } from '@/features/auth'
 import {
   NOTICES,
   NoticeList,
@@ -30,9 +30,7 @@ export function HomePage() {
         </div>
 
         <aside className={styles.asideColumn}>
-          <Panel title={LABELS.login} icon="user">
-            <LoginForm />
-          </Panel>
+          <LoginPanel />
         </aside>
       </div>
 
