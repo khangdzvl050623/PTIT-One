@@ -20,7 +20,7 @@ chỉ có `package-info.java`. `db/central/migrations/` chưa có schema. Web đ
 | Mốc | Gồm | Ước lượng |
 |---|---|---|
 | **A0** — nền auth | Security, Argon2id, access JWT 15 phút, refresh 7 ngày **có rotation + replay**, `PhienDangNhap` + `TokenLamMoi`, logout / logout-all, kiểm `sid`+`accountVersion` mỗi request, phân quyền theo role, tài khoản seed, nối web | 5–7 ngày |
-| **A1** — siết chặt | Ma trận test tương tranh, rate limit `429`, đổi mật khẩu, bootstrap/recovery Admin | khi còn thời gian |
+| **A1** — siết chặt | Ma trận test tương tranh, rate limit `429`, đổi mật khẩu, **quên mật khẩu qua email (Brevo)**, bootstrap Admin | khi còn thời gian |
 | **B** — F02 | Cấp hồ sơ, mã kích hoạt một lần, khóa/ngừng tài khoản | sau A0 |
 
 ⚠️ **Cổng vào Phần 2 là A0, không phải A1.** Xong A0 thì F03–F09 có principal
@@ -33,8 +33,8 @@ là `UPDATE token cũ WHERE chưa dùng` rồi kiểm `@@ROWCOUNT`; bằng 0 ngh
 token đã dùng được trình lại → thu hồi phiên. Phần tốn thời gian thật là **ma
 trận test**, đã đẩy sang A1.
 
-Không làm ở Phần 1: quên mật khẩu qua email/SMS, OAuth mạng xã hội, MFA, saga,
-Outbox, Redis, định tuyến đa DataSource.
+Không làm ở Phần 1: SMS, OAuth mạng xã hội, MFA, saga, Outbox, Redis, định
+tuyến đa DataSource. Quên mật khẩu qua email **có làm**, nhưng ở A1 — xem mục 4b.
 
 ## 2. Quyết định cần chốt với TV4 (TV2 tham gia phần dữ liệu)
 
@@ -96,6 +96,8 @@ tối đa một lần. Không tự retry thao tác ghi khi timeout.
 | `SinhVien`, `GiangVien` tối thiểu | Đủ FK để đối soát danh tính |
 | `PhienDangNhap` *(mới)* | `MaPhien` UUID, `TenDangNhap`, version lúc tạo, thời điểm tạo/hết hạn/thu hồi, lý do |
 | `TokenLamMoi` *(mới)* | UUID, FK phiên, `TokenHash` **unique**, thời điểm tạo/hết hạn/đã dùng/thu hồi. **Không lưu token gốc** |
+| Email — cột thêm *(A1)* | `Email`, `EmailDaXacMinh`, thời điểm xác minh. Đặt cùng chỗ với danh tính tài khoản, chốt với TV2 |
+| `MaKhoiPhuc` *(A1)* | FK tài khoản, **hash** của mã, thời điểm tạo/hết hạn/đã dùng, **số lần thử sai**. Không lưu mã gốc |
 
 - SQL ở repository, có tham số. Migration nguồn duy nhất `db/central/migrations/`.
   **Không `IDENTITY`, không `MERGE`.**
@@ -120,6 +122,91 @@ Phần 1 một database nên chưa lộ, nhưng vị trí bảng quyết định
 Cách xử lý dòng thứ ba chốt ở Phần 2, không phải bây giờ. Phần 1 chỉ cần **ghi
 nhận là đã biết**.
 
+## 4b. Email và khôi phục mật khẩu — A1
+
+**Nguyên tắc, sai là hỏng cả tính năng:** mã luôn gửi tới **email đã lưu và đã
+xác minh** của tài khoản. Email người dùng nhập vào form **chỉ dùng để đối
+chiếu**, không bao giờ dùng làm địa chỉ nhận. Cho nhập email bất kỳ rồi gửi mã
+tới đó nghĩa là ai biết username cũng chiếm được tài khoản.
+
+Luồng quên mật khẩu:
+
+1. Nhập username (`B26DCCN001`) và email.
+2. Backend kiểm email nhập có khớp `Email` đã lưu **và** `EmailDaXacMinh` = true.
+3. Khớp → sinh mã, lưu **hash**, gửi mã tới **email đã lưu**.
+4. Người dùng nhập mã + mật khẩu mới.
+5. Trong **một transaction**: kiểm mã, lưu hash mật khẩu mới, vô hiệu mã,
+   tăng `PhienBanTaiKhoan`, **thu hồi mọi phiên**.
+
+Bước 1–3 luôn trả **phản hồi chung** ("nếu thông tin đúng, mã đã được gửi"),
+kể cả khi username không tồn tại hoặc email không khớp — nếu không thì form này
+thành công cụ dò xem tài khoản nào có thật.
+
+| Thuộc tính mã | Giá trị đề xuất |
+|---|---|
+| Dạng | 6 chữ số |
+| Hạn | 10 phút |
+| Số lần thử sai | tối đa 5, hết thì vô hiệu mã |
+| Số lần xin mã | rate limit theo tài khoản và theo IP |
+| Xin mã mới | **vô hiệu mã cũ ngay** |
+| Lưu trữ | chỉ hash, không lưu mã gốc |
+
+⚠️ **Mã 6 chữ số có entropy thấp** (10⁶). Khác refresh token, ở đây **hash
+không phải là lớp phòng thủ** — bộ đếm số lần thử và hạn 10 phút mới là.
+Thiếu bộ đếm thì mã 6 số bị dò hết trong vài phút.
+
+Tạo mã và commit **trước khi** gửi mail. Gửi hỏng thì mã vẫn tồn tại nhưng
+người dùng không nhận được — họ xin lại, mã cũ bị vô hiệu. Đó là hành vi đúng.
+Không chặn luồng HTTP chờ SMTP; lỗi gửi ghi log, không lộ ra response.
+
+### Dịch vụ gửi thư: Brevo
+
+Hai địa chỉ khác nhau, đừng lẫn: PTIT One gửi **từ** địa chỉ của ứng dụng,
+**tới** `an@gmail.com`; sinh viên mở Gmail để đọc mã.
+
+Dùng **SMTP relay** qua `spring-boot-starter-mail`, không dùng SDK riêng của
+Brevo — đổi nhà cung cấp sau này chỉ là đổi cấu hình.
+
+| Cấu hình | Giá trị |
+|---|---|
+| Host / port | `smtp-relay.brevo.com` : `587`, STARTTLS |
+| Username | SMTP login Brevo cấp |
+| Password | **SMTP key**, không phải mật khẩu tài khoản Brevo |
+| Địa chỉ gửi | Phải là sender/domain **đã xác minh** trong Brevo, nếu không thư bị từ chối |
+| Hạn mức | Gói miễn phí ~300 thư/ngày — đủ cho demo |
+
+Khóa SMTP vào `apps/api/.env`, **không vào Git, không vào `VITE_*`**. Cần mạng
+lúc chạy; môi trường không có mạng thì tắt tính năng chứ không giả lập thành công.
+
+### Admin đầu tiên — A1
+
+⚠️ **Không làm trang web "tạo admin đầu tiên".** Endpoint tự cấp quyền khi chưa
+có admin nghĩa là ai truy cập trước người đó thành admin.
+
+Dùng bootstrap: chỉ tạo `ADMIN_MASTER` khi **chưa có cái nào**, username và mật
+khẩu tạm lấy từ biến môi trường (hoặc sinh ngẫu nhiên, in ra console máy chủ
+đúng một lần). Chạy lại **không** đổi mật khẩu/role, không mở lại tài khoản
+ngừng. Tuyệt đối không `admin/admin`.
+
+Cờ `BatBuocDoiMatKhau`: đăng nhập bằng mật khẩu tạm chỉ được quyền đổi mật khẩu
+và logout, chưa cấp phiên nghiệp vụ. Sau đó admin tự đặt email, xác minh, rồi
+dùng chung luồng khôi phục như mọi tài khoản khác.
+
+**A0 dùng tài khoản Admin trong seed**, chưa cần bootstrap.
+
+### Cấp tài khoản SV/GV — mốc B
+
+- **SV:** Admin nhận danh sách nhập học hợp lệ → tạo/import hồ sơ tối thiểu →
+  cấp tài khoản gắn MSSV.
+- **GV:** Admin nhận thông tin nhân sự đã xác nhận → tạo hồ sơ → cấp tài khoản
+  gắn mã GV. Quyền thao tác lớp còn phụ thuộc **phân công giảng dạy**, không chỉ role.
+- Người dùng nhận thông tin cấp tài khoản → đổi mật khẩu ban đầu hoặc kích hoạt
+  bằng mã một lần, tùy phương án nhóm chọn.
+
+"Admin cấp tài khoản" là **thao tác kỹ thuật đại diện cho quyết định của nhà
+trường**. Không cần dựng thêm hệ thống tuyển sinh, nhân sự hay SSO để chứng minh
+luồng này. Không có nút tự đăng ký làm SV/GV; biết MSSV không đủ để nhận tài khoản.
+
 ## 5. Contract API
 
 | API | Vào / quyền | Ra |
@@ -131,13 +218,17 @@ nhận là đã biết**.
 | `POST /api/auth/logout` | CSRF; xác định phiên qua access hoặc hash refresh | `204` sau khi thu hồi + xóa cookie |
 | `POST /api/auth/logout-all` | Access + CSRF | `204` sau khi tăng version + thu hồi mọi phiên |
 | `POST /api/auth/change-password` — **A1** | Mật khẩu cũ/mới + CSRF | Cập nhật hash, tăng version, thu hồi mọi phiên, đăng nhập lại |
+| `POST /api/auth/forgot-password` — **A1** | `{username, email}` + CSRF | `202` **phản hồi chung** dù đúng hay sai; mã gửi tới email đã lưu |
+| `POST /api/auth/reset-password` — **A1** | `{username, code, newPassword}` + CSRF | Đổi hash, vô hiệu mã, tăng version, thu hồi mọi phiên |
+| `POST /api/auth/verify-email` — **A1** | Mã xác minh gửi tới email | Đặt `EmailDaXacMinh`; chưa xác minh thì không khôi phục được |
 | `POST /api/auth/activate` — **B** | Định danh hồ sơ, mã kích hoạt, mật khẩu mới | Kích hoạt nguyên tử một lần |
 
 Lỗi dùng chung `{ code, message, fieldErrors?, traceId }`:
 
 `400 VALIDATION_ERROR` · `401 AUTH_INVALID_CREDENTIALS` (thông báo chung, không
 lộ tài khoản tồn tại) · `401 AUTH_SESSION_INVALID` · `401 AUTH_REFRESH_INVALID`
-· `403 AUTH_FORBIDDEN` · `403 CSRF_INVALID` · `429 AUTH_TOO_MANY_ATTEMPTS` (A1)
+· `403 AUTH_FORBIDDEN` · `403 CSRF_INVALID` · `429 AUTH_TOO_MANY_ATTEMPTS` (A1,
+dùng cho cả login lẫn xin mã khôi phục)
 · `503 SERVICE_UNAVAILABLE` (không trả SQL exception ra ngoài).
 
 ## 6. Phân quyền và ranh giới module
@@ -177,7 +268,7 @@ Controller gọi service; transaction ở service; SQL ở repository.
 | AUTH-05 | A0 | Nối web: trạng thái đăng nhập, role routing, refresh giữa các tab, logout | 01, ghép sau 04 | TV6 + TV5 | Login → reload → access hết hạn → refresh → logout chạy thật |
 | AUTH-06 | A0 | Kiểm thử và bàn giao — **cổng vào Phần 2** | 04+05 | TV4 | Demo chạy thật + bằng chứng |
 | AUTH-1a | A1 | Test tương tranh refresh/replay, rate limit | 06 | TV4 + TV5 | |
-| AUTH-1b | A1 | Đổi mật khẩu, bootstrap/recovery Admin | 06 | TV5 | |
+| AUTH-1b | A1 | Đổi mật khẩu; email + xác minh; quên mật khẩu qua Brevo; bootstrap Admin | 06 | TV5 | Mã một lần/có hạn/giới hạn thử; reset thu hồi mọi phiên; không gửi mã tới email người dùng tự nhập |
 | AUTH-07 | — | Ca quyền theo bản ghi trên API nghiệp vụ thật | F03–F09 | TV4 + owner | SV không xem người khác; GV không sửa lớp khác |
 | AUTH-08 | B | F02: cấp, kích hoạt, khóa tài khoản | A0 | TV5 + TV2 + TV6 | Mã một lần, rollback, chống nâng quyền |
 
