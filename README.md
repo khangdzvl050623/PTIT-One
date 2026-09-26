@@ -8,7 +8,11 @@ trước; xem [phạm vi khung backend và nhánh tiếp theo](docs/PTIT-One-Bac
 Backend chia module nghiệp vụ; xem [cấu trúc và quy tắc đặt code](apps/api/README.md#cấu-trúc-theo-module).
 Các phần kiến trúc phân tán bên dưới là mục tiêu tiếp theo của đồ án.
 
-**Cài đặt database:** [hướng dẫn máy mới HN/ĐN](docs/PTIT-One-Cai-Dat-May-Moi.md),
+**Database Phần 1:** [khung CENTRAL và hướng dẫn T1/T2/T5](db/central/README.md)
+cho DB cá nhân và DB tích hợp. Có script tạo DB rỗng; schema/seed và kết nối
+backend vẫn là các bước tiếp theo cần triển khai.
+
+**Database Phần 2:** [hướng dẫn máy mới HN/ĐN](docs/PTIT-One-Cai-Dat-May-Moi.md),
 [nhật ký máy HCM/Master](docs/PTIT-One-Setup-HCM.md),
 [cấu hình topology](db/config.ps1) và [hướng dẫn replication](db/replication/README.md).
 Đây là tài liệu hạ tầng Master/site đã có; backend Phần 1 vẫn chưa nối DB.
@@ -703,6 +707,10 @@ bench/benchmark        docs/phan-b             docs/phan-c
 **Một nhánh = một task.** Đừng gom 3 việc vào một nhánh — PR sẽ to, khó review, và dễ conflict.
 
 ## Quy tắc bắt buộc
+
+**CI Phần 1:** [workflow và hướng dẫn](docs/PTIT-One-CI.md) tự build/test
+backend, lint/typecheck/build frontend trên PR vào `dev`/`main`. Hai check
+`ci-api`, `ci-web` cần được thêm vào Rulesets sau lần chạy đầu thành công.
 
 1. **Không push trực tiếp vào `main` và `dev`.** Repo đã bật branch protection nên bạn sẽ bị chặn tự động — thấy lỗi `protected branch hook declined` nghĩa là **bạn đang đứng nhầm nhánh**, không phải lỗi máy.
 2. **Mọi thay đổi phải đi qua Pull Request.** Không có ngoại lệ, kể cả sửa một dòng.

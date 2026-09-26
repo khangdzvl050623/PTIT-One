@@ -1,0 +1,17 @@
+{
+  // F5 chạy API bằng Extension Pack for Java, nạp apps/api/.env thay cho
+  // scripts/dev-api.ps1. Lưu ý: envFile nạp cả dòng trống thành chuỗi rỗng —
+  // xóa hẳn các dòng KEY= trong .env thay vì để trống.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "PTIT One API",
+      "request": "launch",
+      "mainClass": "vn.ptit.one.PtitOneApplication",
+      "projectName": "ptit-one-api",
+      "cwd": "${workspaceFolder}/apps/api",
+      "envFile": "${workspaceFolder}/apps/api/.env"
+    }
+  ]
+}

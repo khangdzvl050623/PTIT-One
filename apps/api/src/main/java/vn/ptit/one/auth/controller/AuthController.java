@@ -1,0 +1,112 @@
+package vn.ptit.one.auth.controller;
+
+import java.time.Clock;
+import java.time.Instant;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import vn.ptit.one.auth.dto.CsrfResponse;
+import vn.ptit.one.auth.dto.LoginRequest;
+import vn.ptit.one.auth.dto.SessionUserResponse;
+import vn.ptit.one.auth.model.AuthenticatedUser;
+import vn.ptit.one.auth.security.AuthCookies;
+import vn.ptit.one.auth.security.AuthenticatedUserToken;
+import vn.ptit.one.auth.service.AuthenticationService;
+import vn.ptit.one.auth.service.AuthenticationService.LoginResult;
+import vn.ptit.one.shared.exception.ApiException;
+
+@RestController
+@RequestMapping("/api/auth")
+@Profile("central")
+public class AuthController {
+
+    private final AuthenticationService authentication;
+    private final AuthCookies cookies;
+    private final CsrfTokenRepository csrfTokens;
+    private final Clock clock;
+
+    public AuthController(AuthenticationService authentication, AuthCookies cookies,
+            CsrfTokenRepository csrfTokens, Clock clock) {
+        this.authentication = authentication;
+        this.cookies = cookies;
+        this.csrfTokens = csrfTokens;
+        this.clock = clock;
+    }
+
+    /** Gọi trước request ghi đầu tiên; đồng thời đặt cookie {@code XSRF-TOKEN}. */
+    @GetMapping("/csrf")
+    public CsrfResponse csrf(CsrfToken token) {
+        return new CsrfResponse(token.getHeaderName(), token.getToken());
+    }
+
+    @PostMapping("/login")
+    public SessionUserResponse login(@Valid @RequestBody LoginRequest body,
+            HttpServletRequest request, HttpServletResponse response) {
+        LoginResult result = authentication.login(body.username(), body.password());
+        Instant now = clock.instant();
+        cookies.writeAccess(response, result.accessToken().value(), result.accessToken().expiresAt(), now);
+        cookies.writeRefresh(response, result.refreshToken().value(), result.user().sessionExpiresAt(), now);
+        // Đổi CSRF token khi danh tính đổi, như CsrfAuthenticationStrategy của Spring.
+        csrfTokens.saveToken(csrfTokens.generateToken(request), request, response);
+        return SessionUserResponse.of(result.user(), result.accessToken().expiresAt());
+    }
+
+    /**
+     * Không cần access còn hạn. Frontend chỉ refresh một lần tại một thời
+     * điểm (phối hợp giữa các tab): hai refresh song song cùng token sẽ bị coi
+     * là replay và mất phiên.
+     */
+    @PostMapping("/refresh")
+    public SessionUserResponse refresh(
+            @CookieValue(name = AuthCookies.REFRESH, required = false) String refreshToken,
+            HttpServletResponse response) {
+        LoginResult result;
+        try {
+            result = authentication.refresh(refreshToken);
+        } catch (ApiException ex) {
+            cookies.clear(response);
+            throw ex;
+        }
+        Instant now = clock.instant();
+        cookies.writeAccess(response, result.accessToken().value(), result.accessToken().expiresAt(), now);
+        cookies.writeRefresh(response, result.refreshToken().value(), result.user().sessionExpiresAt(), now);
+        return SessionUserResponse.of(result.user(), result.accessToken().expiresAt());
+    }
+
+    /** 204 chỉ sau khi việc thu hồi đã commit. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = AuthCookies.REFRESH, required = false) String refreshToken,
+            @CookieValue(name = AuthCookies.ACCESS, required = false) String accessToken,
+            HttpServletResponse response) {
+        authentication.logout(refreshToken, accessToken);
+        cookies.clear(response);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletResponse response) {
+        authentication.logoutAll(user);
+        cookies.clear(response);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public SessionUserResponse me(AuthenticatedUserToken authentication) {
+        return SessionUserResponse.of(authentication.getPrincipal(), authentication.getCredentials().getExpiresAt());
+    }
+}

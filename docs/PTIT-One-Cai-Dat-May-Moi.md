@@ -1,5 +1,10 @@
 # PTIT One — cài SQL Server cho máy HN hoặc ĐN
 
+> 🚦 **Đang làm Phần 1? Đây không phải tài liệu của bạn.**
+> Cài SQL Server cho Phần 1 xem [hướng dẫn cài Phần 1](PTIT-One-Cai-Dat-Phan-1.md)
+> — đơn giản hơn, không cần Replication, Agent hay VPN. Trang này dành cho
+> lúc dựng hạ tầng phân tán ở Phần 2.
+
 > Khôi phục ngày 24/09/2026 từ bản lưu local `da70d64`. Tài liệu này mô tả
 > hạ tầng Master/site của phần phân tán; không phải script khởi tạo DB tập
 > trung cho backend Phần 1. Lần khôi phục chỉ kiểm tra offline, chưa chạy SQL.

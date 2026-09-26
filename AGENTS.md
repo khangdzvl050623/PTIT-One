@@ -22,7 +22,9 @@ Controller nghiệp vụ gọi service; SQL nằm trong repository. `model/polic
 không import Spring/JDBC. Module gọi API công khai của nhau, không truy cập
 repository nội bộ của module khác; không phụ thuộc vòng. `shared` không
 import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
-Khung API hiện chưa kết nối DB; xem `docs/PTIT-One-Backend-Khoi-Dong.md`.
+API đã nối `PTITONE_CENTRAL` qua profile `central` (một DataSource); profile
+mặc định không nối DB. Chưa có schema, xác thực và API nghiệp vụ — trạng thái
+thật ở `docs/PTIT-One-Backend-Khoi-Dong.md`.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.
 

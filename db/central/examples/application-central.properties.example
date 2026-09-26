@@ -1,0 +1,18 @@
+# T5: reference only; not loaded by the current backend.
+# Copy/adapt into apps/api/src/main/resources/application-central.properties
+# AFTER adding JDBC/SQL Server/Flyway dependencies and migration resources.
+spring.datasource.url=${PTITONE_DB_URL}
+spring.datasource.username=${PTITONE_DB_USERNAME}
+spring.datasource.password=${PTITONE_DB_PASSWORD}
+spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
+spring.sql.init.mode=never
+spring.flyway.enabled=${PTITONE_MIGRATE_ON_START:false}
+spring.flyway.locations=classpath:db/migration
+spring.flyway.clean-disabled=true
+spring.flyway.baseline-on-migrate=false
+
+# For a deliberate migration run, supply the migration credentials separately.
+# Keep both connections on the SAME CENTRAL DB; not multi-site routing.
+# spring.flyway.url=${PTITONE_DB_URL}
+# spring.flyway.user=${PTITONE_MIGRATION_USERNAME}
+# spring.flyway.password=${PTITONE_MIGRATION_PASSWORD}
