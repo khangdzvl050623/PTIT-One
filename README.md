@@ -708,6 +708,10 @@ bench/benchmark        docs/phan-b             docs/phan-c
 
 ## Quy tắc bắt buộc
 
+**CI Phần 1:** [workflow và hướng dẫn](docs/PTIT-One-CI.md) tự build/test
+backend, lint/typecheck/build frontend trên PR vào `dev`/`main`. Hai check
+`ci-api`, `ci-web` cần được thêm vào Rulesets sau lần chạy đầu thành công.
+
 1. **Không push trực tiếp vào `main` và `dev`.** Repo đã bật branch protection nên bạn sẽ bị chặn tự động — thấy lỗi `protected branch hook declined` nghĩa là **bạn đang đứng nhầm nhánh**, không phải lỗi máy.
 2. **Mọi thay đổi phải đi qua Pull Request.** Không có ngoại lệ, kể cả sửa một dòng.
 3. **Tự test kỹ trên máy mình trước khi merge.** Chạy được, không lỗi, không làm hỏng phần người khác — trách nhiệm của người mở PR.

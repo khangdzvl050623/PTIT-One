@@ -9,8 +9,12 @@ React 19 + TypeScript + Vite + SCSS Modules. Frontend của **PTIT One**.
 ```bash
 npm ci
 npm run dev       # http://localhost:5173
+npm run lint      # ESLint cho JavaScript/TypeScript
 npm run build
 ```
+
+CI dùng Node.js 24, chạy `npm ci`, lint rồi `npm run build` (gồm kiểm tra
+TypeScript và build Vite). Xem [CI Phần 1](../../docs/PTIT-One-CI.md).
 
 API được dựng ở `apps/api`, mặc định cổng 8080. Vite cổng 5173 đã proxy
 `/api` tới `http://127.0.0.1:8080`; truy cập `/api/health` qua Vite để kiểm
