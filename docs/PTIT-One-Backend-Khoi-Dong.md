@@ -17,15 +17,18 @@ Phân công và nghiệm thu: [kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-
   `GET /api/health/db` trả về database và login thật mà API đang dùng.
   Profile mặc định **không** nối DB nên máy chưa cài SQL Server vẫn chạy được API.
 - `scripts/dev-api.ps1` nạp `apps/api/.env` vào môi trường tiến trình.
+- **Xác thực A0 xong.** Đăng nhập, `/me`, refresh có rotation và phát hiện
+  replay, logout / logout-all, kiểm `sid` + `accountVersion` mỗi request,
+  phân quyền theo vai trò. Web đã nối, có chặn tuyến theo vai trò.
+- **Schema CENTRAL xong.** `V1` lát cắt auth, `V2` học vụ (danh mục + vận hành),
+  kèm seed fixture và test ràng buộc.
 
 **Chưa có:**
 
-- Xác thực, phiên, quyền — chưa chốt contract F01, chưa chọn thư viện JWT.
-- Mọi API nghiệp vụ. Sáu module nghiệp vụ hiện chỉ có `package-info.java`;
-  **chỉ `health` có code thật**. Gọi thử endpoint nghiệp vụ trả 404 là đúng.
-
-> Nối được DB **không** đồng nghĩa xong ENV-05. Phần còn lại — truy vấn bảng
-> thật, transaction rollback, kiểm quyền qua API — cần schema của TV2 trước.
+- Mọi API nghiệp vụ. Sáu module nghiệp vụ hiện chỉ có `package-info.java`
+  (trừ `auth`); gọi thử endpoint nghiệp vụ trả 404 là đúng.
+- F02 cấp và kích hoạt tài khoản, A1 quên mật khẩu qua email — đang hoãn.
+  Chưa có bảng mã một lần, chưa có cột email, chưa có endpoint `activate`.
 
 ## Nhánh nên làm tiếp
 
