@@ -47,7 +47,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let cancelled = false
 
     void (async () => {
-      let restored: SessionUser | null = null
+      /* Không gán giá trị khởi tạo: cả hai nhánh đều ghi trước khi đọc, nên
+         `null` ban đầu là thừa (eslint no-useless-assignment). */
+      let restored: SessionUser | null
       try {
         restored = await authApi.fetchCurrentUser()
       } catch {
