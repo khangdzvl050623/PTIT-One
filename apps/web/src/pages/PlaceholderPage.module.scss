@@ -21,3 +21,11 @@
   font-size: tokens.$font-size-sm;
   color: var(--text);
 }
+
+.feature {
+  margin: 0;
+  font-size: tokens.$font-size-xs;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--notice-meta);
+}

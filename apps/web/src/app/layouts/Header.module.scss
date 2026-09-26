@@ -44,8 +44,13 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: tokens.$space-lg;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: tokens.$space-md tokens.$space-lg;
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    gap: tokens.$space-sm tokens.$space-md;
+  }
 }
 
 .navLink {
@@ -57,5 +62,36 @@
 
   &:hover {
     color: var(--ptit-on-brand-soft);
+  }
+}
+
+.navLinkActive {
+  color: var(--ptit-on-brand);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Tách khu vực tài khoản khỏi menu chức năng bằng một vạch mảnh. */
+.userArea {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-md;
+  padding-left: tokens.$space-lg;
+  border-left: 1px solid var(--ptit-red-border);
+}
+
+.signOut {
+  padding: 0;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  font-weight: 500;
+  color: var(--ptit-on-brand-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ptit-on-brand);
+    text-decoration: underline;
   }
 }
