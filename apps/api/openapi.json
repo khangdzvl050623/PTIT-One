@@ -231,6 +231,31 @@
         },
         "type" : "object"
       },
+      "EnrolledCourse" : {
+        "properties" : {
+          "maLopHP" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "ngayDangKy" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "EnrollmentPeriod" : {
         "properties" : {
           "maCoSo" : {
@@ -377,6 +402,28 @@
               "$ref" : "#/components/schemas/ProgramCourse"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "RegisterRequest" : {
+        "properties" : {
+          "maLopHP" : {
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "maLopHP" ],
+        "type" : "object"
+      },
+      "RegistrationResult" : {
+        "properties" : {
+          "dangKy" : {
+            "$ref" : "#/components/schemas/EnrolledCourse"
+          },
+          "loaiDangKy" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -575,6 +622,28 @@
           "tuanKetThuc" : {
             "format" : "int32",
             "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "StudentEnrollments" : {
+        "properties" : {
+          "dangKy" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EnrolledCourse"
+            },
+            "type" : "array"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "soTinChiDaDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tranTinChi" : {
+            "format" : "int32",
             "type" : "integer"
           }
         },
@@ -1622,6 +1691,84 @@
           }
         },
         "tags" : [ "database-health-controller" ]
+      }
+    },
+    "/api/me/enrollments" : {
+      "get" : {
+        "operationId" : "enrollments",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentEnrollments"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-enrollment-controller" ]
+      },
+      "post" : {
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RegistrationResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-enrollment-controller" ]
+      }
+    },
+    "/api/me/enrollments/{maLopHP}" : {
+      "delete" : {
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentEnrollments"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-enrollment-controller" ]
       }
     },
     "/api/me/grades" : {

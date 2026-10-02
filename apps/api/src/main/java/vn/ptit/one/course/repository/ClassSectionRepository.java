@@ -91,6 +91,24 @@ public class ClassSectionRepository {
                 """, soLuongToiDa, trangThai, choPhepLienCoSo, hinhThucHoc, maLopHP, soLuongToiDa);
     }
 
+    /**
+     * Giữ một chỗ. Điều kiện còn chỗ VÀ lớp đang mở nằm trong chính câu UPDATE;
+     * chỗ gọi đọc số dòng. Không SELECT COUNT rồi IF — đó là race condition.
+     */
+    public int reserveSeat(String maLopHP) {
+        return jdbc.update("""
+                UPDATE dbo.LopHocPhan SET SoLuongDaDangKy = SoLuongDaDangKy + 1
+                 WHERE MaLopHP = ? AND TrangThai = 'MO' AND SoLuongDaDangKy < SoLuongToiDa
+                """, maLopHP);
+    }
+
+    public int releaseSeat(String maLopHP) {
+        return jdbc.update("""
+                UPDATE dbo.LopHocPhan SET SoLuongDaDangKy = SoLuongDaDangKy - 1
+                 WHERE MaLopHP = ? AND SoLuongDaDangKy > 0
+                """, maLopHP);
+    }
+
     /** Điều kiện trạng thái nằm trong câu UPDATE: lớp vừa bị huỷ thì không khoá nhầm. */
     public int lockGrades(String maLopHP) {
         return jdbc.update("""

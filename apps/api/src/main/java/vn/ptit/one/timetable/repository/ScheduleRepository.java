@@ -111,6 +111,19 @@ public class ScheduleRepository {
                 maHocKy, maGiangVien, excludeLopHP);
     }
 
+    /** Buổi học của các lớp cho trước, kèm lớp giữ buổi đó. */
+    public List<ClashRow> slotsOf(Collection<String> maLopHP) {
+        if (maLopHP.isEmpty()) {
+            return List.of();
+        }
+        String placeholders = String.join(", ", Collections.nCopies(maLopHP.size(), "?"));
+        return jdbc.query("""
+                SELECT MaLopHP, Thu, TietBatDau, SoTiet, PhongHoc, TuanBatDau, TuanKetThuc
+                  FROM dbo.LichHoc WHERE MaLopHP IN (%s)
+                """.formatted(placeholders), (rs, rowNum) -> new ClashRow(rs.getString("MaLopHP"), map(rs)),
+                maLopHP.toArray());
+    }
+
     /** Buổi học của mọi lớp khác trong cùng học kỳ dùng cùng phòng (so không phân biệt hoa thường). */
     public List<ClashRow> roomSlots(String maHocKy, String phongHoc, String excludeLopHP) {
         return jdbc.query("""

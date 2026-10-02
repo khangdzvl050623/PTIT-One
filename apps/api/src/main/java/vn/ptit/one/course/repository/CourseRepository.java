@@ -183,6 +183,13 @@ public class CourseRepository {
                 }, maCTDT);
     }
 
+    public boolean inProgram(String maCTDT, String maMonHoc) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM dbo.CTDT_MonHoc WHERE MaCTDT = ? AND MaMonHoc = ?",
+                Integer.class, maCTDT, maMonHoc);
+        return count != null && count > 0;
+    }
+
     private static StudyProgram mapProgram(ResultSet rs) throws SQLException {
         return new StudyProgram(rs.getString("MaCTDT"), rs.getString("TenCTDT"),
                 rs.getString("MaKhoa"), rs.getInt("TongTinChi"));

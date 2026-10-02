@@ -56,6 +56,16 @@ public class CourseService {
                         "Không có học kỳ %s.".formatted(maHocKy)));
     }
 
+    /** Môn có nằm trong chương trình đào tạo không. Dùng cho F08. */
+    public boolean isInProgram(String maCTDT, String maMonHoc) {
+        return courses.inProgram(maCTDT, maMonHoc);
+    }
+
+    /** Mã các môn phải đạt trước khi học môn này; nhiều môn nghĩa là phải đạt TẤT CẢ. */
+    public List<String> prerequisitesOf(String maMonHoc) {
+        return courses.findPrerequisites(maMonHoc).stream().map(CourseSummary::maMonHoc).toList();
+    }
+
     public List<StudyProgram> programs() {
         return courses.findPrograms();
     }
