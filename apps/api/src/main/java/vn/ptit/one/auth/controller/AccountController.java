@@ -45,11 +45,16 @@ public class AccountController {
         return accounts.search(maCoSo, loaiNguoiDung);
     }
 
-    /** Cấp lại mã khi người dùng làm mất hoặc mã hết hạn. Mã cũ bị thu hồi. */
+    /**
+     * Cấp lại mã khi người dùng làm mất hoặc mã hết hạn. Mã cũ bị thu hồi.
+     * {@code guiEmail=false}: Admin nhận mã trao tay dù tài khoản có email —
+     * dùng khi thư không tới được.
+     */
     @PostMapping("/{tenDangNhap}/activation-code")
     @ResponseStatus(HttpStatus.CREATED)
-    public ActivationCode reissueActivationCode(@PathVariable String tenDangNhap) {
-        return accounts.reissueActivationCode(tenDangNhap);
+    public ActivationCode reissueActivationCode(@PathVariable String tenDangNhap,
+            @RequestParam(defaultValue = "true") boolean guiEmail) {
+        return accounts.reissueActivationCode(tenDangNhap, guiEmail);
     }
 
     @PutMapping("/{tenDangNhap}/status")

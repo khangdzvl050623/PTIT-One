@@ -65,8 +65,9 @@ public class SecurityConfig {
                 // Ba endpoint này tự xác định phiên qua cookie, không đòi access còn hạn.
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh",
                         "/api/auth/logout").permitAll()
-                // Người chưa kích hoạt chưa có mật khẩu nên chưa đăng nhập được.
-                .requestMatchers(HttpMethod.POST, "/api/auth/activate").permitAll()
+                // Người chưa kích hoạt / quên mật khẩu chưa đăng nhập được.
+                .requestMatchers(HttpMethod.POST, "/api/auth/activate", "/api/auth/forgot-password",
+                        "/api/auth/reset-password").permitAll()
                 .requestMatchers("/error").permitAll()
                 /* Swagger UI phải tải được TRƯỚC khi đăng nhập, nếu không thì
                    không ai dùng được form login ngay trong đó. Spec chỉ lộ hình

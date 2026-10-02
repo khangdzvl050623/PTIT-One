@@ -57,6 +57,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        <!-- A1: gửi mã qua SMTP relay (Brevo). Chỉ dùng JavaMailSender; KHÔNG đặt
+             spring.mail.* nên auto-config của Boot không bật — shared.mail tự dựng
+             sender khi PTITONE_MAIL_HOST có giá trị. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
         <!-- Argon2PasswordEncoder của Spring Security cần BouncyCastle. -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -114,6 +121,17 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <!-- Khoá OTP chỉ để test khởi động được profile central, kể cả CI không
+                     có .env. Base64 của chuỗi 32 byte cố định — không dùng ngoài test. -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <ptitone.auth.otp-secret>cHRpdG9uZS10ZXN0LW90cC1rZXktMzItYnl0ZXMtbG9uZw==</ptitone.auth.otp-secret>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

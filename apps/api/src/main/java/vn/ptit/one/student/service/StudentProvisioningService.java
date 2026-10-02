@@ -36,7 +36,7 @@ public class StudentProvisioningService {
 
     @Transactional
     public ProvisionedStudent create(String maSinhVien, String hoTen, LocalDate ngaySinh, String maCoSoNha,
-            String maCTDT) {
+            String maCTDT, String email) {
         accounts.requireAvailable(maSinhVien, maCoSoNha);
         if (students.exists(maSinhVien)) {
             throw studentExists(maSinhVien);
@@ -49,7 +49,7 @@ public class StudentProvisioningService {
         } catch (DuplicateKeyException ex) {
             throw studentExists(maSinhVien);
         }
-        ActivationCode code = accounts.provision(maSinhVien, Role.SINH_VIEN, maCoSoNha);
+        ActivationCode code = accounts.provision(maSinhVien, Role.SINH_VIEN, maCoSoNha, email);
         return new ProvisionedStudent(students.findOne(maSinhVien).orElseThrow(), code);
     }
 

@@ -31,7 +31,7 @@ public class TeacherProvisioningService {
 
     @Transactional
     public ProvisionedTeacher create(String maGiangVien, String hoTen, String maCoSo, String maKhoa,
-            String hocVi) {
+            String hocVi, String email) {
         accounts.requireAvailable(maGiangVien, maCoSo);
         if (teachers.findOne(maGiangVien).isPresent()) {
             throw teacherExists(maGiangVien);
@@ -45,7 +45,7 @@ public class TeacherProvisioningService {
         } catch (DuplicateKeyException ex) {
             throw teacherExists(maGiangVien);
         }
-        ActivationCode code = accounts.provision(maGiangVien, Role.GIANG_VIEN, maCoSo);
+        ActivationCode code = accounts.provision(maGiangVien, Role.GIANG_VIEN, maCoSo, email);
         return new ProvisionedTeacher(teachers.findOne(maGiangVien).orElseThrow(), code);
     }
 

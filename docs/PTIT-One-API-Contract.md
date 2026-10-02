@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 73 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 79 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -87,7 +87,8 @@ người dùng và đổi được bất cứ lúc nào.
 | POST | `/api/auth/login` · `refresh` · `logout` | public *(dùng cookie)* |
 | POST | `/api/auth/logout-all` | — |
 | GET | `/api/auth/me` | — |
-| POST | `/api/auth/activate` | public |
+| POST | `/api/auth/activate` · `forgot-password` · `reset-password` | public |
+| GET · PUT · POST | `/api/auth/email` · `/api/auth/email/verify` · `/api/auth/change-password` | — |
 | POST | `/api/students` · `/api/teachers` | `ADMIN_MASTER` |
 | GET · POST · PUT | `/api/accounts` · `/{tenDangNhap}/activation-code` · `/{tenDangNhap}/status` | `ADMIN_MASTER` |
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
@@ -357,9 +358,12 @@ bị từ chối.
   bản — nên UI đừng hiện nút "Thêm sinh viên/giảng viên" cho Admin cơ sở.
 - `POST /api/students` / `POST /api/teachers` tạo hồ sơ + danh bạ + tài khoản
   **chưa có mật khẩu** trong **một** giao dịch; lỗi ở bước nào thì không để lại
-  gì. Tên đăng nhập chính là mã SV/GV. Response có `kichHoat.maKichHoat` dạng
-  `XXXX-XXXX-XXXX-XXXX`, hạn 7 ngày — **lần duy nhất mã gốc xuất hiện**, server
-  chỉ giữ hash. Admin đưa mã cho người dùng (Phần 1 chưa gửi email).
+  gì. Tên đăng nhập chính là mã SV/GV. Mã kích hoạt dạng `XXXX-XXXX-XXXX-XXXX`,
+  hạn 7 ngày, server chỉ giữ hash. Thân có `email` (tuỳ chọn) **và** đã bật gửi
+  thư → mã **chỉ đi qua thư**: `kichHoat.maKichHoat = null`,
+  `kichHoat.guiToiEmail` là địa chỉ nhận, và kích hoạt thành công thì email được
+  coi là **đã xác minh**. Không thì `maKichHoat` có giá trị — **lần duy nhất mã
+  gốc xuất hiện** — Admin trao tay.
 - Người dùng gọi `POST /api/auth/activate` `{tenDangNhap, maKichHoat, matKhauMoi}`
   khi chưa đăng nhập (vẫn cần CSRF). Thành công `204`, **không tự đăng nhập**.
   Mã gõ thường hay thiếu gạch vẫn khớp. Mật khẩu 8–128 ký tự, không chứa tên
@@ -367,11 +371,34 @@ bị từ chối.
 - Mọi lý do từ chối kích hoạt — sai mã, hết hạn, đã dùng, tài khoản bị ngừng,
   không có tài khoản — đều là `400 ACTIVATION_INVALID`. Sai **5 lần** thì mã bị
   thu hồi; Admin cấp lại bằng `POST /api/accounts/{tenDangNhap}/activation-code`
-  (mã cũ mất hiệu lực, chỉ cho tài khoản chưa kích hoạt).
+  (mã cũ mất hiệu lực, chỉ cho tài khoản chưa kích hoạt). `?guiEmail=false` để
+  nhận mã trao tay khi thư không tới được — khi đó kích hoạt không xác minh email.
 - `PUT /api/accounts/{tenDangNhap}/status` `{trangThai: HOAT_DONG | NGUNG}`.
   Khoá thu hồi mọi phiên và tăng phiên bản trong cùng giao dịch — access token
   cũ bị từ chối ngay. Không khoá được Admin Master.
 - `GET /api/accounts?maCoSo=&loaiNguoiDung=` liệt kê danh bạ, có `daKichHoat`.
+
+### Email, đổi mật khẩu, quên mật khẩu (A1)
+
+- **Mã khôi phục chỉ gửi tới email ĐÃ LƯU và ĐÃ XÁC MINH.** Email gõ ở form
+  quên mật khẩu chỉ để đối chiếu, không bao giờ là nơi nhận.
+  `POST /api/auth/forgot-password` `{tenDangNhap, email}` luôn trả `202` — kể cả
+  khi tài khoản không có, email sai hay chưa xác minh — để form không thành công
+  cụ dò tài khoản. UI chỉ nói "nếu thông tin đúng, mã đã được gửi".
+- Mã 6 chữ số, hạn 10 phút, dùng một lần, sai 5 lần thì bị thu hồi; xin mã mới
+  thì mã cũ mất hiệu lực. `POST /api/auth/reset-password`
+  `{tenDangNhap, maXacThuc, matKhauMoi}` → `204`, **thu hồi mọi phiên**.
+- `PUT /api/auth/email` `{email, matKhauHienTai}` cần mật khẩu hiện tại; lưu email
+  **chưa xác minh** và gửi mã tới chính địa chỉ đó. Xác minh bằng
+  `POST /api/auth/email/verify` `{maXacThuc}`. Đổi email là mất trạng thái xác minh.
+- `POST /api/auth/change-password` `{matKhauHienTai, matKhauMoi}` → `204`, thu hồi
+  **mọi phiên kể cả phiên đang dùng** và xoá cookie — UI chuyển về đăng nhập.
+- Chưa cấu hình gửi thư (`PTITONE_MAIL_HOST`/`PTITONE_MAIL_FROM` trống) thì đổi
+  email và quên mật khẩu trả `503 MAIL_DISABLED`, không giả vờ đã gửi.
+- **Giới hạn tần suất** (`429 AUTH_TOO_MANY_ATTEMPTS`, cửa sổ 15 phút, trong bộ
+  nhớ): đăng nhập sai 10 lần/tài khoản hoặc 50 lần/IP; xin mã khôi phục 3
+  lần/tài khoản hoặc 20 lần/IP; nhập sai mã khôi phục 20 lần/IP; sai mật khẩu
+  hiện tại 10 lần/tài khoản. Chỉ lần **sai** mới bị đếm khi đăng nhập.
 
 ### Phiên đăng nhập
 
@@ -453,6 +480,12 @@ bị từ chối.
 | `ACCOUNT_NOT_MANAGEABLE` | 409 | Khoá/cấp mã cho Admin Master, hoặc tài khoản đang chuyển cơ sở |
 | `ACTIVATION_INVALID` | 400 | Mã kích hoạt sai, hết hạn, đã dùng, hoặc tài khoản không kích hoạt được |
 | `PASSWORD_TOO_WEAK` | 400 | Mật khẩu chứa tên đăng nhập |
+| `PASSWORD_INCORRECT` | 400 | Sai mật khẩu hiện tại (đổi mật khẩu/email) |
+| `PASSWORD_UNCHANGED` | 400 | Mật khẩu mới trùng mật khẩu hiện tại |
+| `EMAIL_CODE_INVALID` | 400 | Mã xác minh email sai, hết hạn hoặc đã dùng |
+| `RESET_CODE_INVALID` | 400 | Mã khôi phục sai, hết hạn hoặc đã dùng |
+| `MAIL_DISABLED` | 503 | Chưa cấu hình gửi thư |
+| `AUTH_TOO_MANY_ATTEMPTS` | 429 | Vượt giới hạn tần suất; đợi rồi thử lại |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
 | `CLASS_CANCEL_RETRY` | 409 | Có thay đổi đăng ký đúng lúc huỷ lớp; thử lại |
@@ -480,7 +513,6 @@ bị từ chối.
 | `PERIOD_WINDOW_INVALID` | 400 | Thời gian mở không trước thời gian đóng |
 | `PERIOD_ALREADY_OPEN` | 409 | Cơ sở đã có đợt mở trong học kỳ đó |
 
-`429 AUTH_TOO_MANY_ATTEMPTS` **chưa có** — giới hạn tần suất thuộc A1.
 
 ---
 
@@ -525,6 +557,14 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Nhập sai mã 5 lần rồi nhập đúng | `400` — mã đã bị thu hồi | ✓ |
 | Cấp lại mã | mã trước mất hiệu lực, mã mới dùng được | ✓ |
 | Khoá tài khoản đang có phiên | phiên cũ `401` ngay; đăng nhập lại `401`; mở lại thì vào được | ✓ |
+| Cấp hồ sơ có email | mã chỉ đi qua thư; kích hoạt xong email đã xác minh | ✓ |
+| Quên mật khẩu với email gõ sai | `202`, không có thư nào | ✓ |
+| Quên mật khẩu khi email chưa xác minh | `202`, không có thư nào | ✓ |
+| Khôi phục mật khẩu | phiên cũ `401`, mật khẩu cũ hỏng, mã không dùng lại được | ✓ |
+| Đổi email sai mật khẩu hiện tại | `400 PASSWORD_INCORRECT` | ✓ |
+| Đổi mật khẩu | mọi phiên `401`, đăng nhập bằng mật khẩu mới | ✓ |
+| Xin mã khôi phục lần 4 trong 15 phút | `429` | ✓ |
+| Đăng nhập sai 10 lần rồi đúng | `429` | ✓ |
 | Profile `central` + SQL Server tắt | API vẫn khởi động | ✓ |
 | `/api/health/db` khi SQL Server tắt | `503`, thân báo `DOWN` | **✗** |
 | `openapi.json` lệch với code | build đỏ ở `OpenApiContractTest` | ✓ |
@@ -613,7 +653,7 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 
 | Gói | Nội dung |
 |---|---|
-| A1 | Quên mật khẩu qua email, giới hạn tần suất (`429 AUTH_TOO_MANY_ATTEMPTS`) |
+| A1 | Bootstrap Admin Master đầu tiên + cờ bắt buộc đổi mật khẩu |
 
 
 Gọi các đường dẫn chưa có trả `404` — đó là hành vi đúng.

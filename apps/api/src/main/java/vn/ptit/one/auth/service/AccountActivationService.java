@@ -1,7 +1,5 @@
 package vn.ptit.one.auth.service;
 
-import java.util.Locale;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,10 +29,7 @@ public class AccountActivationService {
 
     public void activate(String username, String code, String newPassword) {
         String tenDangNhap = username.trim();
-        if (newPassword.toLowerCase(Locale.ROOT).contains(tenDangNhap.toLowerCase(Locale.ROOT))) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_TOO_WEAK",
-                    "Mật khẩu không được chứa tên đăng nhập.");
-        }
+        CredentialService.requireAcceptable(tenDangNhap, newPassword);
         String hash = passwordEncoder.encode(newPassword);
         if (accounts.consumeActivation(tenDangNhap, code, hash) != ActivationOutcome.ACTIVATED) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "ACTIVATION_INVALID",

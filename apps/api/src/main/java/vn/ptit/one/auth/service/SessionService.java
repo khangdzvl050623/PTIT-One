@@ -45,6 +45,8 @@ public class SessionService {
     static final String REVOKE_LOGOUT_ALL = "DANG_XUAT_TAT_CA";
     static final String REVOKE_REPLAY = "PHAT_HIEN_DUNG_LAI";
     static final String REVOKE_ACCOUNT_CHANGE = "THAY_DOI_TAI_KHOAN";
+    public static final String REVOKE_PASSWORD_CHANGE = "DOI_MAT_KHAU";
+    public static final String REVOKE_PASSWORD_RESET = "KHOI_PHUC_MAT_KHAU";
 
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
 
@@ -160,8 +162,14 @@ public class SessionService {
      */
     @Transactional
     public void revokeAllForAccountChange(String username) {
+        revokeAll(username, REVOKE_ACCOUNT_CHANGE);
+    }
+
+    /** Như logout-all, với lý do do người gọi trong module chọn (đổi/khôi phục mật khẩu). */
+    @Transactional
+    public void revokeAll(String username, String reason) {
         Instant now = clock.instant();
-        sessions.revokeAllForUser(username, now, REVOKE_ACCOUNT_CHANGE);
+        sessions.revokeAllForUser(username, now, reason);
         refreshTokens.revokeAllForUser(username, now);
         accounts.bumpVersion(username);
     }

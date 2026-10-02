@@ -53,11 +53,15 @@ public class TeacherController {
         return teachers.search(campusScope, maKhoa);
     }
 
-    /** Response chứa mã kích hoạt — lần duy nhất mã gốc rời khỏi server. */
+    /**
+     * Response chứa mã kích hoạt — lần duy nhất mã gốc rời khỏi server. Có
+     * {@code email} và đã bật gửi thư thì mã chỉ đi qua thư, response không có mã.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN_MASTER')")
     public ProvisionedTeacher create(@Valid @RequestBody CreateTeacherRequest body) {
-        return provisioning.create(body.maGiangVien(), body.hoTen(), body.maCoSo(), body.maKhoa(), body.hocVi());
+        return provisioning.create(body.maGiangVien(), body.hoTen(), body.maCoSo(), body.maKhoa(), body.hocVi(),
+                body.email());
     }
 }

@@ -1,7 +1,9 @@
 package vn.ptit.one.auth.service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +23,7 @@ import vn.ptit.one.auth.model.RefreshToken;
 import vn.ptit.one.auth.repository.AccountRepository;
 import vn.ptit.one.auth.security.AccessTokenIssuer;
 import vn.ptit.one.auth.security.AccessTokenIssuer.IssuedAccessToken;
+import vn.ptit.one.auth.security.AttemptLimiter;
 import vn.ptit.one.auth.service.SessionService.OpenedSession;
 import vn.ptit.one.auth.service.SessionService.RefreshOutcome;
 import vn.ptit.one.shared.exception.ApiException;
@@ -35,11 +38,19 @@ public class AuthenticationService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationService.class);
 
+    /* Chỉ đếm lần SAI: người đăng nhập đúng không bao giờ bị chặn vì người khác
+       dùng chung IP (phòng máy, NAT ký túc xá). Theo tài khoản chặn dò một người;
+       theo IP chặn rải mật khẩu trên nhiều tài khoản. */
+    static final Duration LOGIN_WINDOW = Duration.ofMinutes(15);
+    static final int MAX_FAILURES_PER_USER = 10;
+    static final int MAX_FAILURES_PER_IP = 50;
+
     private final AccountRepository accounts;
     private final SessionService sessions;
     private final PasswordEncoder passwordEncoder;
     private final AccessTokenIssuer accessTokens;
     private final JwtDecoder jwtDecoder;
+    private final AttemptLimiter limiter;
     private final Clock clock;
     /* Băm giả khi username không tồn tại để thời gian phản hồi không lộ
        tài khoản nào có thật. */
@@ -47,19 +58,38 @@ public class AuthenticationService {
 
     public AuthenticationService(AccountRepository accounts, SessionService sessions,
             PasswordEncoder passwordEncoder, AccessTokenIssuer accessTokens, JwtDecoder jwtDecoder,
-            Clock clock) {
+            AttemptLimiter limiter, Clock clock) {
         this.accounts = accounts;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
         this.accessTokens = accessTokens;
         this.jwtDecoder = jwtDecoder;
+        this.limiter = limiter;
         this.clock = clock;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     /* Không @Transactional: băm Argon2 tốn vài chục ms, không giữ kết nối DB
        trong lúc đó. Chỉ bước ghi phiên mới cần transaction (SessionService.open). */
-    public LoginResult login(String username, String password) {
+    public LoginResult login(String username, String password, String clientIp) {
+        String userKey = "login:user:" + username.trim().toLowerCase(Locale.ROOT);
+        String ipKey = "login:ip:" + clientIp;
+        if (limiter.isBlocked(userKey, MAX_FAILURES_PER_USER, LOGIN_WINDOW)
+                || limiter.isBlocked(ipKey, MAX_FAILURES_PER_IP, LOGIN_WINDOW)) {
+            throw CredentialService.tooManyAttempts();
+        }
+        try {
+            LoginResult result = authenticate(username, password);
+            limiter.reset(userKey);
+            return result;
+        } catch (ApiException ex) {
+            limiter.record(userKey, LOGIN_WINDOW);
+            limiter.record(ipKey, LOGIN_WINDOW);
+            throw ex;
+        }
+    }
+
+    private LoginResult authenticate(String username, String password) {
         Optional<AccountRecord> found = accounts.findByUsername(username.trim());
         if (found.isEmpty()) {
             passwordEncoder.matches(password, dummyHash);

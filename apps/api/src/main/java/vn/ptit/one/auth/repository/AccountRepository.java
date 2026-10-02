@@ -2,6 +2,7 @@ package vn.ptit.one.auth.repository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import vn.ptit.one.auth.model.AccountContact;
 import vn.ptit.one.auth.model.AccountRecord;
 import vn.ptit.one.auth.model.AccountSummary;
 import vn.ptit.one.auth.model.AccountRecord.Credential;
@@ -58,8 +60,8 @@ public class AccountRepository {
     /* MatKhauHash NULL = chưa kích hoạt: không đăng nhập được cho tới khi
        người dùng đặt mật khẩu bằng mã kích hoạt. */
     private static final String INSERT_SITE_ACCOUNT = """
-            INSERT INTO dbo.TaiKhoan (TenDangNhap, MatKhauHash, VaiTro, MaThucThe, MaCoSo)
-            VALUES (?, NULL, ?, ?, ?)
+            INSERT INTO dbo.TaiKhoan (TenDangNhap, MatKhauHash, VaiTro, MaThucThe, MaCoSo, Email)
+            VALUES (?, NULL, ?, ?, ?, ?)
             """;
 
     /* Điều kiện "chưa có mật khẩu" nằm TRONG câu UPDATE: kích hoạt đúng một lần. */
@@ -83,6 +85,18 @@ public class AccountRepository {
               FROM dbo.DanhBaNguoiDung d
               LEFT JOIN dbo.TaiKhoan       t ON t.TenDangNhap = d.TenDangNhap
               LEFT JOIN dbo.TaiKhoanMaster m ON m.TenDangNhap = d.TenDangNhap
+            """;
+
+    private static final String FIND_CONTACT = """
+            SELECT d.TenDangNhap, d.TrangThai,
+                   CASE WHEN t.TenDangNhap IS NOT NULL THEN 'SITE' ELSE 'MASTER' END AS Nguon,
+                   COALESCE(t.MatKhauHash, m.MatKhauHash) AS MatKhauHash,
+                   COALESCE(t.Email, m.Email) AS Email,
+                   COALESCE(t.EmailDaXacMinh, m.EmailDaXacMinh) AS EmailDaXacMinh
+              FROM dbo.DanhBaNguoiDung d
+              LEFT JOIN dbo.TaiKhoan       t ON t.TenDangNhap = d.TenDangNhap
+              LEFT JOIN dbo.TaiKhoanMaster m ON m.TenDangNhap = d.TenDangNhap
+             WHERE d.TenDangNhap = ? AND (t.TenDangNhap IS NOT NULL OR m.TenDangNhap IS NOT NULL)
             """;
 
     private final JdbcTemplate jdbc;
@@ -118,8 +132,49 @@ public class AccountRepository {
         jdbc.update(INSERT_DIRECTORY, username, campus, role.name(), entityId, status);
     }
 
-    public void insertSiteAccount(String username, Role role, String entityId, String campus) {
-        jdbc.update(INSERT_SITE_ACCOUNT, username, role.name(), entityId, campus);
+    /** @param email chưa xác minh; {@code null} nếu Admin không nhập */
+    public void insertSiteAccount(String username, Role role, String entityId, String campus, String email) {
+        jdbc.update(INSERT_SITE_ACCOUNT, username, role.name(), entityId, campus, email);
+    }
+
+    public Optional<AccountContact> findContact(String username) {
+        return jdbc.query(FIND_CONTACT, (rs, rowNum) -> new AccountContact(
+                        rs.getString("TenDangNhap"),
+                        Source.valueOf(rs.getString("Nguon")),
+                        rs.getString("TrangThai"),
+                        rs.getString("MatKhauHash") != null,
+                        rs.getString("Email"),
+                        rs.getBoolean("EmailDaXacMinh")),
+                username).stream().findFirst();
+    }
+
+    /** Đổi email thì mất trạng thái đã xác minh — phải xác minh lại địa chỉ mới. */
+    public int setEmail(String username, Source source, String email) {
+        return jdbc.update("UPDATE dbo.%s SET Email = ?, EmailDaXacMinh = 0, ThoiDiemXacMinhEmail = NULL WHERE TenDangNhap = ?"
+                .formatted(table(source)), email, username);
+    }
+
+    /** Chỉ đánh dấu khi tài khoản VẪN mang đúng địa chỉ đã nhận mã. @return 0 nếu email đã đổi */
+    public int markEmailVerified(String username, Source source, String email, Instant now) {
+        return jdbc.update("""
+                UPDATE dbo.%s SET EmailDaXacMinh = 1, ThoiDiemXacMinhEmail = ?
+                 WHERE TenDangNhap = ? AND Email = ?
+                """.formatted(table(source)), SqlTime.toDb(now), username, email);
+    }
+
+    /** Đổi mật khẩu / khôi phục: tài khoản phải đã kích hoạt. */
+    public int updatePassword(String username, Source source, String passwordHash) {
+        return jdbc.update("UPDATE dbo.%s SET MatKhauHash = ? WHERE TenDangNhap = ? AND MatKhauHash IS NOT NULL"
+                .formatted(table(source)), passwordHash, username);
+    }
+
+    /* Tên bảng lấy từ enum, không bao giờ từ dữ liệu người dùng. */
+    private static String table(Source source) {
+        return switch (source) {
+            case SITE -> "TaiKhoan";
+            case MASTER -> "TaiKhoanMaster";
+            case BOTH -> throw new IllegalArgumentException("Tài khoản có dòng ở cả hai bảng");
+        };
     }
 
     /** @return 1 nếu đặt được, 0 nếu tài khoản đã có mật khẩu */

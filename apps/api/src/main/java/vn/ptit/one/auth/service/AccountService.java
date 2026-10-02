@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.ptit.one.auth.model.AccountContact;
 import vn.ptit.one.auth.model.AccountRecord;
 import vn.ptit.one.auth.model.AccountSummary;
 import vn.ptit.one.auth.model.ActivationCode;
@@ -23,6 +24,7 @@ import vn.ptit.one.auth.repository.AccountRepository;
 import vn.ptit.one.auth.repository.ActivationCodeRepository;
 import vn.ptit.one.auth.security.AuthProperties;
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.shared.mail.Mailer;
 
 /**
  * Cấp, kích hoạt và khoá tài khoản (F02). API công khai của module auth cho
@@ -51,14 +53,16 @@ public class AccountService {
     private final ActivationCodeRepository codes;
     private final SessionService sessions;
     private final AuthProperties properties;
+    private final Mailer mailer;
     private final Clock clock;
 
     public AccountService(AccountRepository accounts, ActivationCodeRepository codes, SessionService sessions,
-            AuthProperties properties, Clock clock) {
+            AuthProperties properties, Mailer mailer, Clock clock) {
         this.accounts = accounts;
         this.codes = codes;
         this.sessions = sessions;
         this.properties = properties;
+        this.mailer = mailer;
         this.clock = clock;
     }
 
@@ -79,26 +83,34 @@ public class AccountService {
     /**
      * Danh bạ + tài khoản chưa có mật khẩu + mã kích hoạt, trong giao dịch của
      * người gọi. Tên đăng nhập của SV/GV chính là mã thực thể.
+     *
+     * @param email tuỳ chọn. Có email và đã bật gửi thư thì mã CHỈ đi qua thư
+     *              (thư gửi sau commit); không thì mã trả cho Admin trao tay
      */
     @Transactional
-    public ActivationCode provision(String entityId, Role role, String campus) {
+    public ActivationCode provision(String entityId, Role role, String campus, String email) {
         if (role != Role.SINH_VIEN && role != Role.GIANG_VIEN) {
             throw new IllegalArgumentException("Chỉ cấp tài khoản sinh viên/giảng viên qua hồ sơ: " + role);
         }
         try {
             // Phần 1 dựng xong mọi thứ trong cùng giao dịch, nên không có trạng thái chờ đồng bộ.
             accounts.insertDirectory(entityId, campus, role, entityId, HOAT_DONG);
-            accounts.insertSiteAccount(entityId, role, entityId, campus);
+            accounts.insertSiteAccount(entityId, role, entityId, campus, normalizeEmail(email));
         } catch (DuplicateKeyException ex) {
             // Hai Admin cùng cấp một mã: người sau thua ở UNIQUE, cả giao dịch rollback.
             throw accountExists(entityId);
         }
-        return issueCode(entityId, clock.instant());
+        return issueCode(entityId, normalizeEmail(email), true, clock.instant());
     }
 
-    /** Mã cũ (nếu còn) bị thu hồi. Chỉ cấp cho tài khoản chưa kích hoạt. */
+    /**
+     * Mã cũ (nếu còn) bị thu hồi. Chỉ cấp cho tài khoản chưa kích hoạt.
+     *
+     * @param sendByEmail {@code false} để Admin nhận mã trao tay dù tài khoản có
+     *                    email — dùng khi thư không tới được
+     */
     @Transactional
-    public ActivationCode reissueActivationCode(String username) {
+    public ActivationCode reissueActivationCode(String username, boolean sendByEmail) {
         AccountSummary account = requireSummary(username);
         if (account.loaiNguoiDung() == Role.ADMIN_MASTER) {
             throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_MANAGEABLE",
@@ -110,7 +122,8 @@ public class AccountService {
         }
         Instant now = clock.instant();
         codes.revokeLive(username, now);
-        return issueCode(username, now);
+        String email = accounts.findContact(username).map(AccountContact::email).orElse(null);
+        return issueCode(username, email, sendByEmail, now);
     }
 
     /**
@@ -168,6 +181,10 @@ public class AccountService {
             return reject(username, "đã có mật khẩu");
         }
         codes.markUsed(code.codeId(), now);
+        if (code.emailRecipient() != null) {
+            // Mã chỉ đi qua thư, Admin không thấy → kích hoạt được là đã chứng minh sở hữu email.
+            accounts.markEmailVerified(username, AccountRecord.Source.SITE, code.emailRecipient(), now);
+        }
         log.info("Tài khoản {} đã kích hoạt", username);
         return ActivationOutcome.ACTIVATED;
     }
@@ -176,11 +193,33 @@ public class AccountService {
         return accounts.search(blankToNull(maCoSo), role);
     }
 
-    private ActivationCode issueCode(String username, Instant now) {
+    private ActivationCode issueCode(String username, String email, boolean sendByEmail, Instant now) {
         ActivationSecret secret = ActivationSecret.generate();
         Instant expiresAt = now.plus(properties.activationTtl());
-        codes.insert(UUID.randomUUID(), username, secret.hash(), now, expiresAt);
-        return new ActivationCode(username, secret.value(), expiresAt);
+        String recipient = sendByEmail && email != null && mailer.enabled() ? email : null;
+        codes.insert(UUID.randomUUID(), username, secret.hash(), now, expiresAt, recipient);
+        if (recipient == null) {
+            return new ActivationCode(username, secret.value(), expiresAt, null);
+        }
+        mailer.sendAfterCommit(recipient, "Kích hoạt tài khoản PTIT One", """
+                Chào bạn,
+
+                Nhà trường đã cấp tài khoản PTIT One cho bạn.
+
+                Tên đăng nhập: %s
+                Mã kích hoạt:  %s
+                Hạn dùng:      %s (giờ UTC)
+
+                Mở PTIT One, chọn "Kích hoạt tài khoản", nhập tên đăng nhập, mã trên và
+                mật khẩu bạn tự chọn. Mã chỉ dùng được một lần.
+
+                Nếu bạn không phải người nhận thư này, hãy bỏ qua nó.
+                """.formatted(username, secret.value(), expiresAt));
+        return new ActivationCode(username, null, expiresAt, recipient);
+    }
+
+    static String normalizeEmail(String email) {
+        return email == null || email.isBlank() ? null : AccountContact.normalize(email);
     }
 
     private AccountSummary requireSummary(String username) {

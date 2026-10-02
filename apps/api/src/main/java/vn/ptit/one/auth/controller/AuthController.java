@@ -55,7 +55,7 @@ public class AuthController {
     @PostMapping("/login")
     public SessionUserResponse login(@Valid @RequestBody LoginRequest body,
             HttpServletRequest request, HttpServletResponse response) {
-        LoginResult result = authentication.login(body.username(), body.password());
+        LoginResult result = authentication.login(body.username(), body.password(), request.getRemoteAddr());
         Instant now = clock.instant();
         cookies.writeAccess(response, result.accessToken().value(), result.accessToken().expiresAt(), now);
         cookies.writeRefresh(response, result.refreshToken().value(), result.user().sessionExpiresAt(), now);

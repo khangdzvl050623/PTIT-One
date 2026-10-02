@@ -1,6 +1,17 @@
 {
   "components" : {
     "schemas" : {
+      "AccountEmail" : {
+        "properties" : {
+          "daXacMinh" : {
+            "type" : "boolean"
+          },
+          "email" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AccountSummary" : {
         "properties" : {
           "daKichHoat" : {
@@ -48,6 +59,9 @@
       },
       "ActivationCode" : {
         "properties" : {
+          "guiToiEmail" : {
+            "type" : "string"
+          },
           "hetHan" : {
             "format" : "date-time",
             "type" : "string"
@@ -175,6 +189,39 @@
           }
         },
         "required" : [ "trangThai" ],
+        "type" : "object"
+      },
+      "ChangeEmailRequest" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "matKhauHienTai" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "matKhauHienTai" ],
+        "type" : "object"
+      },
+      "ChangePasswordRequest" : {
+        "properties" : {
+          "matKhauHienTai" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "matKhauMoi" : {
+            "maxLength" : 128,
+            "minLength" : 8,
+            "type" : "string"
+          }
+        },
+        "required" : [ "matKhauHienTai", "matKhauMoi" ],
         "type" : "object"
       },
       "ClassRoster" : {
@@ -377,6 +424,12 @@
       },
       "CreateStudentRequest" : {
         "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "hoTen" : {
             "maxLength" : 150,
             "minLength" : 0,
@@ -405,6 +458,12 @@
       },
       "CreateTeacherRequest" : {
         "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
           "hoTen" : {
             "maxLength" : 150,
             "minLength" : 0,
@@ -533,6 +592,22 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "ForgotPasswordRequest" : {
+        "properties" : {
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "tenDangNhap" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "tenDangNhap" ],
         "type" : "object"
       },
       "GradeEntry" : {
@@ -837,6 +912,27 @@
             "$ref" : "#/components/schemas/GradeProgress"
           }
         },
+        "type" : "object"
+      },
+      "ResetPasswordRequest" : {
+        "properties" : {
+          "maXacThuc" : {
+            "minLength" : 1,
+            "pattern" : "[0-9]{6}",
+            "type" : "string"
+          },
+          "matKhauMoi" : {
+            "maxLength" : 128,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "tenDangNhap" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "maXacThuc", "matKhauMoi", "tenDangNhap" ],
         "type" : "object"
       },
       "RosterEntry" : {
@@ -1346,6 +1442,17 @@
         },
         "required" : [ "maKhoa", "tenMonHoc" ],
         "type" : "object"
+      },
+      "VerifyEmailRequest" : {
+        "properties" : {
+          "maXacThuc" : {
+            "minLength" : 1,
+            "pattern" : "[0-9]{6}",
+            "type" : "string"
+          }
+        },
+        "required" : [ "maXacThuc" ],
+        "type" : "object"
       }
     },
     "securitySchemes" : {
@@ -1410,6 +1517,14 @@
           "required" : true,
           "schema" : {
             "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "guiEmail",
+          "required" : false,
+          "schema" : {
+            "default" : true,
+            "type" : "boolean"
           }
         } ],
         "responses" : {
@@ -1484,6 +1599,27 @@
         "tags" : [ "activation-controller" ]
       }
     },
+    "/api/auth/change-password" : {
+      "post" : {
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
+      }
+    },
     "/api/auth/csrf" : {
       "get" : {
         "operationId" : "csrf",
@@ -1508,6 +1644,99 @@
           }
         },
         "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/email" : {
+      "get" : {
+        "operationId" : "email",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountEmail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
+      },
+      "put" : {
+        "operationId" : "changeEmail",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeEmailRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountEmail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
+      }
+    },
+    "/api/auth/email/verify" : {
+      "post" : {
+        "operationId" : "verifyEmail",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VerifyEmailRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountEmail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
+      }
+    },
+    "/api/auth/forgot-password" : {
+      "post" : {
+        "operationId" : "forgotPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
       }
     },
     "/api/auth/login" : {
@@ -1617,6 +1846,27 @@
           }
         },
         "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/reset-password" : {
+      "post" : {
+        "operationId" : "resetPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
       }
     },
     "/api/classes" : {

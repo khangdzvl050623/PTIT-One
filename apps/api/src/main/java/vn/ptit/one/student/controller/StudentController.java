@@ -29,12 +29,15 @@ public class StudentController {
         this.provisioning = provisioning;
     }
 
-    /** Response chứa mã kích hoạt — lần duy nhất mã gốc rời khỏi server. */
+    /**
+     * Response chứa mã kích hoạt — lần duy nhất mã gốc rời khỏi server. Có
+     * {@code email} và đã bật gửi thư thì mã chỉ đi qua thư, response không có mã.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN_MASTER')")
     public ProvisionedStudent create(@Valid @RequestBody CreateStudentRequest body) {
         return provisioning.create(body.maSinhVien(), body.hoTen(), body.ngaySinh(), body.maCoSoNha(),
-                body.maCTDT());
+                body.maCTDT(), body.email());
     }
 }

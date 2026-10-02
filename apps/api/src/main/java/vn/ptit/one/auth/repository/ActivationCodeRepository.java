@@ -20,8 +20,8 @@ import vn.ptit.one.auth.model.ActivationCodeRecord;
 public class ActivationCodeRepository {
 
     private static final String INSERT = """
-            INSERT INTO dbo.MaKichHoat (MaKichHoat, TenDangNhap, MaHash, ThoiDiemTao, ThoiDiemHetHan)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO dbo.MaKichHoat (MaKichHoat, TenDangNhap, MaHash, ThoiDiemTao, ThoiDiemHetHan, EmailNhan)
+            VALUES (?, ?, ?, ?, ?, ?)
             """;
 
     private static final String REVOKE_LIVE = """
@@ -33,7 +33,7 @@ public class ActivationCodeRepository {
     /* UPDLOCK: hai lần nhập cùng lúc xếp hàng ở đây, nên bộ đếm sai và việc
        "dùng một lần" không bị hai request cùng vượt qua. */
     private static final String LOCK_LIVE = """
-            SELECT MaKichHoat, MaHash, ThoiDiemHetHan, SoLanSai
+            SELECT MaKichHoat, MaHash, ThoiDiemHetHan, SoLanSai, EmailNhan
               FROM dbo.MaKichHoat WITH (UPDLOCK, ROWLOCK)
              WHERE TenDangNhap = ? AND ThoiDiemDaDung IS NULL AND ThoiDiemThuHoi IS NULL
             """;
@@ -58,8 +58,11 @@ public class ActivationCodeRepository {
         this.jdbc = jdbc;
     }
 
-    public void insert(UUID codeId, String username, byte[] hash, Instant createdAt, Instant expiresAt) {
-        jdbc.update(INSERT, codeId.toString(), username, hash, SqlTime.toDb(createdAt), SqlTime.toDb(expiresAt));
+    /** @param emailNhan địa chỉ nhận mã qua thư; {@code null} khi mã trao cho Admin */
+    public void insert(UUID codeId, String username, byte[] hash, Instant createdAt, Instant expiresAt,
+            String emailNhan) {
+        jdbc.update(INSERT, codeId.toString(), username, hash, SqlTime.toDb(createdAt), SqlTime.toDb(expiresAt),
+                emailNhan);
     }
 
     public int revokeLive(String username, Instant now) {
@@ -71,7 +74,8 @@ public class ActivationCodeRepository {
                         UUID.fromString(rs.getString("MaKichHoat")),
                         rs.getBytes("MaHash"),
                         SqlTime.fromDb(rs, "ThoiDiemHetHan"),
-                        rs.getInt("SoLanSai")),
+                        rs.getInt("SoLanSai"),
+                        rs.getString("EmailNhan")),
                 username).stream().findFirst();
     }
 
