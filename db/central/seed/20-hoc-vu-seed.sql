@@ -8,7 +8,7 @@
 
    Ca nghiệp vụ có sẵn (học kỳ hiện tại 2026-1):
      Tiên quyết đạt        B25DCCN001 đạt INT1154 (8.0) → được học INT1155
-     Tiên quyết chưa đạt   B25DCCN001 trượt BAS1150 (3.3) → bị chặn BAS1151
+     Tiên quyết chưa đạt   B25DCCN001 trượt BAS1150 (3.2) → bị chặn BAS1151
      Chưa có điểm TQ       B26DCCN001 với INT1155
      Lớp hết chỗ           INT1154-2026-1-HCM01 (sức chứa 1, B26DCCN003 đã giữ)
      Trùng lịch            INT1155-…-HCM01 (T2 tiết 1-3) và BAS1150-…-HCM01 (T2 tiết 2-4)
@@ -247,10 +247,16 @@ SELECT d.MaSinhVien, l.MaHocKy, l.MaMonHoc, l.MaLopHP, l.MaCoSoHost,
 INSERT INTO dbo.Diem (MaLopHP, MaSinhVien, DiemChuyenCan, DiemGiuaKy, DiemCuoiKy, DiemTongKet, NgayCongBo)
 SELECT v.MaLopHP, v.MaSinhVien, v.CC, v.GK, v.CK, v.TK, '2026-01-20 10:00'
   FROM (VALUES ('INT1154-2025-1-HCM01', 'B25DCCN001', 9.0, 7.5, 8.0, 8.0),
-               ('BAS1150-2025-1-HCM01', 'B25DCCN001', 5.0, 3.0, 3.0, 3.3))
+               ('BAS1150-2025-1-HCM01', 'B25DCCN001', 5.0, 3.0, 3.0, 3.2))
        v (MaLopHP, MaSinhVien, CC, GK, CK, TK)
  WHERE NOT EXISTS (SELECT 1 FROM dbo.Diem d
                     WHERE d.MaLopHP = v.MaLopHP AND d.MaSinhVien = v.MaSinhVien);
+
+/* Tổng kết phải khớp công thức của API (0.1·CC + 0.3·GK + 0.6·CK, làm tròn
+   1 chữ số): 5/3/3 ra 3.2. Bản seed cũ ghi 3.3; UPDATE có điều kiện nên chạy
+   lại không làm gì thêm. */
+UPDATE dbo.Diem SET DiemTongKet = 3.2
+ WHERE MaLopHP = 'BAS1150-2025-1-HCM01' AND MaSinhVien = 'B25DCCN001' AND DiemTongKet = 3.3;
 
 /* Mỗi ghi danh còn hiệu lực có đúng một dòng Diem — dòng rỗng (mọi cột NULL,
    chưa công bố) nghĩa là "chưa có điểm". F08 tạo dòng này lúc đăng ký; bảng

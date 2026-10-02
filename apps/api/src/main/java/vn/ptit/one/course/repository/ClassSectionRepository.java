@@ -91,6 +91,14 @@ public class ClassSectionRepository {
                 """, soLuongToiDa, trangThai, choPhepLienCoSo, hinhThucHoc, maLopHP, soLuongToiDa);
     }
 
+    /** Điều kiện trạng thái nằm trong câu UPDATE: lớp vừa bị huỷ thì không khoá nhầm. */
+    public int lockGrades(String maLopHP) {
+        return jdbc.update("""
+                UPDATE dbo.LopHocPhan SET TrangThai = 'DA_KHOA'
+                 WHERE MaLopHP = ? AND TrangThai = 'MO'
+                """, maLopHP);
+    }
+
     public int assignTeacher(String maLopHP, String maGiangVien) {
         return jdbc.update("UPDATE dbo.LopHocPhan SET MaGiangVien = ? WHERE MaLopHP = ?",
                 maGiangVien, maLopHP);

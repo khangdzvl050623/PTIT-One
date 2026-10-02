@@ -12,6 +12,7 @@ class GradeConfig {
 
     @Bean
     GradePolicy gradePolicy(GradeProperties properties) {
-        return new GradePolicy(properties.nguongDat());
+        return new GradePolicy(properties.trongSoChuyenCan(), properties.trongSoGiuaKy(),
+                properties.trongSoCuoiKy(), properties.nguongDat());
     }
 }

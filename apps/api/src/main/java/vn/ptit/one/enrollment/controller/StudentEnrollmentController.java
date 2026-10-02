@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
-import vn.ptit.one.enrollment.model.StudentTimetable;
 import vn.ptit.one.enrollment.service.StudentTimetableService;
+import vn.ptit.one.timetable.model.Timetable;
 
 /**
  * Dữ liệu ghi danh của chính sinh viên đang đăng nhập. Mã sinh viên lấy từ
@@ -27,7 +27,7 @@ public class StudentEnrollmentController {
     }
 
     @GetMapping("/timetable")
-    public StudentTimetable timetable(@AuthenticationPrincipal AuthenticatedUser user,
+    public Timetable timetable(@AuthenticationPrincipal AuthenticatedUser user,
             @RequestParam String maHocKy,
             @RequestParam(required = false) Integer tuan) {
         return timetables.timetable(user, maHocKy, tuan);

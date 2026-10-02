@@ -32,7 +32,9 @@ public class ClassSectionService {
     private static final int MAX_CODE_ATTEMPTS = 3;
 
     private static final List<String> HINH_THUC_HOC = List.of("TRUC_TIEP", "TRUC_TUYEN", "KET_HOP");
-    private static final List<String> TRANG_THAI = List.of("DU_KIEN", "MO", "DA_KHOA", "DA_HUY");
+    public static final String MO = "MO";
+    public static final String DA_KHOA = "DA_KHOA";
+    private static final List<String> TRANG_THAI = List.of("DU_KIEN", MO, DA_KHOA, "DA_HUY");
 
     private final ClassSectionRepository classes;
     private final CourseRepository courses;
@@ -143,6 +145,16 @@ public class ClassSectionService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "CLASS_STATUS_INVALID",
                     "Trạng thái lớp không hợp lệ: %s.".formatted(trangThai));
         }
+        /* DA_KHOA nghĩa là đã khoá điểm. Chỉ đi vào qua luồng khoá điểm (kiểm đã
+           công bố đủ), và không có đường ra — mở khoá/cải chính ngoài bản basic. */
+        if (DA_KHOA.equals(lop.trangThai())) {
+            throw new ApiException(HttpStatus.CONFLICT, "GRADE_LOCKED",
+                    "Lớp %s đã khoá điểm, không sửa được.".formatted(maLopHP));
+        }
+        if (DA_KHOA.equals(trangThai)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CLASS_STATUS_INVALID",
+                    "Khoá điểm bằng thao tác khoá bảng điểm, không đặt trạng thái trực tiếp.");
+        }
 
         /* Điều kiện "không hạ dưới sĩ số" nằm trong chính câu UPDATE rồi đọc số
            dòng — không SELECT trước rồi IF, vì sĩ số đổi được giữa hai câu lệnh. */
@@ -181,6 +193,17 @@ public class ClassSectionService {
 
         classes.assignTeacher(maLopHP, teacher);
         return require(maLopHP);
+    }
+
+    /**
+     * Chuyển lớp đang mở sang {@code DA_KHOA}. API cho module {@code grade}: chỗ
+     * gọi đã kiểm quyền và kiểm điểm đã công bố đủ.
+     *
+     * @return {@code false} nếu lớp không còn ở {@code MO} lúc ghi
+     */
+    @Transactional
+    public boolean lockGrades(String maLopHP) {
+        return classes.lockGrades(maLopHP) == 1;
     }
 
     /** Dùng chung cho module `timetable` khi cần lớp đã kiểm quyền. */
