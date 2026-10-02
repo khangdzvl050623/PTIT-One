@@ -141,6 +141,12 @@ public class NotificationService {
                 maLopHP = null;
             }
             case NotificationTerms.CO_SO -> {
+                if (maCoSo != null) {
+                    String nhap = maCoSo;
+                    maCoSo = notifications.findCampus(nhap)
+                            .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "CAMPUS_NOT_FOUND",
+                                    "Không có cơ sở %s.".formatted(nhap)));
+                }
                 if (user.role() == Role.ADMIN_CO_SO) {
                     if (maCoSo != null && !maCoSo.equals(user.homeCampus())) {
                         throw forbidden("Bạn chỉ gửi được thông báo cho cơ sở %s.".formatted(user.homeCampus()));
@@ -149,9 +155,8 @@ public class NotificationService {
                 } else if (user.role() != Role.ADMIN_MASTER) {
                     throw forbidden("Giảng viên chỉ gửi thông báo cho lớp học phần mình dạy.");
                 }
-                if (maCoSo == null || !notifications.campusExists(maCoSo)) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, "CAMPUS_NOT_FOUND",
-                            "Không có cơ sở %s.".formatted(maCoSo));
+                if (maCoSo == null) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "CAMPUS_NOT_FOUND", "Chọn cơ sở nhận thông báo.");
                 }
                 maLopHP = null;
             }

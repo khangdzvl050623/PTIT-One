@@ -69,15 +69,18 @@ public class AccountService {
     /**
      * Kiểm TRƯỚC khi module gọi ghi hồ sơ: cơ sở có thật và tên đăng nhập /
      * mã thực thể chưa có trong danh bạ. Không dựa vào lỗi FK/UNIQUE để báo.
+     *
+     * @return mã cơ sở CHUẨN (ví dụ {@code HCM} khi client gửi {@code hcm}) —
+     *         người gọi phải ghi giá trị này, không ghi giá trị client gửi
      */
-    public void requireAvailable(String username, String campus) {
-        if (!accounts.campusExists(campus)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "CAMPUS_NOT_FOUND",
-                    "Không có cơ sở %s.".formatted(campus));
-        }
+    public String requireAvailable(String username, String campus) {
+        String maCoSo = accounts.findCampus(campus)
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "CAMPUS_NOT_FOUND",
+                        "Không có cơ sở %s.".formatted(campus)));
         if (accounts.directoryTaken(username, username)) {
             throw accountExists(username);
         }
+        return maCoSo;
     }
 
     /**

@@ -111,10 +111,13 @@ public class NotificationRepository {
                 (rs, rowNum) -> mapAuthored(rs), nguoiTao);
     }
 
-    public boolean campusExists(String maCoSo) {
-        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.CoSo WHERE MaCoSo = ?",
-                Integer.class, maCoSo);
-        return count != null && count > 0;
+    /**
+     * Mã cơ sở đúng như trong {@code CoSo}. Collation không phân biệt hoa thường
+     * nên {@code hcm} vẫn khớp — phải dùng giá trị CHUẨN, vì Java so sánh phân biệt.
+     */
+    public Optional<String> findCampus(String maCoSo) {
+        return jdbc.queryForList("SELECT MaCoSo FROM dbo.CoSo WHERE MaCoSo = ?", String.class, maCoSo.trim())
+                .stream().findFirst();
     }
 
     // --- Người nhận -------------------------------------------------------
