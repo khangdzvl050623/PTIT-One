@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 43 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 57 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -102,7 +102,8 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/enrollment-periods` | — |
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
-| GET | `/api/me/grades` · `/api/me/timetable` | `SINH_VIEN` |
+| GET | `/api/me/grades` · `/api/me/timetable` · `/api/me/enrollments` | `SINH_VIEN` |
+| POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 
 ### Hai quy tắc phạm vi
 
@@ -241,6 +242,34 @@ bị từ chối.
   (trừ lớp đã huỷ). **Cùng hình dạng** với `/api/me/timetable` để UI dùng chung
   một màn lịch tuần.
 
+### Đăng ký và huỷ học phần (F08)
+
+- `POST /api/me/enrollments` chỉ gửi `{"maLopHP"}`. Server tự kiểm mọi điều
+  kiện, **không** tin cờ "đủ điều kiện" từ client.
+- Kiểm theo thứ tự, lỗi đầu tiên gặp được trả về:
+  SV `DANG_HOC` → lớp **cùng cơ sở** (Phần 1 chưa có liên cơ sở) → đợt của cơ sở
+  **đang mở** → lớp `MO` → môn thuộc **CTĐT** của SV → chưa giữ lớp khác **cùng
+  môn** trong kỳ → đã **đạt mọi** môn tiên quyết (chỉ tính điểm **đã công bố**)
+  → không **trùng lịch** (cùng thứ, chồng tiết **và** chồng tuần) → không vượt
+  **trần tín chỉ** → lớp **còn chỗ**.
+- **`201`** khi vừa đăng ký; **`200`** khi gửi lại đúng lớp đang giữ (bấm hai
+  lần) — không cộng sĩ số lần nữa. UI coi cả hai là thành công.
+- `loaiDangKy` ∈ `HOC_MOI` · `HOC_LAI` (đã trượt) · `CAI_THIEN` (đã đạt). Đăng ký
+  lại được **mọi** môn; khi học nhiều lần, **điểm cao nhất** được tính.
+- Lớp đầy → `409 CLASS_FULL` ngay, **không có hàng chờ**.
+- Phần 1 đi thẳng `DA_DANG_KY` / `DA_HUY` vì mỗi thao tác là một giao dịch cục
+  bộ; `DANG_XU_LY` / `DANG_HUY` dành cho Phần 2.
+- `DELETE .../{maLopHP}` chỉ khi đợt **còn mở** và **chưa có điểm** nào. Trả chỗ,
+  trả tín chỉ, đổi trạng thái và xoá dòng điểm rỗng trong **một** giao dịch.
+  Không xoá điểm để huỷ. Huỷ rồi đăng ký lại được, kể cả sang lớp khác cùng môn.
+- `GET /api/me/enrollments?maHocKy=` trả các môn đang giữ chỗ và
+  `soTinChiDaDangKy` / `tranTinChi` (`null` khi chưa đăng ký gì trong kỳ). Trần
+  24 là **giả định demo**, cấu hình `ptitone.enrollment.tran-tin-chi`.
+- Tương tranh: `sp_getapplock` theo (SV, kỳ) **trước** mọi phép kiểm; sức chứa và
+  tín chỉ kiểm **trong câu `UPDATE`** rồi đọc `@@ROWCOUNT`; thứ tự ghi luôn
+  `SinhVienHocKy → LopHocPhan → DangKyHocPhan → DangKyMonHoc → Diem` ở cả đăng
+  ký lẫn huỷ.
+
 ### Phiên đăng nhập
 
 - `401 AUTH_INVALID_CREDENTIALS` cho **mọi** lý do từ chối: sai mật khẩu, chưa
@@ -294,6 +323,20 @@ bị từ chối.
 | `GRADE_LOCKED` | 409 | Ghi vào lớp đã khoá điểm (cả qua API lớp) |
 | `GRADE_CLASS_NOT_OPEN` | 409 | Lớp không ở trạng thái `MO` |
 | `GRADE_BUSY` | 503 | Người khác đang ghi bảng điểm lớp này |
+| `STUDENT_NOT_FOUND` | 404 | Tài khoản SV không có hồ sơ |
+| `STUDENT_NOT_ACTIVE` | 409 | SV không ở trạng thái `DANG_HOC` |
+| `ENROLLMENT_CROSS_CAMPUS` | 409 | Lớp thuộc cơ sở khác (Phần 1 chưa hỗ trợ) |
+| `ENROLLMENT_PERIOD_CLOSED` | 409 | Không có đợt đang mở — tính cả giờ đóng |
+| `CLASS_NOT_OPEN` | 409 | Lớp không ở trạng thái `MO` |
+| `COURSE_NOT_IN_PROGRAM` | 409 | Môn không thuộc CTĐT của SV |
+| `ENROLLMENT_DUPLICATE_COURSE` | 409 | Đã giữ lớp khác của cùng môn trong kỳ |
+| `PREREQUISITE_NOT_MET` | 409 | Chưa đạt tiên quyết; `message` nêu tên môn |
+| `SCHEDULE_CLASH` | 409 | Trùng lịch với lớp đã đăng ký |
+| `CREDIT_LIMIT_EXCEEDED` | 409 | Vượt trần tín chỉ học kỳ |
+| `CLASS_FULL` | 409 | Lớp đã đủ chỗ |
+| `ENROLLMENT_NOT_FOUND` | 404 | Huỷ lớp mình không đăng ký |
+| `ENROLLMENT_HAS_GRADE` | 409 | Huỷ khi đã có điểm |
+| `ENROLLMENT_BUSY` | 503 | Đang xử lý một yêu cầu khác của chính SV đó |
 | `PREREQUISITE_SELF` | 400 | Môn tự làm tiên quyết của chính nó |
 | `PREREQUISITE_UNKNOWN` | 400 | Môn tiên quyết không tồn tại |
 | `PREREQUISITE_CYCLE` | 409 | Tạo thành chu trình |
@@ -350,7 +393,7 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Tạo lớp thì mã do server sinh, cơ sở từ JWT | mã mang đúng cơ sở của admin | ✓ |
 | Mở đợt thứ hai cùng cơ sở + kỳ | `409 PERIOD_ALREADY_OPEN` | ✓ |
 | `thoiGianMo` không trước `thoiGianDong` | `400 PERIOD_WINDOW_INVALID` | ✓ |
-| Đợt `DANG_MO` nhưng đã quá `thoiGianDong` | không tính là đang mở | **✗** |
+| Đợt `DANG_MO` nhưng đã quá `thoiGianDong` | không tính là đang mở — đăng ký và huỷ đều `409` | ✓ |
 | `POST` thiếu header `X-XSRF-TOKEN` | `403`, chặn trước khi vào controller | ✓ |
 | Dùng lại refresh token đã rotate | `401 AUTH_REFRESH_INVALID`, **cả phiên bị thu hồi** | ✓ |
 | `logout-all` rồi gọi API bằng access cũ | `401 AUTH_SESSION_INVALID` ngay | ✓ |
@@ -378,6 +421,16 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Sửa sau khoá, kể cả qua `PUT /api/classes` | `409 GRADE_LOCKED` | ✓ |
 | Đặt thẳng `DA_KHOA` qua API lớp | `400 CLASS_STATUS_INVALID` | ✓ |
 | Lịch dạy GV chỉ gồm lớp mình phụ trách | không lẫn lớp GV khác | ✓ |
+| **Lớp 30 chỗ, 100 SV đăng ký đồng thời** | đúng 30 thành công, 70 `CLASS_FULL`, đối soát 5 nguồn khớp | ✓ |
+| Một SV bấm đăng ký 10 lần cùng lúc | 1 lần `201`, 9 lần `200`, sĩ số +1 | ✓ |
+| Huỷ rồi đăng ký lại | dùng lại dòng cũ, bộ đếm không lệch | ✓ |
+| Chưa đạt tiên quyết | `409 PREREQUISITE_NOT_MET`, nêu tên môn | ✓ |
+| Trùng lịch / trùng môn | `409 SCHEDULE_CLASH` / `ENROLLMENT_DUPLICATE_COURSE` | ✓ |
+| Lớp đầy | `409 CLASS_FULL`, tín chỉ không bị trừ | ✓ |
+| Vượt trần tín chỉ | `409 CREDIT_LIMIT_EXCEEDED` | ✓ |
+| Lớp cơ sở khác / lớp chưa mở | `409` | ✓ |
+| Môn đã trượt / đã đạt đăng ký lại | `HOC_LAI` / `CAI_THIEN` | ✓ |
+| Huỷ khi đã có điểm | `409 ENROLLMENT_HAS_GRADE`, sĩ số và tín chỉ giữ nguyên | ✓ |
 
 Chạy: `.\scripts\dev-api.ps1 -MavenArguments verify`. Các ca tích hợp cần
 SQL Server và biến `PTITONE_DB_URL`; thiếu thì chúng **skip chứ không đỏ**.
@@ -419,12 +472,8 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 | Gói | Nội dung |
 |---|---|
 | F02 | Cấp hồ sơ, kích hoạt tài khoản, quên mật khẩu |
-| F08 | Đăng ký và hủy học phần |
 
-Quy tắc đăng ký/hủy (`DANG_XU_LY → DANG_HUY → DA_HUY`, trần tín chỉ trên
-`SinhVienHocKy`, thứ tự khoá `LopHocPhan` trước `DangKyHocPhan`) đã chốt ở
-[AGENTS.md](../AGENTS.md) và [PTIT-One-Thiet-Ke.md](PTIT-One-Thiet-Ke.md); viết
-vào đây khi F08 có code, không viết trước.
+Thống kê toàn hệ thống và thông báo chưa có endpoint.
 
 Gọi các đường dẫn chưa có trả `404` — đó là hành vi đúng.
 

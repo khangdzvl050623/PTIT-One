@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -71,6 +72,16 @@ public class ScheduleService {
             buoiHoc = buoiHoc.stream().filter(buoi -> buoi.coTrongTuan(tuan)).toList();
         }
         return new Timetable(term.maHocKy(), term.ngayBatDau(), tuan, buoiHoc);
+    }
+
+    /**
+     * Lớp đầu tiên trong {@code others} trùng giờ với {@code maLopHP} — cùng thứ,
+     * chồng tiết VÀ chồng tuần. Cùng tiết nhưng khác khoảng tuần thì không trùng.
+     * Dùng cho F08: sinh viên không học hai lớp cùng lúc.
+     */
+    public Optional<String> firstClash(String maLopHP, Collection<String> others) {
+        List<ScheduleSlot> target = schedules.findByClass(maLopHP);
+        return Optional.ofNullable(firstClash(target, schedules.slotsOf(others))).map(ClashRow::maLopHP);
     }
 
     /** Lịch dạy của giảng viên đang đăng nhập, gom mọi lớp đang phụ trách. */

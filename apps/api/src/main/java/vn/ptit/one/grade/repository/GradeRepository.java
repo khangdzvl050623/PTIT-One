@@ -5,7 +5,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -126,6 +128,48 @@ public class GradeRepository {
                         rs.getBigDecimal("DiemCuoiKy"),
                         rs.getBigDecimal("DiemTongKet"),
                         toInstant(rs.getObject("NgayCongBo", LocalDateTime.class))), args.toArray());
+    }
+
+    // --- API cho đăng ký học phần (F08) ----------------------------------
+
+    /**
+     * Điểm tổng kết CAO NHẤT của mỗi môn sinh viên đã học, chỉ tính điểm đã công
+     * bố — điểm nháp không được coi là đã đạt tiên quyết.
+     */
+    public Map<String, BigDecimal> bestPublishedByCourse(String maSinhVien) {
+        Map<String, BigDecimal> best = new HashMap<>();
+        jdbc.query("""
+                SELECT l.MaMonHoc, MAX(d.DiemTongKet) AS CaoNhat
+                  FROM dbo.Diem d
+                  JOIN dbo.LopHocPhan l ON l.MaLopHP = d.MaLopHP
+                 WHERE d.MaSinhVien = ? AND d.NgayCongBo IS NOT NULL AND d.DiemTongKet IS NOT NULL
+                 GROUP BY l.MaMonHoc
+                """, rs -> {
+            best.put(rs.getString("MaMonHoc"), rs.getBigDecimal("CaoNhat"));
+        }, maSinhVien);
+        return best;
+    }
+
+    /** Dòng điểm rỗng cho ghi danh mới. Chỗ gọi đã giữ khoá theo sinh viên. */
+    public void insertEmpty(String maLopHP, String maSinhVien) {
+        jdbc.update("""
+                INSERT INTO dbo.Diem (MaLopHP, MaSinhVien)
+                SELECT ?, ?
+                 WHERE NOT EXISTS (SELECT 1 FROM dbo.Diem WHERE MaLopHP = ? AND MaSinhVien = ?)
+                """, maLopHP, maSinhVien, maLopHP, maSinhVien);
+    }
+
+    /**
+     * Xoá dòng điểm CHỈ KHI chưa có điểm nào và chưa công bố. Điều kiện nằm trong
+     * câu DELETE: giảng viên vừa nhập điểm xen giữa thì xoá 0 dòng.
+     */
+    public int deleteIfEmpty(String maLopHP, String maSinhVien) {
+        return jdbc.update("""
+                DELETE FROM dbo.Diem
+                 WHERE MaLopHP = ? AND MaSinhVien = ? AND NgayCongBo IS NULL
+                   AND DiemChuyenCan IS NULL AND DiemGiuaKy IS NULL
+                   AND DiemCuoiKy IS NULL AND DiemTongKet IS NULL
+                """, maLopHP, maSinhVien);
     }
 
     private static Instant toInstant(LocalDateTime utc) {

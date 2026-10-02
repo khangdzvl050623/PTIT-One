@@ -196,6 +196,24 @@ public class ClassSectionService {
     }
 
     /**
+     * Giữ một chỗ trong lớp đang mở. API cho {@code enrollment}; bộ đếm do
+     * ứng dụng sở hữu, không trigger nào cộng thêm.
+     *
+     * @return {@code false} nếu lớp đã đầy hoặc không còn mở
+     */
+    public boolean reserveSeat(String maLopHP) {
+        return classes.reserveSeat(maLopHP) == 1;
+    }
+
+    /** Trả lại một chỗ khi huỷ đăng ký. */
+    public void releaseSeat(String maLopHP) {
+        if (classes.releaseSeat(maLopHP) != 1) {
+            throw new IllegalStateException(
+                    "Bộ đếm sĩ số lớp %s đã về 0 trước khi trả chỗ.".formatted(maLopHP));
+        }
+    }
+
+    /**
      * Chuyển lớp đang mở sang {@code DA_KHOA}. API cho module {@code grade}: chỗ
      * gọi đã kiểm quyền và kiểm điểm đã công bố đủ.
      *
