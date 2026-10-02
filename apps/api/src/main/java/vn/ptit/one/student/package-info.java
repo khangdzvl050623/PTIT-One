@@ -1,10 +1,9 @@
 /**
- * Hồ sơ sinh viên và giảng viên.
+ * Hồ sơ sinh viên.
  *
- * <p>Sở hữu bảng {@code SinhVien} và {@code GiangVien}. Module khác lấy dữ liệu
- * qua service công khai ({@code TeacherDirectory}), không đụng repository.
+ * <p>Sở hữu bảng {@code SinhVien}. Hồ sơ giảng viên nằm ở module
+ * {@code teacher} — hai thực thể khác nhau và có quyền khác nhau trong B3.
  *
- * <p>Đã có: tra cứu giảng viên cho việc phân công lớp (F04).
- * Chưa có: hồ sơ sinh viên và luồng cấp hồ sơ (F02).
+ * <p>Chưa có code: hồ sơ sinh viên thuộc F02 và F05.
  */
 package vn.ptit.one.student;

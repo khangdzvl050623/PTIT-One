@@ -1,4 +1,4 @@
-package vn.ptit.one.student.repository;
+package vn.ptit.one.teacher.repository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import vn.ptit.one.student.model.Teacher;
+import vn.ptit.one.teacher.model.Teacher;
 
 /** Đọc hồ sơ giảng viên. Module `student` sở hữu bảng `GiangVien`. */
 @Repository

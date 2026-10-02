@@ -1,4 +1,4 @@
-package vn.ptit.one.student.service;
+package vn.ptit.one.teacher.service;
 
 import java.util.List;
 
@@ -7,11 +7,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import vn.ptit.one.shared.exception.ApiException;
-import vn.ptit.one.student.model.Teacher;
-import vn.ptit.one.student.repository.TeacherRepository;
+import vn.ptit.one.teacher.model.Teacher;
+import vn.ptit.one.teacher.repository.TeacherRepository;
 
 /**
- * API công khai của module `student` về giảng viên.
+ * API công khai của module `teacher`.
  *
  * <p>Module khác (ví dụ `course` khi phân công lớp) gọi service này, KHÔNG
  * đụng {@code TeacherRepository} — đó là repository nội bộ của module này.

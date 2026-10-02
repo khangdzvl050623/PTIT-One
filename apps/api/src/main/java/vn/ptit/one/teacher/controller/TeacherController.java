@@ -1,4 +1,4 @@
-package vn.ptit.one.student.controller;
+package vn.ptit.one.teacher.controller;
 
 import java.util.List;
 
@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.Role;
-import vn.ptit.one.student.model.Teacher;
-import vn.ptit.one.student.service.TeacherDirectory;
+import vn.ptit.one.teacher.model.Teacher;
+import vn.ptit.one.teacher.service.TeacherDirectory;
 
 /**
  * Tra cứu giảng viên, phục vụ màn phân công lớp.

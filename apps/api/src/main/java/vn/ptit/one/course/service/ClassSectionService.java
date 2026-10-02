@@ -15,7 +15,7 @@ import vn.ptit.one.course.model.ClassSection;
 import vn.ptit.one.course.repository.ClassSectionRepository;
 import vn.ptit.one.course.repository.CourseRepository;
 import vn.ptit.one.shared.exception.ApiException;
-import vn.ptit.one.student.service.TeacherDirectory;
+import vn.ptit.one.teacher.service.TeacherDirectory;
 
 /**
  * Lớp học phần (F04).
