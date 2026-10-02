@@ -15,18 +15,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import vn.ptit.one.auth.dto.CsrfResponse;
 import vn.ptit.one.auth.dto.LoginRequest;
 import vn.ptit.one.auth.dto.SessionUserResponse;
-import vn.ptit.one.auth.service.CredentialService;
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.security.AuthCookies;
 import vn.ptit.one.auth.security.AuthenticatedUserToken;
 import vn.ptit.one.auth.service.AuthenticationService;
 import vn.ptit.one.auth.service.AuthenticationService.LoginResult;
+import vn.ptit.one.auth.service.CredentialService;
 import vn.ptit.one.shared.exception.ApiException;
 
 @RestController
@@ -49,9 +50,13 @@ public class AuthController {
         this.clock = clock;
     }
 
-    /** Gọi trước request ghi đầu tiên; đồng thời đặt cookie {@code XSRF-TOKEN}. */
+    /**
+     * Gọi trước request ghi đầu tiên; đồng thời đặt cookie {@code XSRF-TOKEN}.
+     * {@code token} do Spring Security gắn vào request, không phải tham số client
+     * gửi — ẩn khỏi OpenAPI, nếu không springdoc ghi nó thành query param bắt buộc.
+     */
     @GetMapping("/csrf")
-    public CsrfResponse csrf(CsrfToken token) {
+    public CsrfResponse csrf(@Parameter(hidden = true) CsrfToken token) {
         return new CsrfResponse(token.getHeaderName(), token.getToken());
     }
 

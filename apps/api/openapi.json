@@ -502,20 +502,6 @@
         },
         "type" : "object"
       },
-      "CsrfToken" : {
-        "properties" : {
-          "headerName" : {
-            "type" : "string"
-          },
-          "parameterName" : {
-            "type" : "string"
-          },
-          "token" : {
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
       "DatabaseHealthResponse" : {
         "properties" : {
           "database" : {
@@ -1661,14 +1647,6 @@
     "/api/auth/csrf" : {
       "get" : {
         "operationId" : "csrf",
-        "parameters" : [ {
-          "in" : "query",
-          "name" : "token",
-          "required" : true,
-          "schema" : {
-            "$ref" : "#/components/schemas/CsrfToken"
-          }
-        } ],
         "responses" : {
           "200" : {
             "content" : {
