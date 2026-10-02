@@ -109,6 +109,21 @@ public class ClassSectionRepository {
                 """, maLopHP);
     }
 
+    public int markCancelled(String maLopHP) {
+        return jdbc.update("""
+                UPDATE dbo.LopHocPhan SET TrangThai = 'DA_HUY'
+                 WHERE MaLopHP = ? AND TrangThai IN ('MO', 'DU_KIEN')
+                """, maLopHP);
+    }
+
+    /** Đưa sĩ số về 0 CHỈ KHI bộ đếm đúng bằng số ghi danh vừa huỷ — lệch là lỗi dữ liệu. */
+    public int clearSeats(String maLopHP, int expected) {
+        return jdbc.update("""
+                UPDATE dbo.LopHocPhan SET SoLuongDaDangKy = 0
+                 WHERE MaLopHP = ? AND SoLuongDaDangKy = ?
+                """, maLopHP, expected);
+    }
+
     /** Điều kiện trạng thái nằm trong câu UPDATE: lớp vừa bị huỷ thì không khoá nhầm. */
     public int lockGrades(String maLopHP) {
         return jdbc.update("""

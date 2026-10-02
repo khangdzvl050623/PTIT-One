@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 62 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 65 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -93,6 +93,7 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
 | POST · PUT | `/api/classes` · `/{maLopHP}` · `/{maLopHP}/teacher` | `ADMIN_CO_SO` |
+| POST | `/api/classes/{maLopHP}/cancel` | `ADMIN_CO_SO` cùng cơ sở |
 | GET | `/api/classes/{maLopHP}/students` | GV **phụ trách lớp** · `ADMIN_CO_SO` cùng cơ sở · `ADMIN_MASTER` |
 | GET | `/api/classes/{maLopHP}/grades` | GV **phụ trách lớp** · `ADMIN_CO_SO` cùng cơ sở · `ADMIN_MASTER` |
 | PUT · POST | `/api/classes/{maLopHP}/grades` · `/grades/publish` | GV **phụ trách lớp** |
@@ -181,8 +182,23 @@ bị từ chối.
 - Môn, kỳ, cơ sở **không đổi được** — cả ba nằm trong mã lớp.
 - `choPhepLienCoSo: true` chỉ hợp lệ khi `hinhThucHoc = "TRUC_TUYEN"` (D18):
   kiểm "không trùng tiết" là vô nghĩa khi hai điểm cách nhau 1.700 km.
+- `PUT /api/classes/{maLopHP}` **không** đặt được `DA_KHOA` hay `DA_HUY` — hai
+  trạng thái này chỉ đi qua khoá điểm và huỷ lớp. Lớp đã huỷ không sửa được
+  (`409 CLASS_CANCELLED`).
 - Từ vựng: `trangThai` ∈ `DU_KIEN` · `MO` · `DA_KHOA` · `DA_HUY`;
   `hinhThucHoc` ∈ `TRUC_TIEP` · `TRUC_TUYEN` · `KET_HOP`.
+
+### Huỷ lớp
+
+- `POST /api/classes/{maLopHP}/cancel`, thân `{"lyDo"}` tuỳ chọn (≤ 500 ký tự).
+- Trong **một** giao dịch: huỷ mọi ghi danh hai phía, **trả tín chỉ** cho từng SV,
+  xoá dòng điểm rỗng, sĩ số về 0, lớp sang `DA_HUY`; báo SV ("xem lớp còn chỗ để
+  đăng ký bổ sung") và GV phụ trách, kèm lý do.
+- Chặn khi lớp đã khoá điểm (`GRADE_LOCKED`) hoặc đã có SV có điểm
+  (`CLASS_HAS_GRADES`) — không xoá điểm để huỷ. Lỗi thì không gì thay đổi.
+- Huỷ lại lớp đã huỷ trả `200`, `soDangKyDaHuy: 0`, không báo lần hai.
+- Có SV đăng ký chen đúng lúc huỷ → `409 CLASS_CANCEL_RETRY`, thử lại.
+- Không mở lại được lớp đã huỷ.
 
 ### Đợt đăng ký
 
@@ -296,8 +312,8 @@ bị từ chối.
 **Hộp thư** (`/api/me/notifications`, SV và GV):
 
 - Thông báo **tự sinh**: đăng ký thành công, huỷ thành công, điểm vừa công bố,
-  điểm đã công bố bị sửa (`suKien` ∈ `DANG_KY` · `HUY_DANG_KY` · `CONG_BO_DIEM` ·
-  `SUA_DIEM`). Ghi **cùng giao dịch** nghiệp vụ: nghiệp vụ thất bại thì không có
+  điểm đã công bố bị sửa, lớp bị huỷ (`suKien` ∈ `DANG_KY` · `HUY_DANG_KY` ·
+  `CONG_BO_DIEM` · `SUA_DIEM` · `LOP_BI_HUY`). Ghi **cùng giao dịch** nghiệp vụ: nghiệp vụ thất bại thì không có
   thông báo. Bấm đăng ký hai lần không ra hai thông báo; huỷ rồi đăng ký lại thì ra
   thông báo mới. Sửa điểm mà giá trị không đổi thì không báo.
 - `daDoc` là **của riêng người đọc**; nhãn "Mới" theo thời gian là việc của UI.
@@ -403,6 +419,9 @@ bị từ chối.
 | `NOTIFICATION_ALREADY_SENT` | 409 | Sửa, xoá hoặc gửi lại bản đã gửi |
 | `NOTIFICATION_NO_RECIPIENTS` | 409 | Phạm vi hiện không có ai nhận |
 | `CAMPUS_NOT_FOUND` | 400 | Mã cơ sở không có |
+| `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
+| `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
+| `CLASS_CANCEL_RETRY` | 409 | Có thay đổi đăng ký đúng lúc huỷ lớp; thử lại |
 | `PREREQUISITE_SELF` | 400 | Môn tự làm tiên quyết của chính nó |
 | `PREREQUISITE_UNKNOWN` | 400 | Môn tiên quyết không tồn tại |
 | `PREREQUISITE_CYCLE` | 409 | Tạo thành chu trình |
@@ -508,6 +527,11 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Gửi hai lần, sửa bản đã gửi | `409` | ✓ |
 | Admin cơ sở gửi toàn trường / cơ sở khác; GV gửi lớp người khác | `403` | ✓ |
 | Liên kết `https://…` hoặc `//…` | `400` | ✓ |
+| Huỷ lớp có 2 SV | ghi danh huỷ, tín chỉ trả, sĩ số 0, SV và GV được báo | ✓ |
+| Huỷ lại lớp đã huỷ | `200`, không báo lần hai | ✓ |
+| Huỷ lớp đã có điểm / đã khoá điểm | `409`, không gì thay đổi | ✓ |
+| Admin cơ sở khác, Admin Master, GV, SV huỷ lớp | `403` | ✓ |
+| `PUT` đặt `DA_HUY`; sửa hoặc đăng ký vào lớp đã huỷ | `400` / `409` / `409 CLASS_NOT_OPEN` | ✓ |
 
 Chạy: `.\scripts\dev-api.ps1 -MavenArguments verify`. Các ca tích hợp cần
 SQL Server và biến `PTITONE_DB_URL`; thiếu thì chúng **skip chứ không đỏ**.
