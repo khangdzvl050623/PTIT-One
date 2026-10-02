@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Fixture: {@code GVHCM001} dạy INT1154/INT1155 2026-1 nhưng KHÔNG dạy
  * {@code BAS1203-2026-1-HCM01} (của GVHCM002, có B25DCCN001 và B26DCCN001).
- * B25DCCN001 đạt INT1154 (8.0) và trượt BAS1150 (3.3) ở 2025-1.
+ * B25DCCN001 đạt INT1154 (8.0) và trượt BAS1150 (3.2) ở 2025-1.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "ptitone.auth.jwt-secret=cHRpdG9uZS1pbnRlZ3JhdGlvbi10ZXN0LWtleS0zMi1ieXRlcw==")

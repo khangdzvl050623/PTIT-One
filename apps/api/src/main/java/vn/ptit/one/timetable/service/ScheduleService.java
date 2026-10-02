@@ -12,10 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.course.model.ClassSection;
+import vn.ptit.one.course.model.Term;
 import vn.ptit.one.course.service.ClassSectionService;
+import vn.ptit.one.course.service.CourseService;
 import vn.ptit.one.shared.exception.ApiException;
 import vn.ptit.one.timetable.model.ClassSchedule;
 import vn.ptit.one.timetable.model.ScheduleSlot;
+import vn.ptit.one.timetable.model.Timetable;
 import vn.ptit.one.timetable.model.TimetableEntry;
 import vn.ptit.one.timetable.repository.ScheduleRepository;
 import vn.ptit.one.timetable.repository.ScheduleRepository.ClashRow;
@@ -37,10 +40,13 @@ public class ScheduleService {
 
     private final ScheduleRepository schedules;
     private final ClassSectionService classes;
+    private final CourseService courses;
 
-    public ScheduleService(ScheduleRepository schedules, ClassSectionService classes) {
+    public ScheduleService(ScheduleRepository schedules, ClassSectionService classes,
+            CourseService courses) {
         this.schedules = schedules;
         this.classes = classes;
+        this.courses = courses;
     }
 
     public ClassSchedule read(AuthenticatedUser user, String maLopHP) {
@@ -49,12 +55,31 @@ public class ScheduleService {
     }
 
     /**
-     * Buổi học của một tập lớp — API công khai cho thời khoá biểu sinh viên
-     * (F09). Không kiểm quyền: chỗ gọi đã quyết định người dùng được xem
-     * những lớp nào.
+     * Thời khoá biểu của một tập lớp trong học kỳ — API công khai, dùng cho
+     * lịch sinh viên (F09, gọi từ {@code enrollment}) và lịch dạy giảng viên.
+     * Không kiểm quyền: chỗ gọi đã quyết định người dùng được xem lớp nào.
+     *
+     * @param tuan {@code null} là cả học kỳ
      */
-    public List<TimetableEntry> entriesFor(Collection<String> maLopHP) {
-        return schedules.entriesFor(maLopHP);
+    public Timetable timetable(String maHocKy, Collection<String> maLopHP, Integer tuan) {
+        if (tuan != null && tuan < 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Tuần học bắt đầu từ 1.");
+        }
+        Term term = courses.requireTerm(maHocKy);
+        List<TimetableEntry> buoiHoc = schedules.entriesFor(maLopHP);
+        if (tuan != null) {
+            buoiHoc = buoiHoc.stream().filter(buoi -> buoi.coTrongTuan(tuan)).toList();
+        }
+        return new Timetable(term.maHocKy(), term.ngayBatDau(), tuan, buoiHoc);
+    }
+
+    /** Lịch dạy của giảng viên đang đăng nhập, gom mọi lớp đang phụ trách. */
+    public Timetable teachingSchedule(AuthenticatedUser user, String maHocKy, Integer tuan) {
+        List<String> lop = classes.taughtBy(user, maHocKy).stream()
+                .filter(l -> !"DA_HUY".equals(l.trangThai()))
+                .map(ClassSection::maLopHP)
+                .toList();
+        return timetable(maHocKy, lop, tuan);
     }
 
     /**

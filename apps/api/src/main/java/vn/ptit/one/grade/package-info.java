@@ -7,6 +7,6 @@
  * <p>Phụ thuộc một chiều: {@code enrollment → grade}. Dòng {@code Diem} rỗng được
  * tạo lúc đăng ký (F08), nên bảng điểm chỉ cần đọc {@code Diem}, không đọc ghi danh.
  *
- * <p>Đã có: sinh viên xem bảng điểm (F07). Chưa có: nhập, công bố, khoá (F06).
+ * <p>Đã có: nhập, công bố, khoá điểm (F06) và sinh viên xem bảng điểm (F07).
  */
 package vn.ptit.one.grade;

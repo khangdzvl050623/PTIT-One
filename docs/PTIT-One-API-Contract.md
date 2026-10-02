@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 37 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 43 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -94,11 +94,14 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
 | POST · PUT | `/api/classes` · `/{maLopHP}` · `/{maLopHP}/teacher` | `ADMIN_CO_SO` |
 | GET | `/api/classes/{maLopHP}/students` | GV **phụ trách lớp** · `ADMIN_CO_SO` cùng cơ sở · `ADMIN_MASTER` |
+| GET | `/api/classes/{maLopHP}/grades` | GV **phụ trách lớp** · `ADMIN_CO_SO` cùng cơ sở · `ADMIN_MASTER` |
+| PUT · POST | `/api/classes/{maLopHP}/grades` · `/grades/publish` | GV **phụ trách lớp** |
+| POST | `/api/classes/{maLopHP}/grades/lock` | `ADMIN_CO_SO` cùng cơ sở |
 | GET | `/api/classes/{maLopHP}/schedule` | — |
 | PUT | `/api/classes/{maLopHP}/schedule` | `ADMIN_CO_SO` |
 | GET | `/api/enrollment-periods` | — |
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
-| GET | `/api/me/teaching-classes` | `GIANG_VIEN` |
+| GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
 | GET | `/api/me/grades` · `/api/me/timetable` | `SINH_VIEN` |
 
 ### Hai quy tắc phạm vi
@@ -195,6 +198,26 @@ bị từ chối.
   Response trả **cả** bộ đếm `lop.soLuongDaDangKy` **lẫn** danh sách; hai số này
   phải bằng nhau. Lệch nhau là lỗi dữ liệu, đừng tự sửa trên UI.
 
+### Nhập, công bố và khoá điểm (F06)
+
+- Luồng: GV phụ trách **nhập nháp** → **công bố** cả lớp → Admin cơ sở **khoá**.
+  Admin không nhập thay GV; GV không tự khoá.
+- `PUT .../grades` lưu **một loạt** dòng trong một giao dịch: một dòng lỗi thì
+  **không dòng nào** được ghi. Gửi `null` cho một điểm thành phần là xoá điểm đó.
+- **Mỗi dòng phải gửi lại `version`** đã nhận từ `GET`. Lệch → `409
+  GRADE_VERSION_CONFLICT`; UI tải lại bảng điểm, không tự ghi đè.
+- `diemTongKet` do **server** tính (`0.1·CC + 0.3·GK + 0.6·CK`, làm tròn 1 chữ
+  số); thiếu một điểm thành phần thì `null`. Client không gửi tổng kết. Trọng số
+  là giả định demo, cấu hình ở `ptitone.grade.*`.
+- Điểm 0–10, tối đa 1 chữ số thập phân.
+- Công bố bị chặn khi còn SV thiếu điểm thành phần (`GRADE_INCOMPLETE`). Công bố
+  rồi **vẫn sửa được**, SV thấy ngay; thời điểm công bố đầu được giữ.
+- Khoá cần mọi dòng đã công bố (`GRADE_NOT_PUBLISHED`). Khoá rồi gọi lại vẫn `200`.
+  Khoá xong **không có đường mở**: mở khoá/cải chính nằm ngoài bản basic.
+- `trangThai` của bảng điểm ∈ `NHAP` (còn dòng nháp) · `DA_CONG_BO` · `DA_KHOA`.
+- `PUT /api/classes/{maLopHP}` **không** đặt được `DA_KHOA` (`400
+  CLASS_STATUS_INVALID`) và không sửa được lớp đã khoá (`409 GRADE_LOCKED`).
+
 ### Bảng điểm sinh viên (F07)
 
 - Mỗi môn đang ghi danh có **một dòng**, kể cả khi chưa có điểm.
@@ -211,6 +234,12 @@ bị từ chối.
   ngày, `thu` 2 = thứ Hai … 8 = Chủ nhật.
 - `gioBatDau`/`gioKetThuc` lấy từ khung giờ tiết, nên UI không cần tự tra giờ.
 - Chỉ gồm lớp còn giữ chỗ; lớp đã huỷ không xuất hiện.
+
+### Lịch dạy giảng viên
+
+- `GET /api/me/teaching-schedule?maHocKy=&tuan=` gom mọi lớp GV đang phụ trách
+  (trừ lớp đã huỷ). **Cùng hình dạng** với `/api/me/timetable` để UI dùng chung
+  một màn lịch tuần.
 
 ### Phiên đăng nhập
 
@@ -258,13 +287,20 @@ bị từ chối.
 | `FACULTY_UNKNOWN` | 400 | Mã khoa không có |
 | `TERM_NOT_FOUND` | 400 | Mã học kỳ không có (tạo lớp, thời khoá biểu) |
 | `PROGRAM_NOT_FOUND` | 404 | Không có chương trình đào tạo |
+| `GRADE_VERSION_CONFLICT` | 409 | Dòng điểm đã bị người khác sửa sau khi tải |
+| `GRADE_STUDENT_NOT_ENROLLED` | 400 | Sinh viên không thuộc lớp |
+| `GRADE_INCOMPLETE` | 409 | Công bố khi còn SV thiếu điểm thành phần |
+| `GRADE_NOT_PUBLISHED` | 409 | Khoá khi còn điểm chưa công bố |
+| `GRADE_LOCKED` | 409 | Ghi vào lớp đã khoá điểm (cả qua API lớp) |
+| `GRADE_CLASS_NOT_OPEN` | 409 | Lớp không ở trạng thái `MO` |
+| `GRADE_BUSY` | 503 | Người khác đang ghi bảng điểm lớp này |
 | `PREREQUISITE_SELF` | 400 | Môn tự làm tiên quyết của chính nó |
 | `PREREQUISITE_UNKNOWN` | 400 | Môn tiên quyết không tồn tại |
 | `PREREQUISITE_CYCLE` | 409 | Tạo thành chu trình |
 | `CATALOG_BUSY` | 503 | Người khác đang sửa đồ thị tiên quyết |
 | `CLASS_NOT_FOUND` | 404 | Không có lớp |
 | `CLASS_MODE_INVALID` | 400 | `hinhThucHoc` sai |
-| `CLASS_STATUS_INVALID` | 400 | `trangThai` sai |
+| `CLASS_STATUS_INVALID` | 400 | `trangThai` sai, hoặc đặt thẳng `DA_KHOA` |
 | `CROSS_CAMPUS_REQUIRES_ONLINE` | 400 | Liên cơ sở mà không phải lớp trực tuyến |
 | `CLASS_CAPACITY_BELOW_ENROLLED` | 409 | Hạ sức chứa xuống dưới sĩ số |
 | `CLASS_CODE_RACE` | 409 | Hai người cùng tạo lớp; thử lại |
@@ -331,6 +367,17 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Bảng điểm: đạt/trượt theo ngưỡng 4.0 | `DAT` / `KHONG_DAT` | ✓ |
 | Thời khoá biểu lọc tuần ngoài khoảng học | `buoiHoc` rỗng | ✓ |
 | Thời khoá biểu học kỳ không tồn tại | `400 TERM_NOT_FOUND` | ✓ |
+| Lưu điểm: tổng kết do server tính (9 / 7.5 / 8 → 8.0) | `200`, vẫn `NHAP` | ✓ |
+| Hai lần sửa từ cùng một `version` | lần sau `409 GRADE_VERSION_CONFLICT`, lần đầu giữ nguyên | ✓ |
+| Một dòng SV ngoài lớp trong loạt lưu | `400`, cả loạt không ghi | ✓ |
+| Điểm 10.5 | `400 VALIDATION_ERROR` | ✓ |
+| Admin nhập điểm / GV tự khoá / admin cơ sở khác khoá | `403` | ✓ |
+| Công bố khi còn thiếu điểm | `409 GRADE_INCOMPLETE` | ✓ |
+| Khoá khi chưa công bố | `409 GRADE_NOT_PUBLISHED` | ✓ |
+| Sửa sau công bố, trước khoá | `200` | ✓ |
+| Sửa sau khoá, kể cả qua `PUT /api/classes` | `409 GRADE_LOCKED` | ✓ |
+| Đặt thẳng `DA_KHOA` qua API lớp | `400 CLASS_STATUS_INVALID` | ✓ |
+| Lịch dạy GV chỉ gồm lớp mình phụ trách | không lẫn lớp GV khác | ✓ |
 
 Chạy: `.\scripts\dev-api.ps1 -MavenArguments verify`. Các ca tích hợp cần
 SQL Server và biến `PTITONE_DB_URL`; thiếu thì chúng **skip chứ không đỏ**.
@@ -372,7 +419,6 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 | Gói | Nội dung |
 |---|---|
 | F02 | Cấp hồ sơ, kích hoạt tài khoản, quên mật khẩu |
-| F06 | Nhập, công bố và khóa điểm |
 | F08 | Đăng ký và hủy học phần |
 
 Quy tắc đăng ký/hủy (`DANG_XU_LY → DANG_HUY → DA_HUY`, trần tín chỉ trên
