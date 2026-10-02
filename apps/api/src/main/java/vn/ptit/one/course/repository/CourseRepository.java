@@ -11,6 +11,8 @@ import org.springframework.stereotype.Repository;
 
 import vn.ptit.one.course.model.CourseSummary;
 import vn.ptit.one.course.model.Faculty;
+import vn.ptit.one.course.model.ProgramCourse;
+import vn.ptit.one.course.model.StudyProgram;
 import vn.ptit.one.course.model.Term;
 
 /** Danh mục môn học và đồ thị tiên quyết. SQL nằm hết ở đây. */
@@ -144,6 +146,46 @@ public class CourseRepository {
                         rs.getString("NamHoc"),
                         rs.getObject("NgayBatDau", java.time.LocalDate.class),
                         rs.getObject("NgayKetThuc", java.time.LocalDate.class)));
+    }
+
+    // --- Chương trình đào tạo --------------------------------------------
+
+    public List<StudyProgram> findPrograms() {
+        return jdbc.query("""
+                SELECT MaCTDT, TenCTDT, MaKhoa, TongTinChi
+                  FROM dbo.ChuongTrinhDaoTao ORDER BY MaCTDT
+                """, (rs, rowNum) -> mapProgram(rs));
+    }
+
+    public Optional<StudyProgram> findProgram(String maCTDT) {
+        return jdbc.query("""
+                SELECT MaCTDT, TenCTDT, MaKhoa, TongTinChi
+                  FROM dbo.ChuongTrinhDaoTao WHERE MaCTDT = ?
+                """, (rs, rowNum) -> mapProgram(rs), maCTDT).stream().findFirst();
+    }
+
+    /** Môn chưa gợi ý học kỳ xếp cuối, sau mọi môn đã có lộ trình. */
+    public List<ProgramCourse> findProgramCourses(String maCTDT) {
+        return jdbc.query("""
+                SELECT c.MaMonHoc, m.TenMonHoc, m.SoTinChi, c.HocKyGoiY, c.BatBuoc
+                  FROM dbo.CTDT_MonHoc c
+                  JOIN dbo.MonHoc m ON m.MaMonHoc = c.MaMonHoc
+                 WHERE c.MaCTDT = ?
+                 ORDER BY CASE WHEN c.HocKyGoiY IS NULL THEN 1 ELSE 0 END, c.HocKyGoiY, c.MaMonHoc
+                """, (rs, rowNum) -> {
+                    int hocKyGoiY = rs.getInt("HocKyGoiY");
+                    return new ProgramCourse(
+                            rs.getString("MaMonHoc"),
+                            rs.getString("TenMonHoc"),
+                            rs.getInt("SoTinChi"),
+                            rs.wasNull() ? null : hocKyGoiY,
+                            rs.getBoolean("BatBuoc"));
+                }, maCTDT);
+    }
+
+    private static StudyProgram mapProgram(ResultSet rs) throws SQLException {
+        return new StudyProgram(rs.getString("MaCTDT"), rs.getString("TenCTDT"),
+                rs.getString("MaKhoa"), rs.getInt("TongTinChi"));
     }
 
     // --- Ghi danh mục ----------------------------------------------------

@@ -9,6 +9,20 @@
         },
         "type" : "object"
       },
+      "ClassRoster" : {
+        "properties" : {
+          "lop" : {
+            "$ref" : "#/components/schemas/ClassSection"
+          },
+          "sinhVien" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RosterEntry"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ClassSchedule" : {
         "properties" : {
           "buoiHoc" : {
@@ -280,6 +294,63 @@
         "required" : [ "password", "username" ],
         "type" : "object"
       },
+      "ProgramCourse" : {
+        "properties" : {
+          "batBuoc" : {
+            "type" : "boolean"
+          },
+          "hocKyGoiY" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ProgramDetail" : {
+        "properties" : {
+          "chuongTrinh" : {
+            "$ref" : "#/components/schemas/StudyProgram"
+          },
+          "monHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ProgramCourse"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "RosterEntry" : {
+        "properties" : {
+          "hoTen" : {
+            "type" : "string"
+          },
+          "maCoSoNha" : {
+            "type" : "string"
+          },
+          "maSinhVien" : {
+            "type" : "string"
+          },
+          "ngayDangKy" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SaveEnrollmentPeriodRequest" : {
         "properties" : {
           "maHocKy" : {
@@ -416,6 +487,92 @@
         },
         "type" : "object"
       },
+      "StudentGrade" : {
+        "properties" : {
+          "daCongBo" : {
+            "type" : "boolean"
+          },
+          "diemChuyenCan" : {
+            "type" : "number"
+          },
+          "diemCuoiKy" : {
+            "type" : "number"
+          },
+          "diemGiuaKy" : {
+            "type" : "number"
+          },
+          "diemTongKet" : {
+            "type" : "number"
+          },
+          "ketQua" : {
+            "type" : "string"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "ngayCongBo" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenHocKy" : {
+            "type" : "string"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "StudentTimetable" : {
+        "properties" : {
+          "buoiHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TimetableEntry"
+            },
+            "type" : "array"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "ngayBatDau" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "tuan" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "StudyProgram" : {
+        "properties" : {
+          "maCTDT" : {
+            "type" : "string"
+          },
+          "maKhoa" : {
+            "type" : "string"
+          },
+          "tenCTDT" : {
+            "type" : "string"
+          },
+          "tongTinChi" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "Teacher" : {
         "properties" : {
           "hoTen" : {
@@ -454,6 +611,57 @@
           },
           "tenHocKy" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TimetableEntry" : {
+        "properties" : {
+          "gioBatDau" : {
+            "format" : "time-local",
+            "type" : "string"
+          },
+          "gioKetThuc" : {
+            "format" : "time-local",
+            "type" : "string"
+          },
+          "hinhThucHoc" : {
+            "type" : "string"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "phongHoc" : {
+            "type" : "string"
+          },
+          "soTiet" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenGiangVien" : {
+            "type" : "string"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "thu" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tietBatDau" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tuanBatDau" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tuanKetThuc" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -843,6 +1051,32 @@
         "tags" : [ "schedule-controller" ]
       }
     },
+    "/api/classes/{maLopHP}/students" : {
+      "get" : {
+        "operationId" : "students",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassRoster"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "roster-controller" ]
+      }
+    },
     "/api/classes/{maLopHP}/teacher" : {
       "put" : {
         "operationId" : "assignTeacher",
@@ -1183,6 +1417,145 @@
           }
         },
         "tags" : [ "database-health-controller" ]
+      }
+    },
+    "/api/me/grades" : {
+      "get" : {
+        "operationId" : "grades",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/StudentGrade"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-grade-controller" ]
+      }
+    },
+    "/api/me/teaching-classes" : {
+      "get" : {
+        "operationId" : "teachingClasses",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ClassSection"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "teaching-controller" ]
+      }
+    },
+    "/api/me/timetable" : {
+      "get" : {
+        "operationId" : "timetable",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "tuan",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentTimetable"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-enrollment-controller" ]
+      }
+    },
+    "/api/programs" : {
+      "get" : {
+        "operationId" : "programs",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/StudyProgram"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-controller" ]
+      }
+    },
+    "/api/programs/{maCTDT}" : {
+      "get" : {
+        "operationId" : "program",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maCTDT",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProgramDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-controller" ]
       }
     },
     "/api/teachers" : {
