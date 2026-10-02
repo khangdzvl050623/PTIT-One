@@ -152,7 +152,7 @@ Smoke test khởi động server ở cổng ngẫu nhiên và gọi HTTP thật,
 `AuthFlowIntegrationTest` chạy luồng auth thật trên SQL Server, chỉ khi có
 `PTITONE_DB_URL` (DB đã migrate V1 + seed `10-auth-seed.sql`). Chạy kèm `.env`:
 `.\scripts\dev-api.ps1 -MavenArguments verify` từ gốc repo. Không có DB thì
-4 ca này hiện `skipped`, không phải pass.
+6 ca này hiện `skipped`, không phải pass.
 
 ## Auth (A0)
 
@@ -185,7 +185,7 @@ Frontend ở `apps/web`, cùng cấp với `apps/api`. Xem
 Frontend nên gọi URL tương đối `/api/...`; không cần bật CORS rộng.
 
 Nếu đổi cổng backend, sửa đích proxy tương ứng trong `apps/web/vite.config.ts`.
-Form đăng nhập hiện tại vẫn là giao diện mẫu, chưa nối với API auth (AUTH-05).
+Form đăng nhập đã nối API auth thật (AUTH-05).
 
 ## Cấu trúc theo module
 

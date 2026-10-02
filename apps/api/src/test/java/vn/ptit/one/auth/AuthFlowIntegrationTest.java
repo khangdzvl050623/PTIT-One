@@ -7,13 +7,21 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 
+import vn.ptit.one.auth.model.AuthenticatedUser;
+import vn.ptit.one.auth.model.Role;
+import vn.ptit.one.auth.security.AccessTokenIssuer;
 import vn.ptit.one.auth.security.AuthCookies;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,9 +43,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuthFlowIntegrationTest {
 
     private static final String PASSWORD = "PtitOne@2026";
+    private static final String HOST = "127.0.0.1";
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private JwtDecoder jwtDecoder;
+
+    @Autowired
+    private AccessTokenIssuer issuer;
 
     @Test
     void loginMeRefreshLogout() throws Exception {
@@ -105,6 +120,50 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    void expiredAccessIsRejectedThenRefreshRestoresSession() throws Exception {
+        Browser browser = new Browser();
+        assertThat(browser.login("GVHCM001", PASSWORD).statusCode()).isEqualTo(200);
+        Jwt live = jwtDecoder.decode(browser.cookie(AuthCookies.ACCESS));
+
+        // Cùng phiên thật, ký đúng khóa, nhưng hết hạn 5 phút — vượt độ lệch đồng hồ 60 giây.
+        AuthenticatedUser sameSession = new AuthenticatedUser(live.getSubject(), Role.GIANG_VIEN, null, null,
+                UUID.fromString(live.getClaimAsString(AccessTokenIssuer.CLAIM_SESSION)),
+                ((Number) live.getClaim(AccessTokenIssuer.CLAIM_VERSION)).intValue(),
+                Instant.now().plus(Duration.ofDays(1)));
+        String expired = issuer.issue(sameSession, Instant.now().minus(Duration.ofMinutes(20))).value();
+
+        // Tab thứ hai của cùng trình duyệt: access đã hết hạn, refresh còn nguyên.
+        Browser tab = new Browser();
+        tab.fetchCsrf();
+        tab.setCookie(AuthCookies.ACCESS, expired, "/api");
+        tab.setCookie(AuthCookies.REFRESH, browser.cookie(AuthCookies.REFRESH), "/api/auth");
+
+        HttpResponse<String> stale = tab.get("/api/auth/me");
+        assertThat(stale.statusCode()).isEqualTo(401);
+        assertThat(stale.body()).contains("AUTH_SESSION_INVALID");
+
+        assertThat(tab.post("/api/auth/refresh", "").statusCode()).isEqualTo(200);
+        HttpResponse<String> me = tab.get("/api/auth/me");
+        assertThat(me.statusCode()).isEqualTo(200);
+        assertThat(me.body()).contains("\"username\":\"GVHCM001\"", "\"role\":\"GIANG_VIEN\"");
+    }
+
+    @Test
+    void databaseHealthIsAdminOnly() throws Exception {
+        Browser student = new Browser();
+        assertThat(student.login("B26DCCN001", PASSWORD).statusCode()).isEqualTo(200);
+        HttpResponse<String> denied = student.get("/api/health/db");
+        assertThat(denied.statusCode()).isEqualTo(403);
+        assertThat(denied.body()).contains("AUTH_FORBIDDEN");
+
+        for (String admin : new String[] {"admin.hcm", "admin.master"}) {
+            Browser browser = new Browser();
+            assertThat(browser.login(admin, PASSWORD).statusCode()).as(admin).isEqualTo(200);
+            assertThat(browser.get("/api/health/db").statusCode()).as(admin).isEqualTo(200);
+        }
+    }
+
+    @Test
     void inactiveAccountsCannotSignIn() throws Exception {
         assertThat(new Browser().login("B26DCCN003", PASSWORD).statusCode()).isEqualTo(401);
         assertThat(new Browser().login("B26DCCN004", PASSWORD).statusCode()).isEqualTo(401);
@@ -152,13 +211,15 @@ class AuthFlowIntegrationTest {
 
         void setCookie(String name, String value, String path) {
             HttpCookie cookie = new HttpCookie(name, value);
+            // Cùng domain với cookie server đặt, để cookie mới ghi đè thay vì nằm song song.
+            cookie.setDomain(HOST);
             cookie.setPath(path);
             cookie.setVersion(0);
             cookies.getCookieStore().add(uri("/"), cookie);
         }
 
         private URI uri(String path) {
-            return URI.create("http://127.0.0.1:" + port + path);
+            return URI.create("http://" + HOST + ":" + port + path);
         }
     }
 }
