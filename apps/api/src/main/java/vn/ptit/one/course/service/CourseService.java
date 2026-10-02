@@ -13,9 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.ptit.one.course.model.CourseDetail;
 import vn.ptit.one.course.model.CourseSummary;
 import vn.ptit.one.course.model.Faculty;
+import vn.ptit.one.course.model.ProgramDetail;
+import vn.ptit.one.course.model.StudyProgram;
 import vn.ptit.one.course.model.Term;
 import vn.ptit.one.course.repository.CourseRepository;
-import vn.ptit.one.enrollment.service.EnrollmentPeriodService;
 import vn.ptit.one.shared.exception.ApiException;
 
 /** Danh mục môn học và quan hệ tiên quyết. Đọc mở cho mọi vai trò; ghi chỉ Admin Master (B3). */
@@ -27,11 +28,11 @@ public class CourseService {
     private static final int LOCK_TIMEOUT_MS = 5_000;
 
     private final CourseRepository courses;
-    private final EnrollmentPeriodService periods;
+    private final RegistrationWindow registration;
 
-    public CourseService(CourseRepository courses, EnrollmentPeriodService periods) {
+    public CourseService(CourseRepository courses, RegistrationWindow registration) {
         this.courses = courses;
-        this.periods = periods;
+        this.registration = registration;
     }
 
     public List<CourseSummary> search(String maKhoa, String tuKhoa) {
@@ -44,6 +45,26 @@ public class CourseService {
 
     public List<Term> terms() {
         return courses.findTerms();
+    }
+
+    /** Học kỳ theo mã; module khác dùng để quy đổi tuần học thành ngày thật. */
+    public Term requireTerm(String maHocKy) {
+        return courses.findTerms().stream()
+                .filter(term -> term.maHocKy().equals(maHocKy))
+                .findFirst()
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "TERM_NOT_FOUND",
+                        "Không có học kỳ %s.".formatted(maHocKy)));
+    }
+
+    public List<StudyProgram> programs() {
+        return courses.findPrograms();
+    }
+
+    public ProgramDetail program(String maCTDT) {
+        StudyProgram chuongTrinh = courses.findProgram(maCTDT)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PROGRAM_NOT_FOUND",
+                        "Không tìm thấy chương trình đào tạo %s.".formatted(maCTDT)));
+        return new ProgramDetail(chuongTrinh, courses.findProgramCourses(maCTDT));
     }
 
     public CourseDetail detail(String maMonHoc) {
@@ -93,7 +114,7 @@ public class CourseService {
 
         /* Khoá đồ thị không che được việc sinh viên đang đăng ký: đổi tiên quyết
            giữa đợt khiến hai người nộp cùng lúc bị xét theo hai bộ quy tắc. */
-        if (courses.hasClassInTerms(maMonHoc, periods.openTerms())) {
+        if (courses.hasClassInTerms(maMonHoc, registration.openTerms())) {
             throw new ApiException(HttpStatus.CONFLICT, "COURSE_REGISTRATION_OPEN",
                     "Môn %s đang có đợt đăng ký mở. Đóng đợt trước khi đổi môn tiên quyết."
                             .formatted(maMonHoc));

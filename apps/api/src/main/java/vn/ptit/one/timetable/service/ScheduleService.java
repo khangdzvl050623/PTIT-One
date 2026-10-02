@@ -1,6 +1,7 @@
 package vn.ptit.one.timetable.service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -15,6 +16,7 @@ import vn.ptit.one.course.service.ClassSectionService;
 import vn.ptit.one.shared.exception.ApiException;
 import vn.ptit.one.timetable.model.ClassSchedule;
 import vn.ptit.one.timetable.model.ScheduleSlot;
+import vn.ptit.one.timetable.model.TimetableEntry;
 import vn.ptit.one.timetable.repository.ScheduleRepository;
 import vn.ptit.one.timetable.repository.ScheduleRepository.ClashRow;
 
@@ -44,6 +46,15 @@ public class ScheduleService {
     public ClassSchedule read(AuthenticatedUser user, String maLopHP) {
         ClassSection lop = classes.detail(user, maLopHP);
         return new ClassSchedule(lop.maLopHP(), lop.phienBanLich(), schedules.findByClass(maLopHP));
+    }
+
+    /**
+     * Buổi học của một tập lớp — API công khai cho thời khoá biểu sinh viên
+     * (F09). Không kiểm quyền: chỗ gọi đã quyết định người dùng được xem
+     * những lớp nào.
+     */
+    public List<TimetableEntry> entriesFor(Collection<String> maLopHP) {
+        return schedules.entriesFor(maLopHP);
     }
 
     /**

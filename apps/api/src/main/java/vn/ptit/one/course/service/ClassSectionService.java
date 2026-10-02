@@ -60,6 +60,40 @@ public class ClassSectionService {
     }
 
     /**
+     * Lớp giảng viên đang phụ trách (F05). Giảng viên lấy từ principal, nên
+     * không có tham số nào để xem lớp của người khác.
+     */
+    public List<ClassSection> taughtBy(AuthenticatedUser user, String maHocKy) {
+        if (user.role() != Role.GIANG_VIEN || user.entityId() == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
+                    "Chỉ giảng viên mới có danh sách lớp phụ trách.");
+        }
+        return classes.search(maHocKy, null, null, user.entityId());
+    }
+
+    /**
+     * Lớp mà người dùng được xem dữ liệu nội bộ (danh sách sinh viên, bảng điểm):
+     * giảng viên ĐANG phụ trách lớp, Admin cơ sở của lớp, hoặc Admin Master.
+     *
+     * <p>Sinh viên không qua được, kể cả sinh viên của lớp — danh sách lớp chứa
+     * thông tin của người khác.
+     */
+    public ClassSection requireStaffAccess(AuthenticatedUser user, String maLopHP) {
+        ClassSection lop = require(maLopHP);
+        boolean allowed = switch (user.role()) {
+            case GIANG_VIEN -> user.entityId() != null && user.entityId().equals(lop.maGiangVien());
+            case ADMIN_CO_SO -> lop.maCoSoHost().equals(user.homeCampus());
+            case ADMIN_MASTER -> true;
+            case SINH_VIEN -> false;
+        };
+        if (!allowed) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
+                    "Bạn không phụ trách lớp %s.".formatted(maLopHP));
+        }
+        return lop;
+    }
+
+    /**
      * Tạo lớp. Mã lớp do SERVER sinh từ môn + kỳ + cơ sở trong principal, nên
      * client không thể tạo lớp mang mã của cơ sở khác.
      */

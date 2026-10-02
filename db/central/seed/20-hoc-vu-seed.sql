@@ -252,6 +252,17 @@ SELECT v.MaLopHP, v.MaSinhVien, v.CC, v.GK, v.CK, v.TK, '2026-01-20 10:00'
  WHERE NOT EXISTS (SELECT 1 FROM dbo.Diem d
                     WHERE d.MaLopHP = v.MaLopHP AND d.MaSinhVien = v.MaSinhVien);
 
+/* Mỗi ghi danh còn hiệu lực có đúng một dòng Diem — dòng rỗng (mọi cột NULL,
+   chưa công bố) nghĩa là "chưa có điểm". F08 tạo dòng này lúc đăng ký; bảng
+   điểm F06/F07 chỉ đọc Diem, không đọc ghi danh. Chạy sau khối điểm thật ở
+   trên nên không đè lên điểm đã có. */
+INSERT INTO dbo.Diem (MaLopHP, MaSinhVien)
+SELECT d.MaLopHP, d.MaSinhVien
+  FROM dbo.DangKyHocPhan d
+ WHERE d.TrangThai = 'DA_DANG_KY'
+   AND NOT EXISTS (SELECT 1 FROM dbo.Diem x
+                    WHERE x.MaLopHP = d.MaLopHP AND x.MaSinhVien = d.MaSinhVien);
+
 COMMIT TRANSACTION;
 
 /* Đối soát bộ đếm: mọi cột Lech phải bằng 0. */
@@ -262,7 +273,7 @@ SELECT l.MaLopHP, l.SoLuongDaDangKy,
   FROM dbo.LopHocPhan l
  WHERE l.SoLuongDaDangKy > 0 OR EXISTS (SELECT 1 FROM dbo.DangKyHocPhan d WHERE d.MaLopHP = l.MaLopHP);
 
--- Kỳ vọng khi DB chỉ có fixture này: 12 tiết, 5 khoa, 14 môn, 4 học kỳ, 5 SV, 2 GV, 10 lớp, 3 ghi danh, 2 điểm.
+-- Kỳ vọng khi DB chỉ có fixture này: 12 tiết, 5 khoa, 14 môn, 4 học kỳ, 5 SV, 3 GV, 11 lớp, 5 ghi danh, 5 dòng điểm (2 đã công bố + 3 rỗng).
 SELECT (SELECT COUNT(*) FROM dbo.KhungGioTiet)  AS KhungGioTiet,
        (SELECT COUNT(*) FROM dbo.Khoa)          AS Khoa,
        (SELECT COUNT(*) FROM dbo.MonHoc)        AS MonHoc,

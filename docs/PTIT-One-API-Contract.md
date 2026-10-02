@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 36 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 37 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -90,17 +90,24 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
 | GET | `/api/faculties` · `/api/terms` · `/api/teachers` | — |
+| GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
 | POST · PUT | `/api/classes` · `/{maLopHP}` · `/{maLopHP}/teacher` | `ADMIN_CO_SO` |
+| GET | `/api/classes/{maLopHP}/students` | GV **phụ trách lớp** · `ADMIN_CO_SO` cùng cơ sở · `ADMIN_MASTER` |
 | GET | `/api/classes/{maLopHP}/schedule` | — |
 | PUT | `/api/classes/{maLopHP}/schedule` | `ADMIN_CO_SO` |
 | GET | `/api/enrollment-periods` | — |
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
+| GET | `/api/me/teaching-classes` | `GIANG_VIEN` |
+| GET | `/api/me/grades` · `/api/me/timetable` | `SINH_VIEN` |
 
 ### Hai quy tắc phạm vi
 
 **Không endpoint nào nhận tham số `maCoSo`.** Cơ sở luôn lấy từ JWT đã ký; gửi
 lên cũng bị bỏ qua. Đây là chủ ý chống leo thang đặc quyền, không phải thiếu sót.
+
+**Đường `/api/me/*` lấy danh tính từ JWT.** Không nhận mã sinh viên hay mã
+giảng viên từ client, nên không có cách xem dữ liệu của người khác qua đường này.
 
 **`ADMIN_MASTER` chỉ ĐỌC lớp học phần và đợt đăng ký.** Tạo lớp là việc của
 `ADMIN_CO_SO` và chỉ trong cơ sở của mình → UI đừng hiện nút "Tạo lớp" cho Admin
@@ -177,6 +184,34 @@ bị từ chối.
   index ở DB (`V3`) chứ không chỉ ở code. Muốn mở đợt bổ sung thì đóng đợt cũ.
 - `trangThai` ∈ `CHUA_MO` · `DANG_MO` · `DA_DONG`. Mã đợt do server sinh.
 
+### Danh sách lớp và lớp phụ trách (F05)
+
+- `GET /api/me/teaching-classes` chỉ trả lớp mà giảng viên **đang** được phân
+  công. Lọc theo `maHocKy` nếu gửi.
+- `GET .../students`: quyền kiểm theo **lớp**, không theo tham số. Đổi mã lớp
+  trên URL sang lớp của GV khác → `403`. Sinh viên không xem được, **kể cả sinh
+  viên của chính lớp đó**, vì danh sách chứa thông tin người khác.
+- Danh sách gồm ghi danh còn giữ chỗ (`DANG_XU_LY` · `DA_DANG_KY` · `DANG_HUY`).
+  Response trả **cả** bộ đếm `lop.soLuongDaDangKy` **lẫn** danh sách; hai số này
+  phải bằng nhau. Lệch nhau là lỗi dữ liệu, đừng tự sửa trên UI.
+
+### Bảng điểm sinh viên (F07)
+
+- Mỗi môn đang ghi danh có **một dòng**, kể cả khi chưa có điểm.
+- Điểm **chưa công bố** thì mọi cột điểm và `ketQua` là `null`, `daCongBo: false`.
+  Hiển thị "Chưa có điểm", **không** hiện 0.
+- `ketQua` ∈ `DAT` · `KHONG_DAT` · `null`. Đạt khi `diemTongKet ≥ 4.0`. Ngưỡng
+  này là **giả định demo** (cấu hình `ptitone.grade.nguong-dat`), chưa phải quy chế.
+- Bỏ trống `maHocKy` thì trả mọi học kỳ, kỳ mới nhất trước.
+
+### Thời khoá biểu (F09)
+
+- `maHocKy` bắt buộc; `tuan` (≥ 1) tuỳ chọn, bỏ trống thì trả cả học kỳ.
+- Response có `ngayBatDau` của học kỳ: tuần `n` bắt đầu từ `ngayBatDau + 7·(n−1)`
+  ngày, `thu` 2 = thứ Hai … 8 = Chủ nhật.
+- `gioBatDau`/`gioKetThuc` lấy từ khung giờ tiết, nên UI không cần tự tra giờ.
+- Chỉ gồm lớp còn giữ chỗ; lớp đã huỷ không xuất hiện.
+
 ### Phiên đăng nhập
 
 - `401 AUTH_INVALID_CREDENTIALS` cho **mọi** lý do từ chối: sai mật khẩu, chưa
@@ -221,7 +256,8 @@ bị từ chối.
 | `COURSE_DUPLICATE` | 409 | Mã môn đã tồn tại |
 | `COURSE_REGISTRATION_OPEN` | 409 | Đổi tiên quyết khi môn có lớp trong kỳ đang mở đợt |
 | `FACULTY_UNKNOWN` | 400 | Mã khoa không có |
-| `TERM_NOT_FOUND` | 400 | Mã học kỳ không có |
+| `TERM_NOT_FOUND` | 400 | Mã học kỳ không có (tạo lớp, thời khoá biểu) |
+| `PROGRAM_NOT_FOUND` | 404 | Không có chương trình đào tạo |
 | `PREREQUISITE_SELF` | 400 | Môn tự làm tiên quyết của chính nó |
 | `PREREQUISITE_UNKNOWN` | 400 | Môn tiên quyết không tồn tại |
 | `PREREQUISITE_CYCLE` | 409 | Tạo thành chu trình |
@@ -287,6 +323,14 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Profile `central` + SQL Server tắt | API vẫn khởi động | ✓ |
 | `/api/health/db` khi SQL Server tắt | `503`, thân báo `DOWN` | **✗** |
 | `openapi.json` lệch với code | build đỏ ở `OpenApiContractTest` | ✓ |
+| GV xem danh sách lớp của GV khác (đổi mã lớp trên URL) | `403 AUTH_FORBIDDEN` | ✓ |
+| SV xem danh sách lớp, kể cả lớp mình học | `403` | ✓ |
+| Admin cơ sở xem danh sách lớp cơ sở khác | `403` | ✓ |
+| Danh sách lớp trả bộ đếm và các dòng ghi danh để đối soát | hai số khớp | ✓ |
+| Bảng điểm: môn đang học chưa có điểm | `null`, không phải `0`; `daCongBo: false` | ✓ |
+| Bảng điểm: đạt/trượt theo ngưỡng 4.0 | `DAT` / `KHONG_DAT` | ✓ |
+| Thời khoá biểu lọc tuần ngoài khoảng học | `buoiHoc` rỗng | ✓ |
+| Thời khoá biểu học kỳ không tồn tại | `400 TERM_NOT_FOUND` | ✓ |
 
 Chạy: `.\scripts\dev-api.ps1 -MavenArguments verify`. Các ca tích hợp cần
 SQL Server và biến `PTITONE_DB_URL`; thiếu thì chúng **skip chứ không đỏ**.
@@ -328,14 +372,8 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 | Gói | Nội dung |
 |---|---|
 | F02 | Cấp hồ sơ, kích hoạt tài khoản, quên mật khẩu |
-| F05 | GV xem lớp phụ trách, danh sách SV, sĩ số |
 | F06 | Nhập, công bố và khóa điểm |
-| F07 | SV xem bảng điểm |
 | F08 | Đăng ký và hủy học phần |
-| F09 | SV xem thời khóa biểu |
-
-Danh mục chương trình đào tạo (`ChuongTrinhDaoTao`, `CTDT_MonHoc`) đã có bảng và
-seed nhưng **chưa có endpoint** — phần còn thiếu của F03.
 
 Quy tắc đăng ký/hủy (`DANG_XU_LY → DANG_HUY → DA_HUY`, trần tín chỉ trên
 `SinhVienHocKy`, thứ tự khoá `LopHocPhan` trước `DangKyHocPhan`) đã chốt ở

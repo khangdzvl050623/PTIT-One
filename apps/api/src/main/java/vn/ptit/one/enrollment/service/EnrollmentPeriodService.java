@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.Role;
+import vn.ptit.one.course.service.RegistrationWindow;
 import vn.ptit.one.enrollment.model.EnrollmentPeriod;
 import vn.ptit.one.enrollment.repository.EnrollmentPeriodRepository;
 import vn.ptit.one.shared.exception.ApiException;
@@ -19,13 +20,13 @@ import vn.ptit.one.shared.exception.ApiException;
 /**
  * Đợt đăng ký (F04).
  *
- * <p>Cũng là API công khai để module khác hỏi "học kỳ nào đang mở đăng ký" —
- * ví dụ {@code course} cần biết trước khi cho đổi môn tiên quyết. Module khác
- * KHÔNG tự join vào {@code DotDangKy}.
+ * <p>Cũng là API công khai để module khác hỏi "học kỳ nào đang mở đăng ký".
+ * {@code course} hỏi qua {@link RegistrationWindow} để không phụ thuộc ngược
+ * vào module này. Module khác KHÔNG tự join vào {@code DotDangKy}.
  */
 @Service
 @Profile("central")
-public class EnrollmentPeriodService {
+public class EnrollmentPeriodService implements RegistrationWindow {
 
     private static final List<String> TRANG_THAI = List.of(
             EnrollmentPeriod.CHUA_MO, EnrollmentPeriod.DANG_MO, EnrollmentPeriod.DA_DONG);
@@ -40,7 +41,7 @@ public class EnrollmentPeriodService {
 
     // --- API công khai cho module khác -----------------------------------
 
-    /** Học kỳ đang có đợt mở ở bất kỳ cơ sở nào. */
+    @Override
     public List<String> openTerms() {
         return periods.openTerms(clock.instant());
     }

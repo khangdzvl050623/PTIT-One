@@ -5,6 +5,7 @@
  * vào {@code course} để kiểm lớp và quyền; {@code course} không gọi ngược lại.
  *
  * <p>Đã có: xem và thay lịch của lớp (F04), chặn trùng giảng viên và trùng phòng.
- * Chưa có: thời khoá biểu của sinh viên (F09).
+ * Thời khoá biểu sinh viên (F09) do {@code enrollment} ghép từ
+ * {@code ScheduleService.entriesFor} — module này không hỏi ngược ai đang học lớp nào.
  */
 package vn.ptit.one.timetable;
