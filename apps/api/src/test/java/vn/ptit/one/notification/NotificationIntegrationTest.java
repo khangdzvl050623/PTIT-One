@@ -138,14 +138,21 @@ class NotificationIntegrationTest {
 
     // --- Soạn tay ---------------------------------------------------------
 
-    /** Cơ sở HCM: 3 SV còn học (bỏ người đã thôi học) + 2 GV. */
+    /**
+     * Cơ sở HCM: SV còn học (bỏ người đã thôi học/tốt nghiệp) + GV của cơ sở. Số
+     * kỳ vọng đếm thẳng từ DB, để hồ sơ tạo thêm khi thử tay không làm đỏ test.
+     */
     @Test
     void soanXemTruocGuiRoiDocVaDanhDauTatCa() throws Exception {
         Browser admin = signedIn("admin.hcm");
         String body = draft("CO_SO", null, null, "TAT_CA");
+        int soSinhVien = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM dbo.SinhVien WHERE MaCoSoNha = 'HCM' AND TrangThai IN ('DANG_HOC', 'BAO_LUU')
+                """, Integer.class);
+        int soGiangVien = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.GiangVien WHERE MaCoSo = 'HCM'", Integer.class);
+        String counts = "\"soSinhVien\":%d,\"soGiangVien\":%d".formatted(soSinhVien, soGiangVien);
 
-        assertThat(admin.post("/api/notifications/preview", body).body())
-                .contains("\"soSinhVien\":3", "\"soGiangVien\":2");
+        assertThat(admin.post("/api/notifications/preview", body).body()).contains(counts);
 
         HttpResponse<String> created = admin.post("/api/notifications", body);
         assertThat(created.statusCode()).as(created.body()).isEqualTo(201);
@@ -154,7 +161,7 @@ class NotificationIntegrationTest {
 
         HttpResponse<String> sent = admin.post("/api/notifications/" + id + "/send");
         assertThat(sent.statusCode()).as(sent.body()).isEqualTo(200);
-        assertThat(sent.body()).contains("\"trangThai\":\"DA_GUI\"", "\"soSinhVien\":3", "\"soGiangVien\":2");
+        assertThat(sent.body()).contains("\"trangThai\":\"DA_GUI\"", counts);
 
         // Gửi hai lần không ra hai bộ người nhận; bản đã gửi không sửa được.
         assertThat(admin.post("/api/notifications/" + id + "/send").body()).contains("NOTIFICATION_ALREADY_SENT");
@@ -175,6 +182,20 @@ class NotificationIntegrationTest {
 
         sv.post("/api/me/notifications/read-all");
         assertThat(unread(sv)).isZero();
+    }
+
+    /** Collation không phân biệt hoa thường: "hcm" phải được lưu thành mã chuẩn "HCM", và Admin HCM gõ thường vẫn được. */
+    @Test
+    void maCoSoGoThuongDuocChuanHoa() throws Exception {
+        HttpResponse<String> master = signedIn("admin.master").post("/api/notifications",
+                draft("CO_SO", "hcm", null, "TAT_CA"));
+        assertThat(master.statusCode()).as(master.body()).isEqualTo(201);
+        assertThat(master.body()).contains("\"maCoSo\":\"HCM\"");
+
+        HttpResponse<String> adminHcm = signedIn("admin.hcm").post("/api/notifications",
+                draft("CO_SO", "hcm", null, "TAT_CA"));
+        assertThat(adminHcm.statusCode()).as(adminHcm.body()).isEqualTo(201);
+        assertThat(adminHcm.body()).contains("\"maCoSo\":\"HCM\"");
     }
 
     /** Giảng viên gửi cho lớp mình: chỉ sinh viên của lớp, không gửi cho chính mình. */

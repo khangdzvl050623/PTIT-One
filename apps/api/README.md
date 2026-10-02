@@ -154,10 +154,19 @@ Smoke test khởi động server ở cổng ngẫu nhiên và gọi HTTP thật,
 `.\scripts\dev-api.ps1 -MavenArguments verify` từ gốc repo. Không có DB thì
 6 ca này hiện `skipped`, không phải pass.
 
-## Auth (A0)
+## Auth (A0, F02, A1)
 
-Cần `PTITONE_JWT_SECRET` trong `.env` khi chạy profile `central`. Contract đầy đủ
-ở [kế hoạch auth](../../docs/PTIT-One-Ke-Hoach-Auth.md#5-contract-api).
+Profile `central` cần trong `.env` (mẫu ở `.env.example`):
+
+| Biến | Bắt buộc | Ghi chú |
+|---|---|---|
+| `PTITONE_JWT_SECRET` | ✅ | base64 của ≥ 32 byte ngẫu nhiên |
+| `PTITONE_OTP_SECRET` | ✅ | như trên nhưng **khác** khoá JWT; khoá HMAC cho mã 6 số |
+| `PTITONE_MAIL_FROM` | để gửi thư | địa chỉ đã xác minh trong Brevo (Senders) |
+| `PTITONE_BREVO_API_KEY` | để gửi thư | `xkeysib-...`; khuyên dùng. SMTP (`PTITONE_MAIL_HOST`…) chỉ là dự phòng và bị Brevo chặn theo IP |
+
+Thiếu cấu hình thư thì API vẫn chạy; các tính năng cần thư trả `503 MAIL_DISABLED`.
+Quyền, mã lỗi và quy tắc đầy đủ ở [API contract](../../docs/PTIT-One-API-Contract.md).
 
 | API | Ghi chú |
 |---|---|
@@ -167,6 +176,12 @@ Cần `PTITONE_JWT_SECRET` trong `.env` khi chạy profile `central`. Contract �
 | `POST /api/auth/refresh` | Rotate refresh; dùng lại token cũ = replay → thu hồi cả phiên |
 | `POST /api/auth/logout` | `204` sau khi thu hồi; xóa hai cookie |
 | `POST /api/auth/logout-all` | Tăng `PhienBanTaiKhoan`, thu hồi mọi phiên |
+| `POST /api/auth/activate` · `/activate/resend` | Kích hoạt bằng mã một lần (F02); tự xin gửi lại mã tới email đã lưu |
+| `GET/PUT /api/auth/email` · `/email/resend` · `/email/verify` | Email và xác minh bằng mã 6 số (A1) |
+| `POST /api/auth/change-password` | Thu hồi mọi phiên, đăng nhập lại |
+| `POST /api/auth/forgot-password` · `/reset-password` | Mã 6 số chỉ tới email đã xác minh; luôn `202` |
+| `POST /api/students` · `/api/teachers` | **Chỉ `ADMIN_MASTER`**: hồ sơ + tài khoản chưa kích hoạt |
+| `/api/accounts` | **Chỉ `ADMIN_MASTER`**: liệt kê, cấp lại mã, khoá/mở |
 
 Test tay: import `postman/PTIT-One-Auth.postman_collection.json`. Script của
 collection tự lấy và gắn CSRF cho mọi POST; endpoint mới thêm vào collection

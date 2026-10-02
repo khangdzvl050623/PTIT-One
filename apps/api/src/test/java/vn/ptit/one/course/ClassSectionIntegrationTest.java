@@ -10,8 +10,10 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,6 +51,9 @@ class ClassSectionIntegrationTest {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     // --- Quyền ------------------------------------------------------------
 
@@ -201,6 +206,57 @@ class ClassSectionIntegrationTest {
 
             assertThat(response.statusCode()).isEqualTo(400);
             assertThat(response.body()).contains("SCHEDULE_SELF_OVERLAP");
+        } finally {
+            admin.put("/api/classes/" + SANDBOX + "/schedule", LICH_GOC);
+        }
+    }
+
+    /**
+     * Sân thử được gán tạm GVHCM001 (đang dạy INT1155 thứ 2 tiết 1-3). Đặt lịch
+     * trùng khung giờ đó phải bị chặn dù không ghi phòng.
+     */
+    @Test
+    void chanLichTrungGioGiangVienDangDay() throws Exception {
+        Browser admin = signedIn("admin.hcm");
+        jdbc.update("UPDATE dbo.LopHocPhan SET MaGiangVien = 'GVHCM001' WHERE MaLopHP = ?", SANDBOX);
+        try {
+            HttpResponse<String> response = admin.put("/api/classes/" + SANDBOX + "/schedule", """
+                    {"buoiHoc":[{"thu":2,"tietBatDau":2,"soTiet":2,"tuanBatDau":1,"tuanKetThuc":15}]}
+                    """);
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(409);
+            assertThat(response.body()).contains("SCHEDULE_TEACHER_CLASH");
+        } finally {
+            jdbc.update("UPDATE dbo.LopHocPhan SET MaGiangVien = NULL WHERE MaLopHP = ?", SANDBOX);
+            admin.put("/api/classes/" + SANDBOX + "/schedule", LICH_GOC);
+        }
+    }
+
+    /** Một ngày có 12 tiết: bắt đầu tiết 11 mà kéo 4 tiết là tràn sang tiết 14. */
+    @Test
+    void chanBuoiHocVuotTiet12() throws Exception {
+        Browser admin = signedIn("admin.hcm");
+        try {
+            HttpResponse<String> response = admin.put("/api/classes/" + SANDBOX + "/schedule", """
+                    {"buoiHoc":[{"thu":4,"tietBatDau":11,"soTiet":4,"tuanBatDau":1,"tuanKetThuc":15}]}
+                    """);
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+            assertThat(response.body()).contains("SCHEDULE_SLOT_INVALID");
+        } finally {
+            admin.put("/api/classes/" + SANDBOX + "/schedule", LICH_GOC);
+        }
+    }
+
+    /** Danh sách rỗng là hợp lệ: xoá hết lịch của lớp. */
+    @Test
+    void lichRongThiXoaHetLich() throws Exception {
+        Browser admin = signedIn("admin.hcm");
+        try {
+            HttpResponse<String> response = admin.put("/api/classes/" + SANDBOX + "/schedule", "{\"buoiHoc\":[]}");
+
+            assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+            assertThat(admin.get("/api/classes/" + SANDBOX + "/schedule").body()).contains("\"buoiHoc\":[]");
         } finally {
             admin.put("/api/classes/" + SANDBOX + "/schedule", LICH_GOC);
         }
