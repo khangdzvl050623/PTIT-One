@@ -72,7 +72,7 @@ public class CourseController {
     }
 
     /** Thay toàn bộ tập tiên quyết. Danh sách rỗng = gỡ hết. */
-    @PutMapping("/{maMonHoc}/tien-quyet")
+    @PutMapping("/{maMonHoc}/prerequisites")
     @PreAuthorize("hasRole('ADMIN_MASTER')")
     public CourseDetail setPrerequisites(@PathVariable String maMonHoc,
             @Valid @RequestBody SetPrerequisitesRequest body) {

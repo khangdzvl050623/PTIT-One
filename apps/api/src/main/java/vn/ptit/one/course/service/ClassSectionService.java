@@ -1,0 +1,216 @@
+package vn.ptit.one.course.service;
+
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import vn.ptit.one.auth.model.AuthenticatedUser;
+import vn.ptit.one.auth.model.Role;
+import vn.ptit.one.course.model.ClassSection;
+import vn.ptit.one.course.repository.ClassSectionRepository;
+import vn.ptit.one.course.repository.CourseRepository;
+import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.student.service.TeacherDirectory;
+
+/**
+ * Lớp học phần (F04).
+ *
+ * <p>Quyền theo B3: {@code ADMIN_CO_SO} đọc/ghi trong cơ sở mình;
+ * {@code ADMIN_MASTER} chỉ đọc mọi cơ sở; SV/GV chỉ đọc. Cơ sở LUÔN lấy từ
+ * principal đã ký, không bao giờ từ tham số client.
+ */
+@Service
+@Profile("central")
+public class ClassSectionService {
+
+    /** Thử lại khi hai admin cùng tạo lớp và đua số thứ tự. */
+    private static final int MAX_CODE_ATTEMPTS = 3;
+
+    private static final List<String> HINH_THUC_HOC = List.of("TRUC_TIEP", "TRUC_TUYEN", "KET_HOP");
+    private static final List<String> TRANG_THAI = List.of("DU_KIEN", "MO", "DA_KHOA", "DA_HUY");
+
+    private final ClassSectionRepository classes;
+    private final CourseRepository courses;
+    private final TeacherDirectory teachers;
+
+    public ClassSectionService(ClassSectionRepository classes, CourseRepository courses,
+            TeacherDirectory teachers) {
+        this.classes = classes;
+        this.courses = courses;
+        this.teachers = teachers;
+    }
+
+    public List<ClassSection> search(AuthenticatedUser user, String maHocKy, String maMonHoc,
+            String maGiangVien) {
+        /* Admin Master đọc được mọi cơ sở (B3). Các vai trò khác bị giới hạn
+           trong cơ sở của chính mình — lấy từ principal, không nhận từ query. */
+        String campusScope = user.role() == Role.ADMIN_MASTER ? null : user.homeCampus();
+        return classes.search(maHocKy, maMonHoc, campusScope, maGiangVien);
+    }
+
+    public ClassSection detail(AuthenticatedUser user, String maLopHP) {
+        ClassSection lop = require(maLopHP);
+        requireReadable(user, lop);
+        return lop;
+    }
+
+    /**
+     * Tạo lớp. Mã lớp do SERVER sinh từ môn + kỳ + cơ sở trong principal, nên
+     * client không thể tạo lớp mang mã của cơ sở khác.
+     */
+    @Transactional
+    public ClassSection create(AuthenticatedUser user, String maMonHoc, String maHocKy,
+            int soLuongToiDa, String hinhThucHoc, boolean choPhepLienCoSo, String maGiangVien) {
+        String campus = requireCampusAdmin(user);
+
+        if (!courses.exists(maMonHoc)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "COURSE_NOT_FOUND",
+                    "Không có môn học %s.".formatted(maMonHoc));
+        }
+        if (!courses.termExists(maHocKy)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "TERM_NOT_FOUND",
+                    "Không có học kỳ %s.".formatted(maHocKy));
+        }
+        validateMode(hinhThucHoc, choPhepLienCoSo);
+        if (maGiangVien != null && !maGiangVien.isBlank()) {
+            teachers.requireInCampus(maGiangVien.trim(), campus);
+        }
+
+        String prefix = "%s-%s-%s".formatted(maMonHoc, maHocKy, campus);
+        for (int attempt = 1; ; attempt++) {
+            String maLopHP = "%s%02d".formatted(prefix, classes.nextSequence(prefix));
+            try {
+                classes.insert(new ClassSection(maLopHP, maMonHoc, null, 0, maHocKy, campus,
+                        emptyToNull(maGiangVien), null, soLuongToiDa, 0, "DU_KIEN",
+                        choPhepLienCoSo, hinhThucHoc, 1));
+                return require(maLopHP);
+            } catch (DuplicateKeyException ex) {
+                // Hai admin cùng tạo lớp cho một môn/kỳ: người sau lấy số kế tiếp.
+                if (attempt == MAX_CODE_ATTEMPTS) {
+                    throw new ApiException(HttpStatus.CONFLICT, "CLASS_CODE_RACE",
+                            "Không cấp được mã lớp do có người tạo cùng lúc. Vui lòng thử lại.");
+                }
+            }
+        }
+    }
+
+    @Transactional
+    public ClassSection update(AuthenticatedUser user, String maLopHP, int soLuongToiDa,
+            String trangThai, String hinhThucHoc, boolean choPhepLienCoSo) {
+        ClassSection lop = require(maLopHP);
+        requireManageable(user, lop);
+        validateMode(hinhThucHoc, choPhepLienCoSo);
+        if (!TRANG_THAI.contains(trangThai)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CLASS_STATUS_INVALID",
+                    "Trạng thái lớp không hợp lệ: %s.".formatted(trangThai));
+        }
+
+        /* Điều kiện "không hạ dưới sĩ số" nằm trong chính câu UPDATE rồi đọc số
+           dòng — không SELECT trước rồi IF, vì sĩ số đổi được giữa hai câu lệnh. */
+        if (classes.update(maLopHP, soLuongToiDa, trangThai, choPhepLienCoSo, hinhThucHoc) != 1) {
+            throw new ApiException(HttpStatus.CONFLICT, "CLASS_CAPACITY_BELOW_ENROLLED",
+                    "Không hạ được sức chứa xuống %d: lớp đang có %d sinh viên."
+                            .formatted(soLuongToiDa, lop.soLuongDaDangKy()));
+        }
+        return require(maLopHP);
+    }
+
+    /**
+     * Phân công giảng viên.
+     *
+     * <p>Chặn khi giảng viên đã dạy lớp khác trùng khung giờ: một người không
+     * thể ở hai chỗ cùng lúc. Lớp chưa có lịch thì không có gì để đụng.
+     */
+    @Transactional
+    public ClassSection assignTeacher(AuthenticatedUser user, String maLopHP, String maGiangVien) {
+        ClassSection lop = require(maLopHP);
+        requireManageable(user, lop);
+
+        if (maGiangVien == null || maGiangVien.isBlank()) {
+            classes.assignTeacher(maLopHP, null);
+            return require(maLopHP);
+        }
+
+        String teacher = maGiangVien.trim();
+        teachers.requireInCampus(teacher, lop.maCoSoHost());
+
+        List<String> clashes = classes.teacherClashes(teacher, maLopHP);
+        if (!clashes.isEmpty()) {
+            throw new ApiException(HttpStatus.CONFLICT, "TEACHER_SCHEDULE_CLASH",
+                    "Giảng viên %s đã có lịch trùng ở lớp %s.".formatted(teacher, String.join(", ", clashes)));
+        }
+
+        classes.assignTeacher(maLopHP, teacher);
+        return require(maLopHP);
+    }
+
+    /** Dùng chung cho module `timetable` khi cần lớp đã kiểm quyền. */
+    public ClassSection requireManageableBy(AuthenticatedUser user, String maLopHP) {
+        ClassSection lop = require(maLopHP);
+        requireManageable(user, lop);
+        return lop;
+    }
+
+    public ClassSection require(String maLopHP) {
+        return classes.findOne(maLopHP)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLASS_NOT_FOUND",
+                        "Không tìm thấy lớp học phần %s.".formatted(maLopHP)));
+    }
+
+    private static void validateMode(String hinhThucHoc, boolean choPhepLienCoSo) {
+        if (!HINH_THUC_HOC.contains(hinhThucHoc)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CLASS_MODE_INVALID",
+                    "Hình thức học không hợp lệ: %s.".formatted(hinhThucHoc));
+        }
+        /* Quyết định D18: v1 chỉ cho đăng ký liên cơ sở với lớp trực tuyến —
+           kiểm "không trùng tiết" là vô nghĩa khi hai điểm cách nhau 1.700 km. */
+        if (choPhepLienCoSo && !"TRUC_TUYEN".equals(hinhThucHoc)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CROSS_CAMPUS_REQUIRES_ONLINE",
+                    "Chỉ lớp trực tuyến mới cho phép đăng ký liên cơ sở.");
+        }
+    }
+
+    /** Chỉ Admin cơ sở được ghi, và chỉ trong cơ sở của mình (B3). */
+    private static String requireCampusAdmin(AuthenticatedUser user) {
+        if (user.role() != Role.ADMIN_CO_SO || user.homeCampus() == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
+                    "Chỉ quản trị đào tạo của cơ sở mới mở được lớp học phần.");
+        }
+        return user.homeCampus();
+    }
+
+    private static void requireManageable(AuthenticatedUser user, ClassSection lop) {
+        String campus = requireCampusAdmin(user);
+        if (!campus.equals(lop.maCoSoHost())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
+                    "Lớp %s thuộc cơ sở khác.".formatted(lop.maLopHP()));
+        }
+    }
+
+    private static void requireReadable(AuthenticatedUser user, ClassSection lop) {
+        if (user.role() == Role.ADMIN_MASTER) {
+            return;
+        }
+        if (user.homeCampus() != null && !user.homeCampus().equals(lop.maCoSoHost())
+                && !lop.choPhepLienCoSo()) {
+            /* Lớp liên cơ sở cố ý mở cho mọi cơ sở xem — đó là điều kiện để sinh
+               viên nơi khác biết mà đăng ký. */
+            throw new ApiException(HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
+                    "Lớp %s thuộc cơ sở khác.".formatted(lop.maLopHP()));
+        }
+    }
+
+    private static String emptyToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /** Chuẩn hoá phòng để so trùng: cắt khoảng trắng, bỏ phân biệt hoa thường. */
+    public static String normaliseRoom(String phong) {
+        return phong == null ? null : phong.trim().toUpperCase(Locale.ROOT);
+    }
+}
