@@ -34,7 +34,8 @@ public class ClassSectionService {
     private static final List<String> HINH_THUC_HOC = List.of("TRUC_TIEP", "TRUC_TUYEN", "KET_HOP");
     public static final String MO = "MO";
     public static final String DA_KHOA = "DA_KHOA";
-    private static final List<String> TRANG_THAI = List.of("DU_KIEN", MO, DA_KHOA, "DA_HUY");
+    public static final String DA_HUY = "DA_HUY";
+    private static final List<String> TRANG_THAI = List.of("DU_KIEN", MO, DA_KHOA, DA_HUY);
 
     private final ClassSectionRepository classes;
     private final CourseRepository courses;
@@ -155,6 +156,16 @@ public class ClassSectionService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "CLASS_STATUS_INVALID",
                     "Khoá điểm bằng thao tác khoá bảng điểm, không đặt trạng thái trực tiếp.");
         }
+        /* DA_HUY cũng vậy: huỷ lớp phải trả tín chỉ, huỷ ghi danh và báo sinh viên —
+           đổi trạng thái trần thì sinh viên vẫn kẹt trong lớp đã huỷ. Huỷ là cuối cùng. */
+        if (DA_HUY.equals(lop.trangThai())) {
+            throw new ApiException(HttpStatus.CONFLICT, "CLASS_CANCELLED",
+                    "Lớp %s đã huỷ, không sửa được.".formatted(maLopHP));
+        }
+        if (DA_HUY.equals(trangThai)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CLASS_STATUS_INVALID",
+                    "Huỷ lớp bằng thao tác huỷ lớp, không đặt trạng thái trực tiếp.");
+        }
 
         /* Điều kiện "không hạ dưới sĩ số" nằm trong chính câu UPDATE rồi đọc số
            dòng — không SELECT trước rồi IF, vì sĩ số đổi được giữa hai câu lệnh. */
@@ -203,6 +214,25 @@ public class ClassSectionService {
      */
     public boolean reserveSeat(String maLopHP) {
         return classes.reserveSeat(maLopHP) == 1;
+    }
+
+    /**
+     * Bước đầu của huỷ lớp: chuyển sang {@code DA_HUY}. Từ đây {@link #reserveSeat}
+     * không giữ được chỗ nào nữa vì điều kiện {@code TrangThai = 'MO'} nằm trong
+     * câu UPDATE của nó. API cho {@code enrollment}; chỗ gọi đã kiểm quyền.
+     *
+     * @return {@code false} nếu lớp không còn ở {@code MO}/{@code DU_KIEN} lúc ghi
+     */
+    public boolean markCancelled(String maLopHP) {
+        return classes.markCancelled(maLopHP) == 1;
+    }
+
+    /** Bước cuối của huỷ lớp: mọi ghi danh đã huỷ nên sĩ số về 0. */
+    public void clearSeats(String maLopHP, int expected) {
+        if (classes.clearSeats(maLopHP, expected) != 1) {
+            throw new IllegalStateException(
+                    "Bộ đếm sĩ số lớp %s lệch với số ghi danh %d.".formatted(maLopHP, expected));
+        }
     }
 
     /** Trả lại một chỗ khi huỷ đăng ký. */

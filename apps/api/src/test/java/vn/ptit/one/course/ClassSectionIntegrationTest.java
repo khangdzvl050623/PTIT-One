@@ -90,9 +90,7 @@ class ClassSectionIntegrationTest {
         assertThat(created.body()).contains("\"trangThai\":\"DU_KIEN\"");
 
         String maLopHP = extract(created.body(), "maLopHP");
-        admin.put("/api/classes/" + maLopHP, """
-                {"soLuongToiDa":30,"trangThai":"DA_HUY","hinhThucHoc":"TRUC_TIEP","choPhepLienCoSo":false}
-                """);
+        assertThat(admin.post("/api/classes/" + maLopHP + "/cancel", "{}").statusCode()).isEqualTo(200);
     }
 
     /** D18: chỉ lớp trực tuyến mới cho đăng ký liên cơ sở. */

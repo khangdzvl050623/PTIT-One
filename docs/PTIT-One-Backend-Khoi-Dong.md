@@ -16,7 +16,7 @@ Phân công và nghiệm thu: [kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-
   [hướng dẫn cài Phần 1](PTIT-One-Cai-Dat-Phan-1.md#migration-và-seed).
 - **A0** xác thực: đăng nhập, refresh có rotation, logout/logout-all, phân quyền.
 - **F03** môn học, tiên quyết (chặn chu trình), khoa, học kỳ, chương trình đào tạo.
-- **F04** lớp học phần, phân công GV, lịch học (chặn trùng GV/phòng), đợt đăng ký.
+- **F04** lớp học phần, phân công GV, lịch học (chặn trùng GV/phòng), đợt đăng ký, huỷ lớp.
 - **F05** GV xem lớp phụ trách, danh sách SV và sĩ số; lịch dạy GV.
 - **F06** nhập điểm (kiểm phiên bản), công bố, khoá điểm.
 - **F07** SV xem bảng điểm; **F09** SV xem thời khoá biểu.

@@ -160,6 +160,11 @@ public class EnrollmentService {
                             .formatted(tc.daDangKy(), tc.tranTinChi(), lop.soTinChi(), lop.maMonHoc()));
         }
         if (!classes.reserveSeat(maLopHP)) {
+            // Lớp vừa bị huỷ giữa lúc kiểm và lúc giữ chỗ thì báo đúng lý do, không báo "đầy".
+            if (!ClassSectionService.MO.equals(classes.require(maLopHP).trangThai())) {
+                throw new ApiException(HttpStatus.CONFLICT, "CLASS_NOT_OPEN",
+                        "Lớp %s không còn mở đăng ký.".formatted(maLopHP));
+            }
             throw new ApiException(HttpStatus.CONFLICT, "CLASS_FULL",
                     "Lớp %s đã đủ %d sinh viên.".formatted(maLopHP, lop.soLuongToiDa()));
         }

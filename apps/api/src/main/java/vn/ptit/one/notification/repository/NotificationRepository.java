@@ -50,11 +50,19 @@ public class NotificationRepository {
         return jdbc.update("""
                 INSERT INTO dbo.ThongBao (MaThongBao, Loai, TrangThai, MucDo, TieuDe, NoiDung, LienKet,
                                           PhamVi, MaLopHP, DoiTuong, SuKien, KhoaSuKien, NgayTao, NgayGui)
-                SELECT ?, 'TU_DONG', 'DA_GUI', ?, ?, ?, ?, ?, ?, 'SINH_VIEN', ?, ?, ?, ?
+                SELECT ?, 'TU_DONG', 'DA_GUI', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                  WHERE NOT EXISTS (SELECT 1 FROM dbo.ThongBao WHERE KhoaSuKien = ?)
                 """, id.toString(), event.mucDo(), event.tieuDe(), event.noiDung(), event.lienKet(),
                 event.nguoiNhan().size() == 1 ? NotificationTerms.CA_NHAN : NotificationTerms.LOP_HOC_PHAN,
-                event.maLopHP(), event.suKien(), event.khoaSuKien(), ngay, ngay, event.khoaSuKien());
+                event.maLopHP(), audience(event.nguoiNhan()), event.suKien(), event.khoaSuKien(),
+                ngay, ngay, event.khoaSuKien());
+    }
+
+    /** Đối tượng suy từ chính danh sách người nhận. */
+    private static String audience(List<Recipient> recipients) {
+        boolean sv = recipients.stream().anyMatch(r -> NotificationTerms.SINH_VIEN.equals(r.loai()));
+        boolean gv = recipients.stream().anyMatch(r -> NotificationTerms.GIANG_VIEN.equals(r.loai()));
+        return sv && gv ? NotificationTerms.TAT_CA : gv ? NotificationTerms.GIANG_VIEN : NotificationTerms.SINH_VIEN;
     }
 
     // --- Soạn tay ---------------------------------------------------------

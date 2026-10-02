@@ -60,6 +60,28 @@
         },
         "type" : "object"
       },
+      "CancelClassRequest" : {
+        "properties" : {
+          "lyDo" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CancelledClass" : {
+        "properties" : {
+          "lop" : {
+            "$ref" : "#/components/schemas/ClassSection"
+          },
+          "soDangKyDaHuy" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "Capacity" : {
         "properties" : {
           "soLopConCho" : {
@@ -1436,6 +1458,41 @@
         "tags" : [ "class-section-controller" ]
       }
     },
+    "/api/classes/{maLopHP}/cancel" : {
+      "post" : {
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CancelClassRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CancelledClass"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "class-cancellation-controller" ]
+      }
+    },
     "/api/classes/{maLopHP}/grades" : {
       "get" : {
         "operationId" : "sheet",
@@ -2030,7 +2087,7 @@
     },
     "/api/me/enrollments/{maLopHP}" : {
       "delete" : {
-        "operationId" : "cancel",
+        "operationId" : "cancel_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "maLopHP",
