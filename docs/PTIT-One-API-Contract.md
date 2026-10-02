@@ -104,11 +104,14 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
 | GET | `/api/me/grades` · `/api/me/timetable` · `/api/me/enrollments` | `SINH_VIEN` |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
+| GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 
 ### Hai quy tắc phạm vi
 
-**Không endpoint nào nhận tham số `maCoSo`.** Cơ sở luôn lấy từ JWT đã ký; gửi
-lên cũng bị bỏ qua. Đây là chủ ý chống leo thang đặc quyền, không phải thiếu sót.
+**Không endpoint ghi nào nhận tham số `maCoSo`.** Cơ sở luôn lấy từ JWT đã ký.
+Đây là chủ ý chống leo thang đặc quyền, không phải thiếu sót. Ngoại lệ duy nhất
+là bộ lọc **chỉ đọc** của `/api/reports/*`: có tác dụng với Admin Master; Admin
+cơ sở gửi cơ sở khác thì nhận `403`, không bao giờ được mở rộng phạm vi.
 
 **Đường `/api/me/*` lấy danh tính từ JWT.** Không nhận mã sinh viên hay mã
 giảng viên từ client, nên không có cách xem dữ liệu của người khác qua đường này.
@@ -269,6 +272,22 @@ bị từ chối.
   tín chỉ kiểm **trong câu `UPDATE`** rồi đọc `@@ROWCOUNT`; thứ tự ghi luôn
   `SinhVienHocKy → LopHocPhan → DangKyHocPhan → DangKyMonHoc → Diem` ở cả đăng
   ký lẫn huỷ.
+
+### Thống kê
+
+- `maHocKy` bắt buộc. `/summary` lọc thêm được `maMonHoc`.
+- Lớp và điểm tính theo cơ sở **mở lớp**. Chỉ tính lớp `MO` và `DA_KHOA` — bỏ
+  lớp dự kiến và đã huỷ.
+- `luotDangKy` ≠ `soSinhVien`: một SV học sáu môn là sáu lượt, một sinh viên.
+- `tiLeLapDay` = tổng đã đăng ký / tổng sức chứa (0–1, 4 chữ số), **không** lấy
+  trung bình phần trăm từng lớp. `null` khi không có lớp nào.
+- Đạt/trượt chỉ tính điểm **đã công bố**, cùng ngưỡng với bảng điểm.
+  `chuaCoKetQua` = lượt chưa có điểm công bố — **không** phải trượt.
+- `phanBoDiem` gồm 5 khoảng `<4.0`, `4.0–5.4`, `5.5–6.9`, `7.0–8.4`, `≥8.5`; chỉ
+  để vẽ biểu đồ, không phải xếp loại chính thức.
+- `tienDoDiem` đếm theo lớp: `daKhoa`, `daCongBo` (mọi dòng đã công bố),
+  `chuaCongBo` (còn lại, kể cả lớp chưa có SV).
+- Báo cáo liên cơ sở thuộc Phần 2.
 
 ### Phiên đăng nhập
 
@@ -431,6 +450,10 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Lớp cơ sở khác / lớp chưa mở | `409` | ✓ |
 | Môn đã trượt / đã đạt đăng ký lại | `HOC_LAI` / `CAI_THIEN` | ✓ |
 | Huỷ khi đã có điểm | `409 ENROLLMENT_HAS_GRADE`, sĩ số và tín chỉ giữ nguyên | ✓ |
+| Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
+| Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |
+| Admin cơ sở lọc thống kê cơ sở khác | `403` | ✓ |
+| Cơ sở không có lớp | `tiLeLapDay: null` | ✓ |
 
 Chạy: `.\scripts\dev-api.ps1 -MavenArguments verify`. Các ca tích hợp cần
 SQL Server và biến `PTITONE_DB_URL`; thiếu thì chúng **skip chứ không đỏ**.
@@ -473,7 +496,7 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 |---|---|
 | F02 | Cấp hồ sơ, kích hoạt tài khoản, quên mật khẩu |
 
-Thống kê toàn hệ thống và thông báo chưa có endpoint.
+Thông báo chưa có endpoint.
 
 Gọi các đường dẫn chưa có trả `404` — đó là hành vi đúng.
 
