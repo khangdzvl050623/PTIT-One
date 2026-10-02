@@ -15,6 +15,7 @@ import vn.ptit.one.course.model.CourseSummary;
 import vn.ptit.one.course.model.Faculty;
 import vn.ptit.one.course.model.Term;
 import vn.ptit.one.course.repository.CourseRepository;
+import vn.ptit.one.enrollment.service.EnrollmentPeriodService;
 import vn.ptit.one.shared.exception.ApiException;
 
 /** Danh mục môn học và quan hệ tiên quyết. Đọc mở cho mọi vai trò; ghi chỉ Admin Master (B3). */
@@ -26,9 +27,11 @@ public class CourseService {
     private static final int LOCK_TIMEOUT_MS = 5_000;
 
     private final CourseRepository courses;
+    private final EnrollmentPeriodService periods;
 
-    public CourseService(CourseRepository courses) {
+    public CourseService(CourseRepository courses, EnrollmentPeriodService periods) {
         this.courses = courses;
+        this.periods = periods;
     }
 
     public List<CourseSummary> search(String maKhoa, String tuKhoa) {
@@ -90,7 +93,7 @@ public class CourseService {
 
         /* Khoá đồ thị không che được việc sinh viên đang đăng ký: đổi tiên quyết
            giữa đợt khiến hai người nộp cùng lúc bị xét theo hai bộ quy tắc. */
-        if (courses.hasOpenRegistration(maMonHoc)) {
+        if (courses.hasClassInTerms(maMonHoc, periods.openTerms())) {
             throw new ApiException(HttpStatus.CONFLICT, "COURSE_REGISTRATION_OPEN",
                     "Môn %s đang có đợt đăng ký mở. Đóng đợt trước khi đổi môn tiên quyết."
                             .formatted(maMonHoc));

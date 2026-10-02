@@ -66,6 +66,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh",
                         "/api/auth/logout").permitAll()
                 .requestMatchers("/error").permitAll()
+                /* Swagger UI phải tải được TRƯỚC khi đăng nhập, nếu không thì
+                   không ai dùng được form login ngay trong đó. Spec chỉ lộ hình
+                   dạng API — thứ frontend vốn đã biết — không lộ dữ liệu.
+                   Tắt hẳn ngoài máy dev bằng springdoc.api-docs.enabled=false. */
+                .requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**",
+                        "/swagger-ui.html", "/swagger-ui/**").permitAll()
                 // Lộ tên DB và login SQL — chỉ quản trị được xem.
                 .requestMatchers("/api/health/db").hasAnyRole(
                         Role.ADMIN_CO_SO.name(), Role.ADMIN_MASTER.name())

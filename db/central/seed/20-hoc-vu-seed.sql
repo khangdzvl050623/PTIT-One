@@ -131,6 +131,8 @@ SELECT v.MaSinhVien, v.HoTen, v.NgaySinh, v.MaCoSoNha, v.MaCTDT, v.TrangThai, v.
 INSERT INTO dbo.GiangVien (MaGiangVien, HoTen, MaCoSo, MaKhoa, HocVi)
 SELECT v.MaGiangVien, v.HoTen, v.MaCoSo, v.MaKhoa, v.HocVi
   FROM (VALUES ('GVHCM001', N'Nguyễn Hữu Phước', 'HCM', 'CNTT', N'Tiến sĩ'),
+               -- Cần GV thứ hai ở HCM: hai lớp trùng khung giờ không thể chung một người dạy.
+               ('GVHCM002', N'Trần Thị Mỹ Linh',  'HCM', 'CNTT', N'Thạc sĩ'),
                ('GVHN001',  N'Đặng Thị Hạnh',    'HN',  'CNTT', N'Thạc sĩ'))
        v (MaGiangVien, HoTen, MaCoSo, MaKhoa, HocVi)
  WHERE NOT EXISTS (SELECT 1 FROM dbo.GiangVien g WHERE g.MaGiangVien = v.MaGiangVien);
@@ -156,7 +158,10 @@ SELECT v.MaLopHP, v.MaMonHoc, v.MaHocKy, v.MaCoSoHost, v.MaGiangVien,
         ('BAS1150-2025-1-HCM01', 'BAS1150', '2025-1', 'HCM', 'GVHCM001', 40, 1, 'DA_KHOA',  0, 'TRUC_TIEP'),
         -- 2026-1 đang mở.
         ('INT1155-2026-1-HCM01', 'INT1155', '2026-1', 'HCM', 'GVHCM001', 40, 0, 'MO',       0, 'TRUC_TIEP'),
-        ('BAS1150-2026-1-HCM01', 'BAS1150', '2026-1', 'HCM', 'GVHCM001', 40, 0, 'MO',       0, 'TRUC_TIEP'),
+        -- GVHCM002 chứ không phải GVHCM001: lớp này trùng khung giờ với INT1155.
+        ('BAS1150-2026-1-HCM01', 'BAS1150', '2026-1', 'HCM', 'GVHCM002', 40, 0, 'MO',       0, 'TRUC_TIEP'),
+        -- Sức chứa 3 / sĩ số 2: ca nghiệm thu "không hạ sức chứa dưới sĩ số" của F04.
+        ('BAS1203-2026-1-HCM01', 'BAS1203', '2026-1', 'HCM', 'GVHCM002',  3, 2, 'MO',       0, 'TRUC_TIEP'),
         ('BAS1151-2026-1-HCM01', 'BAS1151', '2026-1', 'HCM', 'GVHCM001', 40, 0, 'MO',       0, 'TRUC_TIEP'),
         ('INT1154-2026-1-HCM01', 'INT1154', '2026-1', 'HCM', 'GVHCM001',  1, 1, 'MO',       0, 'TRUC_TIEP'),
         ('INT1358-2026-1-HCM01', 'INT1358', '2026-1', 'HCM', 'GVHCM001', 60, 0, 'MO',       1, 'TRUC_TUYEN'),
@@ -167,14 +172,29 @@ SELECT v.MaLopHP, v.MaMonHoc, v.MaHocKy, v.MaCoSoHost, v.MaGiangVien,
           SoLuongToiDa, SoLuongDaDangKy, TrangThai, ChoPhepLienCoSo, HinhThucHoc)
  WHERE NOT EXISTS (SELECT 1 FROM dbo.LopHocPhan l WHERE l.MaLopHP = v.MaLopHP);
 
+/* Sửa dữ liệu đã seed từ trước.
+
+   Mọi INSERT ở file này dùng WHERE NOT EXISTS nên đổi giá trị trong VALUES
+   KHÔNG cập nhật dòng đã tồn tại. DB nào seed trước khi có GVHCM002 vẫn đang
+   để BAS1150-2026-1-HCM01 cho GVHCM001 — trùng giờ với INT1155 cùng người dạy.
+
+   UPDATE có điều kiện nên chạy lại không làm gì thêm: lần hai không còn dòng
+   nào khớp GVHCM001. Không đụng lớp đã được phân công tay sang người khác. */
+UPDATE dbo.LopHocPhan
+   SET MaGiangVien = 'GVHCM002'
+ WHERE MaLopHP = 'BAS1150-2026-1-HCM01' AND MaGiangVien = 'GVHCM001';
+
 INSERT INTO dbo.LichHoc (MaLopHP, Thu, TietBatDau, SoTiet, PhongHoc, TuanBatDau, TuanKetThuc)
 SELECT v.MaLopHP, v.Thu, v.TietBatDau, v.SoTiet, v.PhongHoc, v.TuanBatDau, v.TuanKetThuc
   FROM (VALUES ('INT1154-2025-1-HCM01', 2, 1, 3, N'A2-201',     1, 15),
                ('BAS1150-2025-1-HCM01', 4, 1, 3, N'A2-305',     1, 15),
                ('INT1155-2026-1-HCM01', 2, 1, 3, N'A2-201',     1, 15),
-               -- Tiết 2-4 chồng lên tiết 1-3 của INT1155 cùng thứ Hai: ca trùng lịch.
+               -- Tiết 2-4 chồng lên tiết 1-3 của INT1155 cùng thứ Hai.
+               -- Hai lớp KHÁC giảng viên và khác phòng nên mở lớp hợp lệ;
+               -- đây là ca để F08 chặn SINH VIÊN đăng ký cả hai.
                ('BAS1150-2026-1-HCM01', 2, 2, 3, N'A2-305',     1, 15),
                ('BAS1151-2026-1-HCM01', 3, 1, 3, N'A2-305',     1, 15),
+               ('BAS1203-2026-1-HCM01', 4, 1, 3, N'A2-401',     1, 15),
                ('INT1154-2026-1-HCM01', 4, 7, 3, N'A3-102',     1, 15),
                ('INT1358-2026-1-HCM01', 6, 7, 3, N'Trực tuyến', 1, 15),
                ('INT1445-2026-1-HCM01', 5, 1, 3, NULL,          1, 15),
@@ -188,7 +208,10 @@ SELECT v.MaLopHP, v.Thu, v.TietBatDau, v.SoTiet, v.PhongHoc, v.TuanBatDau, v.Tua
 INSERT INTO dbo.SinhVienHocKy (MaSinhVien, MaHocKy, SoTinChiDaDangKy, SoTinChiDangGiuCho, TranTinChi)
 SELECT v.MaSinhVien, v.MaHocKy, v.SoTinChiDaDangKy, 0, 24
   FROM (VALUES ('B25DCCN001', '2025-1', 6),
-               ('B26DCCN003', '2026-1', 3))
+               ('B26DCCN003', '2026-1', 3),
+               -- Hai sinh viên của lớp BAS1203 sức chứa 3 / sĩ số 2.
+               ('B25DCCN001', '2026-1', 3),
+               ('B26DCCN001', '2026-1', 3))
        v (MaSinhVien, MaHocKy, SoTinChiDaDangKy)
  WHERE NOT EXISTS (SELECT 1 FROM dbo.SinhVienHocKy k
                     WHERE k.MaSinhVien = v.MaSinhVien AND k.MaHocKy = v.MaHocKy);
@@ -197,7 +220,9 @@ INSERT INTO dbo.DangKyHocPhan (MaLopHP, MaSinhVien, MaCoSoNhaSV, HoTenSinhVien, 
 SELECT v.MaLopHP, s.MaSinhVien, s.MaCoSoNha, s.HoTen, v.NgayDangKy, 'DA_DANG_KY'
   FROM (VALUES ('INT1154-2025-1-HCM01', 'B25DCCN001', '2025-08-20 09:00'),
                ('BAS1150-2025-1-HCM01', 'B25DCCN001', '2025-08-20 09:05'),
-               ('INT1154-2026-1-HCM01', 'B26DCCN003', '2026-09-02 08:30'))
+               ('INT1154-2026-1-HCM01', 'B26DCCN003', '2026-09-02 08:30'),
+               ('BAS1203-2026-1-HCM01', 'B25DCCN001', '2026-09-02 09:00'),
+               ('BAS1203-2026-1-HCM01', 'B26DCCN001', '2026-09-02 09:05'))
        v (MaLopHP, MaSinhVien, NgayDangKy)
   JOIN dbo.SinhVien s ON s.MaSinhVien = v.MaSinhVien
  WHERE NOT EXISTS (SELECT 1 FROM dbo.DangKyHocPhan d
@@ -209,7 +234,9 @@ SELECT d.MaSinhVien, l.MaHocKy, l.MaMonHoc, l.MaLopHP, l.MaCoSoHost,
        'DA_DANG_KY', m.SoTinChi, l.PhienBanLich
   FROM (VALUES ('INT1154-2025-1-HCM01', 'B25DCCN001'),
                ('BAS1150-2025-1-HCM01', 'B25DCCN001'),
-               ('INT1154-2026-1-HCM01', 'B26DCCN003'))
+               ('INT1154-2026-1-HCM01', 'B26DCCN003'),
+               ('BAS1203-2026-1-HCM01', 'B25DCCN001'),
+               ('BAS1203-2026-1-HCM01', 'B26DCCN001'))
        d (MaLopHP, MaSinhVien)
   JOIN dbo.LopHocPhan l ON l.MaLopHP = d.MaLopHP
   JOIN dbo.MonHoc m ON m.MaMonHoc = l.MaMonHoc

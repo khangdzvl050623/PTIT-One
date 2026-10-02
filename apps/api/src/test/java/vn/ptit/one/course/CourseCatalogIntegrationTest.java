@@ -53,8 +53,8 @@ class CourseCatalogIntegrationTest {
         // Cả hai chiều của quan hệ: môn phải đạt trước, và môn đang phụ thuộc vào nó.
         assertThat(detail.body()).contains("\"tienQuyet\"", "INT1154", "\"monPhuThuoc\"", "INT1306");
 
-        assertThat(sv.get("/api/catalog/khoa").statusCode()).isEqualTo(200);
-        assertThat(sv.get("/api/catalog/hoc-ky").statusCode()).isEqualTo(200);
+        assertThat(sv.get("/api/faculties").statusCode()).isEqualTo(200);
+        assertThat(sv.get("/api/terms").statusCode()).isEqualTo(200);
     }
 
     @Test
@@ -67,7 +67,7 @@ class CourseCatalogIntegrationTest {
     void chiAdminMasterDuocSuaDanhMuc() throws Exception {
         String body = "{\"tienQuyet\":[]}";
         for (String username : new String[] { "B26DCCN001", "GVHCM001", "admin.hcm" }) {
-            HttpResponse<String> denied = signedIn(username).put("/api/courses/INT1313/tien-quyet", body);
+            HttpResponse<String> denied = signedIn(username).put("/api/courses/INT1313/prerequisites", body);
             assertThat(denied.statusCode()).as("vai trò %s", username).isEqualTo(403);
         }
     }
@@ -75,7 +75,7 @@ class CourseCatalogIntegrationTest {
     @Test
     void chanMonTuLamTienQuyetCuaChinhNo() throws Exception {
         HttpResponse<String> response = signedIn("admin.master")
-                .put("/api/courses/INT1313/tien-quyet", "{\"tienQuyet\":[\"INT1313\"]}");
+                .put("/api/courses/INT1313/prerequisites", "{\"tienQuyet\":[\"INT1313\"]}");
 
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(response.body()).contains("PREREQUISITE_SELF");
@@ -84,7 +84,7 @@ class CourseCatalogIntegrationTest {
     @Test
     void chanTienQuyetKhongTonTai() throws Exception {
         HttpResponse<String> response = signedIn("admin.master")
-                .put("/api/courses/INT1313/tien-quyet", "{\"tienQuyet\":[\"KHONG-CO\"]}");
+                .put("/api/courses/INT1313/prerequisites", "{\"tienQuyet\":[\"KHONG-CO\"]}");
 
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(response.body()).contains("PREREQUISITE_UNKNOWN");
@@ -102,7 +102,7 @@ class CourseCatalogIntegrationTest {
         Browser admin = signedIn("admin.master");
 
         HttpResponse<String> response = admin
-                .put("/api/courses/INT1306/tien-quyet", "{\"tienQuyet\":[\"INT1339\"]}");
+                .put("/api/courses/INT1306/prerequisites", "{\"tienQuyet\":[\"INT1339\"]}");
         assertThat(response.statusCode()).isEqualTo(409);
         assertThat(response.body()).contains("PREREQUISITE_CYCLE");
 
@@ -115,7 +115,7 @@ class CourseCatalogIntegrationTest {
     @Test
     void chanSuaTienQuyetKhiDangMoDotDangKy() throws Exception {
         HttpResponse<String> response = signedIn("admin.master")
-                .put("/api/courses/INT1154/tien-quyet", "{\"tienQuyet\":[]}");
+                .put("/api/courses/INT1154/prerequisites", "{\"tienQuyet\":[]}");
 
         assertThat(response.statusCode()).isEqualTo(409);
         assertThat(response.body()).contains("COURSE_REGISTRATION_OPEN");
@@ -126,7 +126,7 @@ class CourseCatalogIntegrationTest {
         Browser admin = signedIn("admin.master");
         try {
             HttpResponse<String> changed = admin
-                    .put("/api/courses/INT1313/tien-quyet", "{\"tienQuyet\":[\"INT1306\"]}");
+                    .put("/api/courses/INT1313/prerequisites", "{\"tienQuyet\":[\"INT1306\"]}");
             assertThat(changed.statusCode()).as(changed.body()).isEqualTo(200);
             assertThat(changed.body()).contains("INT1306");
 
@@ -134,11 +134,11 @@ class CourseCatalogIntegrationTest {
             assertThat(admin.get("/api/courses/INT1313").body()).contains("INT1306");
 
             // Danh sách rỗng là thao tác hợp lệ: gỡ hết tiên quyết.
-            assertThat(admin.put("/api/courses/INT1313/tien-quyet", "{\"tienQuyet\":[]}").statusCode())
+            assertThat(admin.put("/api/courses/INT1313/prerequisites", "{\"tienQuyet\":[]}").statusCode())
                     .isEqualTo(200);
             assertThat(admin.get("/api/courses/INT1313").body()).doesNotContain("INT1306");
         } finally {
-            admin.put("/api/courses/INT1313/tien-quyet", "{\"tienQuyet\":[\"INT1155\"]}");
+            admin.put("/api/courses/INT1313/prerequisites", "{\"tienQuyet\":[\"INT1155\"]}");
         }
     }
 

@@ -2471,6 +2471,7 @@ apps/api/src/main/java/vn/ptit/one/
 ├── PtitOneApplication.java
 ├── auth/                  tài khoản, đăng nhập và quyền truy cập
 ├── student/               hồ sơ sinh viên
+├── teacher/               hồ sơ giảng viên
 ├── course/                môn, lớp học phần và quan hệ tiên quyết
 ├── enrollment/            đăng ký và hủy đăng ký
 ├── grade/                 nhập, công bố và xem điểm

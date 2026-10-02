@@ -12,13 +12,14 @@ import vn.ptit.one.course.model.Term;
 import vn.ptit.one.course.service.CourseService;
 
 /**
- * Danh mục tra cứu dùng chung: khoa và học kỳ.
+ * Danh mục tra cứu dùng chung: khoa ({@code /api/faculties}) và học kỳ
+ * ({@code /api/terms}).
  *
  * <p>Chỉ đọc. Ghi hai bảng này là việc của Admin Master và chưa có màn quản trị
  * nào cần tới, nên không mở endpoint ghi cho tới khi thực sự dùng.
  */
 @RestController
-@RequestMapping("/api/catalog")
+@RequestMapping("/api")
 @Profile("central")
 public class CatalogController {
 
@@ -28,12 +29,12 @@ public class CatalogController {
         this.courses = courses;
     }
 
-    @GetMapping("/khoa")
+    @GetMapping("/faculties")
     public List<Faculty> faculties() {
         return courses.faculties();
     }
 
-    @GetMapping("/hoc-ky")
+    @GetMapping("/terms")
     public List<Term> terms() {
         return courses.terms();
     }

@@ -72,19 +72,6 @@ public class CourseRepository {
             OPTION (MAXRECURSION 100)
             """;
 
-    /**
-     * Môn này có lớp trong học kỳ nào đang mở đợt đăng ký không.
-     *
-     * <p>Đổi tiên quyết giữa lúc sinh viên đang đăng ký sẽ khiến hai người nộp
-     * cùng một phút bị xét theo hai bộ quy tắc khác nhau.
-     */
-    private static final String HAS_OPEN_REGISTRATION = """
-            SELECT COUNT(*)
-              FROM dbo.LopHocPhan l
-              JOIN dbo.DotDangKy d ON d.MaHocKy = l.MaHocKy
-             WHERE l.MaMonHoc = ? AND d.TrangThai = 'DANG_MO'
-            """;
-
     private final JdbcTemplate jdbc;
 
     public CourseRepository(JdbcTemplate jdbc) {
@@ -133,6 +120,12 @@ public class CourseRepository {
     public boolean facultyExists(String maKhoa) {
         Integer count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM dbo.Khoa WHERE MaKhoa = ?", Integer.class, maKhoa);
+        return count != null && count > 0;
+    }
+
+    public boolean termExists(String maHocKy) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM dbo.HocKy WHERE MaHocKy = ?", Integer.class, maHocKy);
         return count != null && count > 0;
     }
 
@@ -194,8 +187,24 @@ public class CourseRepository {
         return count != null && count > 0;
     }
 
-    public boolean hasOpenRegistration(String maMonHoc) {
-        Integer count = jdbc.queryForObject(HAS_OPEN_REGISTRATION, Integer.class, maMonHoc);
+    /**
+     * Môn này có lớp trong một trong các học kỳ đã cho không.
+     *
+     * <p>Chỉ đọc bảng của chính module `course`. Danh sách học kỳ đang mở đăng
+     * ký do module `enrollment` cung cấp — ở đây không join vào `DotDangKy`,
+     * vì đó là bảng của module khác.
+     */
+    public boolean hasClassInTerms(String maMonHoc, List<String> maHocKyList) {
+        if (maHocKyList.isEmpty()) {
+            return false;
+        }
+        String placeholders = String.join(", ", java.util.Collections.nCopies(maHocKyList.size(), "?"));
+        List<Object> args = new java.util.ArrayList<>();
+        args.add(maMonHoc);
+        args.addAll(maHocKyList);
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM dbo.LopHocPhan WHERE MaMonHoc = ? AND MaHocKy IN (" + placeholders + ")",
+                Integer.class, args.toArray());
         return count != null && count > 0;
     }
 

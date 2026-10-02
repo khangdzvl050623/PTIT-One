@@ -1,0 +1,1239 @@
+{
+  "components" : {
+    "schemas" : {
+      "AssignTeacherRequest" : {
+        "properties" : {
+          "maGiangVien" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassSchedule" : {
+        "properties" : {
+          "buoiHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ScheduleSlot"
+            },
+            "type" : "array"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          },
+          "phienBanLich" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassSection" : {
+        "properties" : {
+          "choPhepLienCoSo" : {
+            "type" : "boolean"
+          },
+          "hinhThucHoc" : {
+            "type" : "string"
+          },
+          "maCoSoHost" : {
+            "type" : "string"
+          },
+          "maGiangVien" : {
+            "type" : "string"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "phienBanLich" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soLuongDaDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soLuongToiDa" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenGiangVien" : {
+            "type" : "string"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CourseDetail" : {
+        "properties" : {
+          "mon" : {
+            "$ref" : "#/components/schemas/CourseSummary"
+          },
+          "monPhuThuoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CourseSummary"
+            },
+            "type" : "array"
+          },
+          "tienQuyet" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CourseSummary"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "CourseSummary" : {
+        "properties" : {
+          "maKhoa" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenKhoa" : {
+            "type" : "string"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateClassRequest" : {
+        "properties" : {
+          "choPhepLienCoSo" : {
+            "type" : "boolean"
+          },
+          "hinhThucHoc" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maGiangVien" : {
+            "type" : "string"
+          },
+          "maHocKy" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "soLuongToiDa" : {
+            "format" : "int32",
+            "maximum" : 500,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "hinhThucHoc", "maHocKy", "maMonHoc" ],
+        "type" : "object"
+      },
+      "CreateCourseRequest" : {
+        "properties" : {
+          "maKhoa" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "maximum" : 15,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "tenMonHoc" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "maKhoa", "maMonHoc", "tenMonHoc" ],
+        "type" : "object"
+      },
+      "CsrfResponse" : {
+        "properties" : {
+          "headerName" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CsrfToken" : {
+        "properties" : {
+          "headerName" : {
+            "type" : "string"
+          },
+          "parameterName" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DatabaseHealthResponse" : {
+        "properties" : {
+          "database" : {
+            "type" : "string"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "login" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EnrollmentPeriod" : {
+        "properties" : {
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "maDot" : {
+            "type" : "string"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "thoiGianDong" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "thoiGianMo" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Faculty" : {
+        "properties" : {
+          "maKhoa" : {
+            "type" : "string"
+          },
+          "tenKhoa" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HealthResponse" : {
+        "properties" : {
+          "service" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "properties" : {
+          "password" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "username" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "password", "username" ],
+        "type" : "object"
+      },
+      "SaveEnrollmentPeriodRequest" : {
+        "properties" : {
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "thoiGianDong" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "thoiGianMo" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "trangThai" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "thoiGianDong", "thoiGianMo", "trangThai" ],
+        "type" : "object"
+      },
+      "ScheduleSlot" : {
+        "properties" : {
+          "phongHoc" : {
+            "type" : "string"
+          },
+          "soTiet" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "thu" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tietBatDau" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tuanBatDau" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tuanKetThuc" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "SessionUserResponse" : {
+        "properties" : {
+          "accessExpiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "entityId" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "homeCampus" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SetPrerequisitesRequest" : {
+        "properties" : {
+          "tienQuyet" : {
+            "items" : {
+              "type" : "string"
+            },
+            "maxItems" : 20,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SetScheduleRequest" : {
+        "properties" : {
+          "buoiHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SlotRequest"
+            },
+            "maxItems" : 14,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SlotRequest" : {
+        "properties" : {
+          "phongHoc" : {
+            "type" : "string"
+          },
+          "soTiet" : {
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "thu" : {
+            "format" : "int32",
+            "maximum" : 8,
+            "minimum" : 2,
+            "type" : "integer"
+          },
+          "tietBatDau" : {
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "tuanBatDau" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "tuanKetThuc" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "Teacher" : {
+        "properties" : {
+          "hoTen" : {
+            "type" : "string"
+          },
+          "hocVi" : {
+            "type" : "string"
+          },
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "maGiangVien" : {
+            "type" : "string"
+          },
+          "maKhoa" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Term" : {
+        "properties" : {
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "namHoc" : {
+            "type" : "string"
+          },
+          "ngayBatDau" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "ngayKetThuc" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "tenHocKy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdateClassRequest" : {
+        "properties" : {
+          "choPhepLienCoSo" : {
+            "type" : "boolean"
+          },
+          "hinhThucHoc" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "soLuongToiDa" : {
+            "format" : "int32",
+            "maximum" : 500,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "trangThai" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "hinhThucHoc", "trangThai" ],
+        "type" : "object"
+      },
+      "UpdateCourseRequest" : {
+        "properties" : {
+          "maKhoa" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "soTinChi" : {
+            "format" : "int32",
+            "maximum" : 15,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "tenMonHoc" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "maKhoa", "tenMonHoc" ],
+        "type" : "object"
+      }
+    },
+    "securitySchemes" : {
+      "PTITONE_AT" : {
+        "description" : "Cookie HttpOnly do server đặt khi đăng nhập. Khai báo ở đây để spec nói rõ API dùng cookie; không nhập tay được và cũng không cần.",
+        "in" : "cookie",
+        "name" : "PTITONE_AT",
+        "type" : "apiKey"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Đăng nhập bằng `POST /api/auth/login` ngay trong trang này: cookie phiên được trình duyệt giữ, các lệnh sau tự dùng. Không có `Authorization` header.\n\nBảng quyền theo vai trò, 36 mã lỗi và các quy tắc nghiệp vụ nằm ở `docs/PTIT-One-API-Contract.md`; trang này chỉ mô tả hình dạng request/response.\n\nPhạm vi cơ sở LUÔN lấy từ JWT đã ký — không endpoint nào nhận tham số `maCoSo`.",
+    "title" : "PTIT One API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/auth/csrf" : {
+      "get" : {
+        "operationId" : "csrf",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "token",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/CsrfToken"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CsrfResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionUserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/logout" : {
+      "post" : {
+        "operationId" : "logout",
+        "parameters" : [ {
+          "in" : "cookie",
+          "name" : "PTITONE_RT",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "cookie",
+          "name" : "PTITONE_AT",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/logout-all" : {
+      "post" : {
+        "operationId" : "logoutAll",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionUserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "parameters" : [ {
+          "in" : "cookie",
+          "name" : "PTITONE_RT",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionUserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/classes" : {
+      "get" : {
+        "operationId" : "search_2",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "maMonHoc",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "maGiangVien",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ClassSection"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "class-section-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateClassRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSection"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "class-section-controller" ]
+      }
+    },
+    "/api/classes/{maLopHP}" : {
+      "get" : {
+        "operationId" : "detail_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSection"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "class-section-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateClassRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSection"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "class-section-controller" ]
+      }
+    },
+    "/api/classes/{maLopHP}/schedule" : {
+      "get" : {
+        "operationId" : "read",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSchedule"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "schedule-controller" ]
+      },
+      "put" : {
+        "operationId" : "replace",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetScheduleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSchedule"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "schedule-controller" ]
+      }
+    },
+    "/api/classes/{maLopHP}/teacher" : {
+      "put" : {
+        "operationId" : "assignTeacher",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AssignTeacherRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSection"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "class-section-controller" ]
+      }
+    },
+    "/api/courses" : {
+      "get" : {
+        "operationId" : "search_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maKhoa",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CourseSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCourseRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CourseDetail"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      }
+    },
+    "/api/courses/{maMonHoc}" : {
+      "get" : {
+        "operationId" : "detail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maMonHoc",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CourseDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maMonHoc",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateCourseRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CourseDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      }
+    },
+    "/api/courses/{maMonHoc}/prerequisites" : {
+      "put" : {
+        "operationId" : "setPrerequisites",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maMonHoc",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetPrerequisitesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CourseDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      }
+    },
+    "/api/enrollment-periods" : {
+      "get" : {
+        "operationId" : "search",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/EnrollmentPeriod"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "enrollment-period-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveEnrollmentPeriodRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EnrollmentPeriod"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "enrollment-period-controller" ]
+      }
+    },
+    "/api/enrollment-periods/{maDot}" : {
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maDot",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveEnrollmentPeriodRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EnrollmentPeriod"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "enrollment-period-controller" ]
+      }
+    },
+    "/api/faculties" : {
+      "get" : {
+        "operationId" : "faculties",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Faculty"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-controller" ]
+      }
+    },
+    "/api/health" : {
+      "get" : {
+        "operationId" : "health",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "health-controller" ]
+      }
+    },
+    "/api/health/db" : {
+      "get" : {
+        "operationId" : "database",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DatabaseHealthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "database-health-controller" ]
+      }
+    },
+    "/api/teachers" : {
+      "get" : {
+        "operationId" : "search_3",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maKhoa",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Teacher"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "teacher-controller" ]
+      }
+    },
+    "/api/terms" : {
+      "get" : {
+        "operationId" : "terms",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Term"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-controller" ]
+      }
+    }
+  }
+}
