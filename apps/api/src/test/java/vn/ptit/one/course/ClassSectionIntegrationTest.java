@@ -41,6 +41,8 @@ class ClassSectionIntegrationTest {
     private static final String PASSWORD = "PtitOne@2026";
     private static final String SANDBOX = "INT1445-2026-1-HCM01";
     private static final String LOP_DA_CO_SV = "INT1154-2026-1-HCM01";
+    /** Sức chứa 3, sĩ số 2 — fixture riêng cho luật "không hạ dưới sĩ số". */
+    private static final String LOP_SUC_CHUA = "BAS1203-2026-1-HCM01";
     /** Lịch gốc của sân thử, để trả về sau mỗi ca ghi. */
     private static final String LICH_GOC =
             "{\"buoiHoc\":[{\"thu\":5,\"tietBatDau\":1,\"soTiet\":3,\"tuanBatDau\":1,\"tuanKetThuc\":15}]}";
@@ -114,7 +116,63 @@ class ClassSectionIntegrationTest {
         assertThat(response.body()).contains("TEACHER_WRONG_CAMPUS");
     }
 
+    // --- Sức chứa ---------------------------------------------------------
+
+    /**
+     * Ma trận nghiệm thu F04 cho "không hạ sức chứa dưới sĩ số thực".
+     *
+     * <p>Điều kiện nằm trong chính câu UPDATE rồi đọc số dòng, không SELECT
+     * trước rồi IF — nên ca hạ xuống ĐÚNG bằng sĩ số phải thành công, chỉ
+     * xuống dưới mới bị chặn.
+     */
+    @Test
+    void khongHaSucChuaXuongDuoiSiSo() throws Exception {
+        Browser admin = signedIn("admin.hcm");
+        try {
+            HttpResponse<String> qua = admin.put("/api/classes/" + LOP_SUC_CHUA, capacity(1));
+            assertThat(qua.statusCode()).isEqualTo(409);
+            assertThat(qua.body()).contains("CLASS_CAPACITY_BELOW_ENROLLED");
+            // Bị từ chối thì dữ liệu phải y nguyên.
+            assertThat(admin.get("/api/classes/" + LOP_SUC_CHUA).body())
+                    .contains("\"soLuongToiDa\":3", "\"soLuongDaDangKy\":2");
+
+            HttpResponse<String> bang = admin.put("/api/classes/" + LOP_SUC_CHUA, capacity(2));
+            assertThat(bang.statusCode()).as(bang.body()).isEqualTo(200);
+            assertThat(bang.body()).contains("\"soLuongToiDa\":2");
+
+            HttpResponse<String> tang = admin.put("/api/classes/" + LOP_SUC_CHUA, capacity(10));
+            assertThat(tang.statusCode()).isEqualTo(200);
+            // Tăng sức chứa không đụng tới sĩ số.
+            assertThat(tang.body()).contains("\"soLuongToiDa\":10", "\"soLuongDaDangKy\":2");
+        } finally {
+            admin.put("/api/classes/" + LOP_SUC_CHUA, capacity(3));
+        }
+    }
+
+    private static String capacity(int soLuongToiDa) {
+        return """
+                {"soLuongToiDa":%d,"trangThai":"MO","hinhThucHoc":"TRUC_TIEP","choPhepLienCoSo":false}
+                """.formatted(soLuongToiDa);
+    }
+
     // --- Lịch học ---------------------------------------------------------
+
+    /**
+     * BAS1150-2026-1-HCM01 (thứ 2 tiết 2-4) chồng giờ với INT1155-2026-1-HCM01
+     * (thứ 2 tiết 1-3) của GVHCM001. Seed cố ý giữ hai lớp trùng giờ để F08
+     * chặn SINH VIÊN đăng ký cả hai — nhưng chúng phải khác người dạy.
+     */
+    @Test
+    void khongGanGiangVienDaBanGioKhac() throws Exception {
+        Browser admin = signedIn("admin.hcm");
+        HttpResponse<String> response = admin.put(
+                "/api/classes/BAS1150-2026-1-HCM01/teacher", "{\"maGiangVien\":\"GVHCM001\"}");
+
+        assertThat(response.statusCode()).isEqualTo(409);
+        assertThat(response.body()).contains("TEACHER_SCHEDULE_CLASH", "INT1155-2026-1-HCM01");
+        // Bị từ chối thì giữ nguyên phân công cũ.
+        assertThat(admin.get("/api/classes/BAS1150-2026-1-HCM01").body()).contains("GVHCM002");
+    }
 
     @Test
     void chanTrungPhongTrongCungHocKy() throws Exception {
