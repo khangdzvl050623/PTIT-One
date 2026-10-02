@@ -402,8 +402,10 @@ bị từ chối.
   "Gửi lại mã" — chưa xác minh thì không tự khôi phục mật khẩu được.
 - `POST /api/auth/change-password` `{matKhauHienTai, matKhauMoi}` → `204`, thu hồi
   **mọi phiên kể cả phiên đang dùng** và xoá cookie — UI chuyển về đăng nhập.
-- Chưa cấu hình gửi thư (`PTITONE_MAIL_HOST`/`PTITONE_MAIL_FROM` trống) thì đổi
-  email và quên mật khẩu trả `503 MAIL_DISABLED`, không giả vờ đã gửi.
+- Thư đi qua Brevo: API HTTP nếu có `PTITONE_BREVO_API_KEY` (`xkeysib-`), không
+  thì SMTP relay (`PTITONE_MAIL_HOST` + SMTP key `xsmtpsib-`). Thiếu
+  `PTITONE_MAIL_FROM`, hoặc thiếu cả hai đường, thì đổi email, gửi lại mã và quên
+  mật khẩu trả `503 MAIL_DISABLED`, không giả vờ đã gửi.
 - **Giới hạn tần suất** (`429 AUTH_TOO_MANY_ATTEMPTS`, cửa sổ 15 phút, trong bộ
   nhớ): đăng nhập sai 10 lần/tài khoản hoặc 50 lần/IP; xin mã khôi phục 3
   lần/tài khoản hoặc 20 lần/IP; nhập sai mã khôi phục 20 lần/IP; sai mật khẩu
