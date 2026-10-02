@@ -35,9 +35,9 @@ public class StudentProvisioningService {
     }
 
     @Transactional
-    public ProvisionedStudent create(String maSinhVien, String hoTen, LocalDate ngaySinh, String maCoSoNha,
+    public ProvisionedStudent create(String maSinhVien, String hoTen, LocalDate ngaySinh, String coSoNhap,
             String maCTDT, String email) {
-        accounts.requireAvailable(maSinhVien, maCoSoNha);
+        String maCoSoNha = accounts.requireAvailable(maSinhVien, coSoNhap);
         if (students.exists(maSinhVien)) {
             throw studentExists(maSinhVien);
         }

@@ -30,9 +30,9 @@ public class TeacherProvisioningService {
     }
 
     @Transactional
-    public ProvisionedTeacher create(String maGiangVien, String hoTen, String maCoSo, String maKhoa,
+    public ProvisionedTeacher create(String maGiangVien, String hoTen, String coSoNhap, String maKhoa,
             String hocVi, String email) {
-        accounts.requireAvailable(maGiangVien, maCoSo);
+        String maCoSo = accounts.requireAvailable(maGiangVien, coSoNhap);
         if (teachers.findOne(maGiangVien).isPresent()) {
             throw teacherExists(maGiangVien);
         }
