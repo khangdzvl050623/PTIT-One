@@ -12,9 +12,14 @@ Phân công và nghiệm thu: [kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-
 
 - `apps/api` Spring Boot 4.1.1, JDK 21; profile `central` nối một DataSource tới
   `PTITONE_CENTRAL`, profile mặc định không nối DB.
-- Schema `V1`–`V4` chạy tự động bằng Flyway lúc API khởi động — cách chạy ở
+- Schema `V1`–`V6` chạy tự động bằng Flyway lúc API khởi động — cách chạy ở
   [hướng dẫn cài Phần 1](PTIT-One-Cai-Dat-Phan-1.md#migration-và-seed).
 - **A0** xác thực: đăng nhập, refresh có rotation, logout/logout-all, phân quyền.
+- **F02** Admin Master cấp hồ sơ SV/GV kèm tài khoản, kích hoạt bằng mã một lần,
+  cấp lại mã, khoá/mở tài khoản. Cấp tài khoản chỉ ở Master (chốt 02/10/2026).
+- **A1** email + xác minh, đổi mật khẩu, quên mật khẩu bằng mã 6 số gửi qua
+  Brevo, giới hạn tần suất `429`. Cần `PTITONE_OTP_SECRET` và các biến
+  `PTITONE_MAIL_*` trong `.env` (xem `apps/api/.env.example`).
 - **F03** môn học, tiên quyết (chặn chu trình), khoa, học kỳ, chương trình đào tạo.
 - **F04** lớp học phần, phân công GV, lịch học (chặn trùng GV/phòng), đợt đăng ký, huỷ lớp.
 - **F05** GV xem lớp phụ trách, danh sách SV và sĩ số; lịch dạy GV.
@@ -26,7 +31,7 @@ Phân công và nghiệm thu: [kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-
 
 **Chưa có:**
 
-- **F02** cấp hồ sơ, kích hoạt tài khoản; **A1** quên mật khẩu, giới hạn tần suất.
+- Bootstrap Admin Master đầu tiên (hiện dùng `admin.master` của seed).
 - Thông báo đổi lịch/phòng và nhắc đợt đăng ký sắp đóng.
 
 ## Quy ước nhánh

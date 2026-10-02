@@ -7,7 +7,7 @@
  *
  * <p>Module khác lấy dữ liệu qua {@code TeacherDirectory}, không đụng repository.
  *
- * <p>Đã có: tra cứu giảng viên cho việc phân công lớp (F04).
- * Chưa có: cấp và sửa hồ sơ giảng viên (F02).
+ * <p>Đã có: tra cứu giảng viên cho việc phân công lớp (F04); Admin Master cấp
+ * hồ sơ kèm tài khoản chưa kích hoạt (F02). Chưa có: sửa hồ sơ.
  */
 package vn.ptit.one.teacher;
