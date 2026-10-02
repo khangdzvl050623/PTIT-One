@@ -66,6 +66,23 @@ class AccountProvisioningIntegrationTest {
         jdbc.update("DELETE FROM dbo.GiangVien WHERE MaGiangVien = ?", GV);
     }
 
+    /** Collation không phân biệt hoa thường: "hcm" phải được lưu thành mã chuẩn "HCM" ở cả ba bảng. */
+    @Test
+    void maCoSoGoThuongDuocLuuThanhMaChuan() throws Exception {
+        HttpResponse<String> created = signedIn("admin.master", SEED_PASSWORD)
+                .post("/api/students", SV_BODY.replace("\"HCM\"", "\"hcm\""));
+
+        assertThat(created.statusCode()).as(created.body()).isEqualTo(201);
+        assertThat(created.body()).contains("\"maCoSoNha\":\"HCM\"");
+        assertThat(jdbc.queryForObject("""
+                SELECT s.MaCoSoNha + '|' + d.MaCoSo + '|' + t.MaCoSo
+                  FROM dbo.SinhVien s
+                  JOIN dbo.DanhBaNguoiDung d ON d.TenDangNhap = s.MaSinhVien
+                  JOIN dbo.TaiKhoan t ON t.TenDangNhap = s.MaSinhVien
+                 WHERE s.MaSinhVien = ?
+                """, String.class, SV)).isEqualTo("HCM|HCM|HCM");
+    }
+
     /** Luồng chính: cấp → chưa đăng nhập được → kích hoạt → đăng nhập → mã không dùng lại được. */
     @Test
     void capKichHoatRoiDangNhap() throws Exception {

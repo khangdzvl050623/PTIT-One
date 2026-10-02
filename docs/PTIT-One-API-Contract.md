@@ -402,8 +402,10 @@ bị từ chối.
   "Gửi lại mã" — chưa xác minh thì không tự khôi phục mật khẩu được.
 - `POST /api/auth/change-password` `{matKhauHienTai, matKhauMoi}` → `204`, thu hồi
   **mọi phiên kể cả phiên đang dùng** và xoá cookie — UI chuyển về đăng nhập.
-- Chưa cấu hình gửi thư (`PTITONE_MAIL_HOST`/`PTITONE_MAIL_FROM` trống) thì đổi
-  email và quên mật khẩu trả `503 MAIL_DISABLED`, không giả vờ đã gửi.
+- Thư đi qua Brevo: API HTTP nếu có `PTITONE_BREVO_API_KEY` (`xkeysib-`), không
+  thì SMTP relay (`PTITONE_MAIL_HOST` + SMTP key `xsmtpsib-`). Thiếu
+  `PTITONE_MAIL_FROM`, hoặc thiếu cả hai đường, thì đổi email, gửi lại mã và quên
+  mật khẩu trả `503 MAIL_DISABLED`, không giả vờ đã gửi.
 - **Giới hạn tần suất** (`429 AUTH_TOO_MANY_ATTEMPTS`, cửa sổ 15 phút, trong bộ
   nhớ): đăng nhập sai 10 lần/tài khoản hoặc 50 lần/IP; xin mã khôi phục 3
   lần/tài khoản hoặc 20 lần/IP; nhập sai mã khôi phục 20 lần/IP; sai mật khẩu
@@ -538,11 +540,11 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Hạ sức chứa xuống **đúng bằng** sĩ số (3/2 → 2) | `200` | ✓ |
 | Sửa lịch lớp đã có sinh viên | `409 CLASS_HAS_ENROLLMENTS` | ✓ |
 | Gán GV đã dạy lớp khác trùng giờ | `409 TEACHER_SCHEDULE_CLASH` | ✓ |
-| Đặt lịch trùng giờ GV đang dạy lớp khác | `409 SCHEDULE_TEACHER_CLASH` | **✗** |
+| Đặt lịch trùng giờ GV đang dạy lớp khác | `409 SCHEDULE_TEACHER_CLASH` | ✓ |
 | Đặt lịch trùng phòng, khác hoa thường (`a2-201` vs `A2-201`) | `409 SCHEDULE_ROOM_CLASH` | ✓ |
 | Hai buổi của cùng lớp chồng nhau | `400 SCHEDULE_SELF_OVERLAP` | ✓ |
-| Tiết 11 kéo 4 tiết | `400 SCHEDULE_SLOT_INVALID` | **✗** |
-| Lịch rỗng | `200`, xoá hết lịch | **✗** |
+| Tiết 11 kéo 4 tiết | `400 SCHEDULE_SLOT_INVALID` | ✓ |
+| Lịch rỗng | `200`, xoá hết lịch | ✓ |
 | Chu trình tiên quyết dài `A → B → C → A` | `409 PREREQUISITE_CYCLE`, tập cũ còn nguyên | ✓ |
 | Môn tự làm tiên quyết của chính nó | `400 PREREQUISITE_SELF` | ✓ |
 | Tiên quyết không tồn tại | `400 PREREQUISITE_UNKNOWN` | ✓ |
@@ -580,7 +582,7 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | `/me` khi chưa có email, rồi sau khi xác minh | `emailDaXacMinh` `false` → `true` | ✓ |
 | Gửi lại mã xác minh | mã trước mất hiệu lực; đã xác minh thì `409` | ✓ |
 | Profile `central` + SQL Server tắt | API vẫn khởi động | ✓ |
-| `/api/health/db` khi SQL Server tắt | `503`, thân báo `DOWN` | **✗** |
+| `/api/health/db` khi SQL Server tắt | `503`, thân báo `DOWN` | ✓ |
 | `openapi.json` lệch với code | build đỏ ở `OpenApiContractTest` | ✓ |
 | GV xem danh sách lớp của GV khác (đổi mã lớp trên URL) | `403 AUTH_FORBIDDEN` | ✓ |
 | SV xem danh sách lớp, kể cả lớp mình học | `403` | ✓ |

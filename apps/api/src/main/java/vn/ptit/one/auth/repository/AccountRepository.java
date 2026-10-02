@@ -114,10 +114,14 @@ public class AccountRepository {
         return jdbc.update(BUMP_VERSION, username);
     }
 
-    public boolean campusExists(String maCoSo) {
-        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.CoSo WHERE MaCoSo = ?",
-                Integer.class, maCoSo);
-        return count != null && count > 0;
+    /**
+     * Mã cơ sở đúng như trong bảng {@code CoSo}. Collation không phân biệt hoa
+     * thường nên {@code hcm} vẫn khớp {@code HCM} — phải ghi giá trị CHUẨN, vì
+     * code Java so sánh phân biệt hoa thường.
+     */
+    public Optional<String> findCampus(String maCoSo) {
+        return jdbc.queryForList("SELECT MaCoSo FROM dbo.CoSo WHERE MaCoSo = ?", String.class, maCoSo.trim())
+                .stream().findFirst();
     }
 
     /** Tên đăng nhập hoặc mã thực thể đã có trong danh bạ. */
