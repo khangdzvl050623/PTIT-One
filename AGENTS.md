@@ -14,8 +14,10 @@ nghiệp vụ với một database tập trung; Phần 2 phân tán lập kế h
 Frontend ở `apps/web`, backend ở `apps/api`; nhóm đã thống nhất cấu trúc này.
 Mọi hướng dẫn chạy, cấu hình và tính năng mới dùng hai đường dẫn trên.
 Backend chia module nghiệp vụ: `auth`, `student`, `teacher`, `course`,
-`enrollment`, `grade`, `timetable`; `health` phục vụ liveness, `shared` chứa
-kỹ thuật dùng chung. Mỗi bảng có đúng MỘT module sở hữu.
+`enrollment`, `grade`, `timetable`, `notification` (thêm 02/10/2026, sở hữu
+`ThongBao`, `ThongBaoNguoiNhan`); `report` chỉ đọc, không sở hữu bảng;
+`health` phục vụ liveness, `shared` chứa kỹ thuật dùng chung. Mỗi bảng có
+đúng MỘT module sở hữu.
 Trong mỗi module, thêm `controller/service/repository/dto/model` khi có code;
 `policy` dành cho quy tắc thuần phức tạp. Không dựng lại bốn tầng chung
 `domain/application/infrastructure/interfaces` ở package gốc.
@@ -24,9 +26,9 @@ không import Spring/JDBC. Module gọi API công khai của nhau, không truy c
 repository nội bộ của module khác; không phụ thuộc vòng. `shared` không
 import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
 API đã nối `PTITONE_CENTRAL` qua profile `central` (một DataSource); profile
-mặc định không nối DB. Đã có schema (`V1` auth + `V2` học vụ) và xác thực A0
-(đăng nhập, phiên, refresh có rotation, phân quyền theo vai trò). Chưa có API
-nghiệp vụ — trạng thái thật ở `docs/PTIT-One-Backend-Khoi-Dong.md`.
+mặc định không nối DB. Đã có schema `V1`–`V4`, xác thực A0 và API nghiệp vụ
+Phần 1 (F03–F09, thống kê, thông báo); còn thiếu F02 — trạng thái thật ở
+`docs/PTIT-One-Backend-Khoi-Dong.md`.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.
 

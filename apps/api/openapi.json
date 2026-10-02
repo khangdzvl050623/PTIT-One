@@ -9,6 +9,57 @@
         },
         "type" : "object"
       },
+      "AuthoredNotification" : {
+        "properties" : {
+          "doiTuong" : {
+            "type" : "string"
+          },
+          "lienKet" : {
+            "type" : "string"
+          },
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          },
+          "maThongBao" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "mucDo" : {
+            "type" : "string"
+          },
+          "ngayGui" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "ngayTao" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "nguoiNhan" : {
+            "$ref" : "#/components/schemas/RecipientCount"
+          },
+          "noiDung" : {
+            "type" : "string"
+          },
+          "phamVi" : {
+            "type" : "string"
+          },
+          "soDaDoc" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tieuDe" : {
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Capacity" : {
         "properties" : {
           "soLopConCho" : {
@@ -413,6 +464,70 @@
         },
         "type" : "object"
       },
+      "Inbox" : {
+        "properties" : {
+          "kichThuoc" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soChuaDoc" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "thongBao" : {
+            "items" : {
+              "$ref" : "#/components/schemas/InboxItem"
+            },
+            "type" : "array"
+          },
+          "trang" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "InboxItem" : {
+        "properties" : {
+          "daDoc" : {
+            "type" : "boolean"
+          },
+          "lienKet" : {
+            "type" : "string"
+          },
+          "loai" : {
+            "type" : "string"
+          },
+          "maThongBao" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "mucDo" : {
+            "type" : "string"
+          },
+          "ngayDoc" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "ngayGui" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "noiDung" : {
+            "type" : "string"
+          },
+          "suKien" : {
+            "type" : "string"
+          },
+          "tieuDe" : {
+            "type" : "string"
+          },
+          "vaiTroNguoiGui" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LoginRequest" : {
         "properties" : {
           "password" : {
@@ -461,6 +576,19 @@
               "$ref" : "#/components/schemas/ProgramCourse"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "RecipientCount" : {
+        "properties" : {
+          "soGiangVien" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soSinhVien" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -621,6 +749,50 @@
           }
         },
         "required" : [ "diem" ],
+        "type" : "object"
+      },
+      "SaveNotificationRequest" : {
+        "properties" : {
+          "doiTuong" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "lienKet" : {
+            "maxLength" : 300,
+            "minLength" : 0,
+            "pattern" : "^/(?!/)\\S*$",
+            "type" : "string"
+          },
+          "maCoSo" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "maLopHP" : {
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "mucDo" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "noiDung" : {
+            "maxLength" : 4000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phamVi" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "tieuDe" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "doiTuong", "mucDo", "noiDung", "phamVi", "tieuDe" ],
         "type" : "object"
       },
       "ScheduleSlot" : {
@@ -1178,7 +1350,7 @@
         "tags" : [ "class-section-controller" ]
       },
       "post" : {
-        "operationId" : "create_2",
+        "operationId" : "create_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1206,7 +1378,7 @@
     },
     "/api/classes/{maLopHP}" : {
       "get" : {
-        "operationId" : "detail_1",
+        "operationId" : "detail_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "maLopHP",
@@ -1230,7 +1402,7 @@
         "tags" : [ "class-section-controller" ]
       },
       "put" : {
-        "operationId" : "update_2",
+        "operationId" : "update_3",
         "parameters" : [ {
           "in" : "path",
           "name" : "maLopHP",
@@ -1534,7 +1706,7 @@
         "tags" : [ "course-controller" ]
       },
       "post" : {
-        "operationId" : "create_1",
+        "operationId" : "create_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1562,7 +1734,7 @@
     },
     "/api/courses/{maMonHoc}" : {
       "get" : {
-        "operationId" : "detail",
+        "operationId" : "detail_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "maMonHoc",
@@ -1586,7 +1758,7 @@
         "tags" : [ "course-controller" ]
       },
       "put" : {
-        "operationId" : "update_1",
+        "operationId" : "update_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "maMonHoc",
@@ -1685,7 +1857,7 @@
         "tags" : [ "enrollment-period-controller" ]
       },
       "post" : {
-        "operationId" : "create",
+        "operationId" : "create_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1713,7 +1885,7 @@
     },
     "/api/enrollment-periods/{maDot}" : {
       "put" : {
-        "operationId" : "update",
+        "operationId" : "update_1",
         "parameters" : [ {
           "in" : "path",
           "name" : "maDot",
@@ -1911,6 +2083,126 @@
         "tags" : [ "student-grade-controller" ]
       }
     },
+    "/api/me/notifications" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "chuaDoc",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
+        }, {
+          "in" : "query",
+          "name" : "trang",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "kichThuoc",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Inbox"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "inbox-controller" ]
+      }
+    },
+    "/api/me/notifications/read-all" : {
+      "post" : {
+        "operationId" : "markAllRead",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "format" : "int32",
+                    "type" : "integer"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "inbox-controller" ]
+      }
+    },
+    "/api/me/notifications/unread-count" : {
+      "get" : {
+        "operationId" : "unreadCount",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "format" : "int32",
+                    "type" : "integer"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "inbox-controller" ]
+      }
+    },
+    "/api/me/notifications/{maThongBao}/read" : {
+      "post" : {
+        "operationId" : "markRead",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maThongBao",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "format" : "int32",
+                    "type" : "integer"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "inbox-controller" ]
+      }
+    },
     "/api/me/teaching-classes" : {
       "get" : {
         "operationId" : "teachingClasses",
@@ -2006,6 +2298,188 @@
           }
         },
         "tags" : [ "student-enrollment-controller" ]
+      }
+    },
+    "/api/notifications" : {
+      "get" : {
+        "operationId" : "mine",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AuthoredNotification"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "notification-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveNotificationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthoredNotification"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "notification-controller" ]
+      }
+    },
+    "/api/notifications/preview" : {
+      "post" : {
+        "operationId" : "preview",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveNotificationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RecipientCount"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "notification-controller" ]
+      }
+    },
+    "/api/notifications/{maThongBao}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maThongBao",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "notification-controller" ]
+      },
+      "get" : {
+        "operationId" : "detail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maThongBao",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthoredNotification"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "notification-controller" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maThongBao",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SaveNotificationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthoredNotification"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "notification-controller" ]
+      }
+    },
+    "/api/notifications/{maThongBao}/send" : {
+      "post" : {
+        "operationId" : "send",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maThongBao",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthoredNotification"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "notification-controller" ]
       }
     },
     "/api/programs" : {

@@ -211,8 +211,7 @@ Mở `http://localhost:5173`.
 | Mở `http://localhost:5173/api/health` | cùng JSON như trên |
 | *(chạy backend)* `sqlcmd -S "tcp:localhost,14330" -U ptitone_api -d PTITONE_CENTRAL -Q "SELECT SUSER_NAME()"` | `ptitone_api` |
 | *(chạy backend)* `Invoke-RestMethod http://localhost:8080/api/health/db` | `status: UP`, `login: ptitone_api` |
-
-**0 bảng trong CENTRAL là đúng** — TV2 chưa có migration.
+| *(sau khi chạy API)* `SELECT TOP 1 version FROM flyway_schema_history ORDER BY installed_rank DESC` | số V mới nhất trong `db/central/migrations` |
 
 # Lỗi thường gặp
 
@@ -232,13 +231,31 @@ Mở `http://localhost:5173`.
 | Chạy `dev-api.ps1` xong không gõ được lệnh tiếp | Đúng vậy — nó giữ terminal khi app đang chạy. Gọi API ở **terminal thứ hai** |
 | `.env` điền rồi vẫn không nối được | Kiểm dán lặp tên biến: dòng phải là `PTITONE_DB_URL=jdbc:...`, không phải `PTITONE_DB_URL=PTITONE_DB_URL=jdbc:...` |
 
-# Chưa có gì
+# Migration và seed
 
-Chạy hết phần trên bạn có: SQL Server + CENTRAL **rỗng** + API skeleton + web
-+ proxy thông. **Chưa có** schema, migration, seed, JDBC, đăng nhập và mọi API
-nghiệp vụ — gọi thử trả 404 là **đúng**.
+**Migration** (`db/central/migrations/V<n>__*.sql`) do API tự chạy lúc khởi
+động bằng Flyway. Trong `apps/api/.env`:
 
-**Tạo được database rỗng không phải là xong ENV-04 hay F00.**
+```
+PTITONE_MIGRATE_ON_START=true
+PTITONE_MIGRATION_USERNAME=<login có db_ddladmin>
+PTITONE_MIGRATION_PASSWORD=<mật khẩu>
+```
+
+Mỗi lần `git pull` thấy file `V<n>__` mới: **chỉ cần chạy lại API**
+(`.\scripts\dev-api.ps1`). Log có `Successfully applied N migration` là xong.
+Không chạy tay file `V`, và **không sửa file `V` đã merge** — Flyway báo lệch
+checksum; muốn đổi schema thì thêm file `V` mới.
+
+**Seed** chạy tay, chạy lại nhiều lần không nhân đôi dữ liệu. Chạy lại mỗi khi
+`db/central/seed/` đổi, **sau** khi API đã migrate:
+
+```powershell
+sqlcmd -S "localhost\PTITONE" -d PTITONE_CENTRAL -E -C -b -f 65001 -i db\central\seed\10-auth-seed.sql
+sqlcmd -S "localhost\PTITONE" -d PTITONE_CENTRAL -E -C -b -f 65001 -i db\central\seed\20-hoc-vu-seed.sql
+```
+
+Seed in bảng đối soát ở cuối: mọi cột `Lech` phải bằng 0.
 
 ---
 

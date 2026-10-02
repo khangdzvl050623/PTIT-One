@@ -36,6 +36,9 @@ cho mỗi file SQL mới và kiểm chứng riêng trên SQL Server.
 - `V2__hoc_vu_schema.sql` — schema học vụ: 7 bảng danh mục + 9 bảng vận hành,
   CHECK/UNIQUE/chỉ mục, hợp nhất từ `db/master/01` + `db/site/10..12`. Bỏ
   Mirror/Outbox/YeuCau/KetQua. FK chỉ có ở Phần 1 đánh dấu `[P1]` trong file.
+- `V3__dot_dang_ky_mot_dot_mo.sql` — mỗi cơ sở chỉ một đợt `DANG_MO` mỗi học kỳ.
+- `V4__thong_bao.sql` — `ThongBao`, `ThongBaoNguoiNhan` cho module `notification`
+  (nhóm cho phép ngày 02/10/2026): thông báo soạn tay và tự sinh, trạng thái đọc.
 
 Tài khoản chạy migration cần `db_ddladmin` (hoặc cao hơn). Login chỉ có
 `CONNECT` sẽ báo `CREATE TABLE permission denied`.

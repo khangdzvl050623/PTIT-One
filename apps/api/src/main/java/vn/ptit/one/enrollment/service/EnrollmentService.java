@@ -1,6 +1,7 @@
 package vn.ptit.one.enrollment.service;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +24,10 @@ import vn.ptit.one.enrollment.repository.EnrollmentRepository;
 import vn.ptit.one.enrollment.repository.EnrollmentRepository.TermCredits;
 import vn.ptit.one.grade.policy.GradePolicy;
 import vn.ptit.one.grade.service.GradeRecords;
+import vn.ptit.one.notification.model.AutoNotification;
+import vn.ptit.one.notification.model.NotificationTerms;
+import vn.ptit.one.notification.model.Recipient;
+import vn.ptit.one.notification.service.NotificationPublisher;
 import vn.ptit.one.shared.exception.ApiException;
 import vn.ptit.one.student.model.StudentProfile;
 import vn.ptit.one.student.service.StudentDirectory;
@@ -57,12 +62,14 @@ public class EnrollmentService {
     private final ScheduleService schedules;
     private final GradeRecords grades;
     private final StudentDirectory students;
+    private final NotificationPublisher notifications;
     private final EnrollmentProperties properties;
     private final Clock clock;
 
     public EnrollmentService(EnrollmentRepository enrollments, ClassSectionService classes,
             CourseService courses, EnrollmentPeriodService periods, ScheduleService schedules,
-            GradeRecords grades, StudentDirectory students, EnrollmentProperties properties, Clock clock) {
+            GradeRecords grades, StudentDirectory students, NotificationPublisher notifications,
+            EnrollmentProperties properties, Clock clock) {
         this.enrollments = enrollments;
         this.classes = classes;
         this.courses = courses;
@@ -70,6 +77,7 @@ public class EnrollmentService {
         this.schedules = schedules;
         this.grades = grades;
         this.students = students;
+        this.notifications = notifications;
         this.properties = properties;
         this.clock = clock;
     }
@@ -155,10 +163,20 @@ public class EnrollmentService {
             throw new ApiException(HttpStatus.CONFLICT, "CLASS_FULL",
                     "Lớp %s đã đủ %d sinh viên.".formatted(maLopHP, lop.soLuongToiDa()));
         }
-        enrollments.upsertClassEnrollment(maLopHP, sv.maSinhVien(), sv.maCoSoNha(), sv.hoTen(), clock.instant());
+        Instant now = clock.instant();
+        enrollments.upsertClassEnrollment(maLopHP, sv.maSinhVien(), sv.maCoSoNha(), sv.hoTen(), now);
         enrollments.upsertCourseEnrollment(sv.maSinhVien(), maHocKy, lop.maMonHoc(), maLopHP,
                 lop.maCoSoHost(), lop.soTinChi(), lop.phienBanLich());
         grades.openRecord(maLopHP, sv.maSinhVien());
+        // Cùng giao dịch: đăng ký rollback thì thông báo cũng không còn. Khoá gồm
+        // thời điểm đăng ký nên huỷ rồi đăng ký lại ra thông báo MỚI.
+        notifications.publish(new AutoNotification(NotificationTerms.DANG_KY,
+                "DANG_KY:%s:%s:%d".formatted(maLopHP, sv.maSinhVien(), now.toEpochMilli()),
+                NotificationTerms.THONG_THUONG,
+                "Đăng ký thành công %s".formatted(lop.tenMonHoc()),
+                "Bạn đã đăng ký lớp %s (%d tín chỉ) học kỳ %s."
+                        .formatted(maLopHP, lop.soTinChi(), maHocKy),
+                dangKyLink(maHocKy), maLopHP, List.of(Recipient.student(sv.maSinhVien()))));
 
         return new Registration(new RegistrationResult(enrolled(sv.maSinhVien(), maHocKy, maLopHP),
                 loaiDangKy(lop.maMonHoc(), ketQua)), true);
@@ -192,6 +210,13 @@ public class EnrollmentService {
             throw new ApiException(HttpStatus.CONFLICT, "ENROLLMENT_HAS_GRADE",
                     "Lớp %s đã có điểm của bạn, không huỷ được.".formatted(maLopHP));
         }
+        notifications.publish(new AutoNotification(NotificationTerms.HUY_DANG_KY,
+                "HUY_DANG_KY:%s:%s:%d".formatted(maLopHP, maSinhVien, clock.instant().toEpochMilli()),
+                NotificationTerms.THONG_THUONG,
+                "Đã huỷ đăng ký %s".formatted(lop.tenMonHoc()),
+                "Bạn đã huỷ lớp %s; %d tín chỉ đã được trả lại cho học kỳ %s. Xem lớp còn chỗ để đăng ký bổ sung."
+                        .formatted(maLopHP, soTinChi, maHocKy),
+                dangKyLink(maHocKy), maLopHP, List.of(Recipient.student(maSinhVien))));
         return myEnrollments(user, maHocKy);
     }
 
@@ -225,6 +250,10 @@ public class EnrollmentService {
                 .filter(course -> course.maLopHP().equals(maLopHP))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private static String dangKyLink(String maHocKy) {
+        return "/sinh-vien/dang-ky?maHocKy=" + maHocKy;
     }
 
     /** Đã đạt thì là cải thiện, đã trượt thì là học lại; điểm tính là điểm cao nhất. */
