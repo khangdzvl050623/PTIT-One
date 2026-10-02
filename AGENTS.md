@@ -14,8 +14,10 @@ nghiệp vụ với một database tập trung; Phần 2 phân tán lập kế h
 Frontend ở `apps/web`, backend ở `apps/api`; nhóm đã thống nhất cấu trúc này.
 Mọi hướng dẫn chạy, cấu hình và tính năng mới dùng hai đường dẫn trên.
 Backend chia module nghiệp vụ: `auth`, `student`, `teacher`, `course`,
-`enrollment`, `grade`, `timetable`; `health` phục vụ liveness, `shared` chứa
-kỹ thuật dùng chung. Mỗi bảng có đúng MỘT module sở hữu.
+`enrollment`, `grade`, `timetable`, `notification` (thêm 02/10/2026, sở hữu
+`ThongBao`, `ThongBaoNguoiNhan`); `report` chỉ đọc, không sở hữu bảng;
+`health` phục vụ liveness, `shared` chứa kỹ thuật dùng chung. Mỗi bảng có
+đúng MỘT module sở hữu.
 Trong mỗi module, thêm `controller/service/repository/dto/model` khi có code;
 `policy` dành cho quy tắc thuần phức tạp. Không dựng lại bốn tầng chung
 `domain/application/infrastructure/interfaces` ở package gốc.

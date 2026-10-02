@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 57 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 62 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -105,6 +105,8 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/me/grades` · `/api/me/timetable` · `/api/me/enrollments` | `SINH_VIEN` |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
+| GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |
+| GET · POST · PUT · DELETE | `/api/notifications` · `/preview` · `/{id}` · `/{id}/send` | `ADMIN_MASTER` · `ADMIN_CO_SO` · `GIANG_VIEN` — chỉ bản **mình soạn** |
 
 ### Hai quy tắc phạm vi
 
@@ -289,6 +291,46 @@ bị từ chối.
   `chuaCongBo` (còn lại, kể cả lớp chưa có SV).
 - Báo cáo liên cơ sở thuộc Phần 2.
 
+### Thông báo
+
+**Hộp thư** (`/api/me/notifications`, SV và GV):
+
+- Thông báo **tự sinh**: đăng ký thành công, huỷ thành công, điểm vừa công bố,
+  điểm đã công bố bị sửa (`suKien` ∈ `DANG_KY` · `HUY_DANG_KY` · `CONG_BO_DIEM` ·
+  `SUA_DIEM`). Ghi **cùng giao dịch** nghiệp vụ: nghiệp vụ thất bại thì không có
+  thông báo. Bấm đăng ký hai lần không ra hai thông báo; huỷ rồi đăng ký lại thì ra
+  thông báo mới. Sửa điểm mà giá trị không đổi thì không báo.
+- `daDoc` là **của riêng người đọc**; nhãn "Mới" theo thời gian là việc của UI.
+  **Mở hộp thư không tự đánh dấu đã đọc** — chỉ `/{id}/read` hoặc `/read-all`.
+  Đọc lại là không làm gì.
+- `?chuaDoc=true` lọc chưa đọc; `trang` từ 0, `kichThuoc` 1–50. `soChuaDoc` là của
+  cả hộp thư. Chuông dùng `/unread-count` cho nhẹ.
+- `lienKet` là đường dẫn nội bộ của web (ví dụ `/sinh-vien/bang-diem?maHocKy=2026-1`).
+- Admin không có hộp thư (`403`).
+
+**Soạn tay** (`/api/notifications`):
+
+| Người gửi | `phamVi` được dùng |
+|---|---|
+| `ADMIN_MASTER` | `TOAN_TRUONG` · `CO_SO` (bất kỳ) · `LOP_HOC_PHAN` (bất kỳ) |
+| `ADMIN_CO_SO` | `CO_SO` (của mình; bỏ trống `maCoSo` là cơ sở mình) · `LOP_HOC_PHAN` do cơ sở mình mở |
+| `GIANG_VIEN` | `LOP_HOC_PHAN` đang được phân công |
+
+- `doiTuong` ∈ `SINH_VIEN` · `GIANG_VIEN` · `TAT_CA`; `mucDo` ∈ `THONG_THUONG` ·
+  `QUAN_TRONG`. "Lớp" ở đây là **lớp học phần**, không phải lớp hành chính.
+- Người nhận: `CO_SO` / `TOAN_TRUONG` lấy SV theo **cơ sở nhà**, chỉ SV **đang học
+  hoặc bảo lưu**; GV theo cơ sở công tác. `LOP_HOC_PHAN` lấy SV đang giữ chỗ và GV
+  phụ trách. Người gửi không tự nhận.
+- Luồng: `POST` tạo **nháp** → `POST /preview` hoặc `GET /{id}` xem **số người nhận
+  dự kiến** → `POST /{id}/send` **chốt** danh sách người nhận. SV chuyển lớp sau đó
+  không làm lịch sử đổi theo.
+- Quyền kiểm **cả lúc gửi**: GV bị gỡ phân công thì không gửi được nháp cũ.
+- Đã gửi thì không sửa, không xoá, không gửi lại (`409 NOTIFICATION_ALREADY_SENT`).
+  Chỉ xoá được nháp.
+- `lienKet` chỉ nhận đường dẫn nội bộ bắt đầu bằng `/` (không nhận `https://…`
+  hay `//…`) — thông báo chính thức không được dẫn sang trang lạ.
+- Bản soạn của người khác trả `404`, không lộ là có tồn tại.
+
 ### Phiên đăng nhập
 
 - `401 AUTH_INVALID_CREDENTIALS` cho **mọi** lý do từ chối: sai mật khẩu, chưa
@@ -356,6 +398,11 @@ bị từ chối.
 | `ENROLLMENT_NOT_FOUND` | 404 | Huỷ lớp mình không đăng ký |
 | `ENROLLMENT_HAS_GRADE` | 409 | Huỷ khi đã có điểm |
 | `ENROLLMENT_BUSY` | 503 | Đang xử lý một yêu cầu khác của chính SV đó |
+| `NOTIFICATION_NOT_FOUND` | 404 | Không có, hoặc không phải của mình |
+| `NOTIFICATION_INVALID` | 400 | `phamVi` / `doiTuong` / `mucDo` sai, thiếu lớp |
+| `NOTIFICATION_ALREADY_SENT` | 409 | Sửa, xoá hoặc gửi lại bản đã gửi |
+| `NOTIFICATION_NO_RECIPIENTS` | 409 | Phạm vi hiện không có ai nhận |
+| `CAMPUS_NOT_FOUND` | 400 | Mã cơ sở không có |
 | `PREREQUISITE_SELF` | 400 | Môn tự làm tiên quyết của chính nó |
 | `PREREQUISITE_UNKNOWN` | 400 | Môn tiên quyết không tồn tại |
 | `PREREQUISITE_CYCLE` | 409 | Tạo thành chu trình |
@@ -454,6 +501,13 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |
 | Admin cơ sở lọc thống kê cơ sở khác | `403` | ✓ |
 | Cơ sở không có lớp | `tiLeLapDay: null` | ✓ |
+| Đăng ký → bấm lại → huỷ → đăng ký lại | đúng 3 thông báo | ✓ |
+| Đăng ký bị từ chối | không có thông báo | ✓ |
+| Công bố điểm / sửa điểm đã công bố / lưu lại cùng điểm | báo / báo / không báo | ✓ |
+| Soạn → xem trước → gửi → đọc → đọc tất cả | đếm người nhận và chưa đọc đúng | ✓ |
+| Gửi hai lần, sửa bản đã gửi | `409` | ✓ |
+| Admin cơ sở gửi toàn trường / cơ sở khác; GV gửi lớp người khác | `403` | ✓ |
+| Liên kết `https://…` hoặc `//…` | `400` | ✓ |
 
 Chạy: `.\scripts\dev-api.ps1 -MavenArguments verify`. Các ca tích hợp cần
 SQL Server và biến `PTITONE_DB_URL`; thiếu thì chúng **skip chứ không đỏ**.
@@ -496,7 +550,6 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 |---|---|
 | F02 | Cấp hồ sơ, kích hoạt tài khoản, quên mật khẩu |
 
-Thông báo chưa có endpoint.
 
 Gọi các đường dẫn chưa có trả `404` — đó là hành vi đúng.
 

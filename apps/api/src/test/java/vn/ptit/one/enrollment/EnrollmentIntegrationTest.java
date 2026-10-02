@@ -256,6 +256,11 @@ class EnrollmentIntegrationTest {
 
     private void dropClasses() {
         for (String lop : List.of(LOP_CAI_THIEN, LOP_TRUNG_MON)) {
+            jdbc.update("""
+                    DELETE n FROM dbo.ThongBaoNguoiNhan n JOIN dbo.ThongBao t ON t.MaThongBao = n.MaThongBao
+                     WHERE t.MaLopHP = ?
+                    """, lop);
+            jdbc.update("DELETE FROM dbo.ThongBao WHERE MaLopHP = ?", lop);
             jdbc.update("DELETE FROM dbo.Diem WHERE MaLopHP = ?", lop);
             jdbc.update("DELETE FROM dbo.DangKyMonHoc WHERE MaLopHP = ?", lop);
             jdbc.update("DELETE FROM dbo.DangKyHocPhan WHERE MaLopHP = ?", lop);

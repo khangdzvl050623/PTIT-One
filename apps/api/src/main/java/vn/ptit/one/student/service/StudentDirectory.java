@@ -1,5 +1,7 @@
 package vn.ptit.one.student.service;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,16 @@ public class StudentDirectory {
 
     public StudentDirectory(StudentRepository students) {
         this.students = students;
+    }
+
+    /**
+     * Sinh viên còn thuộc trường theo cơ sở NHÀ — người nhận bản tin cơ sở/toàn
+     * trường. Bỏ người đã thôi học và đã tốt nghiệp.
+     *
+     * @param maCoSo {@code null} là toàn trường
+     */
+    public List<String> currentStudentIds(String maCoSo) {
+        return students.currentStudentIds(maCoSo);
     }
 
     public StudentProfile require(String maSinhVien) {

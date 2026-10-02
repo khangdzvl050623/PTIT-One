@@ -2,9 +2,13 @@ package vn.ptit.one.grade.service;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -21,6 +25,10 @@ import vn.ptit.one.grade.model.GradeSheet;
 import vn.ptit.one.grade.policy.GradePolicy;
 import vn.ptit.one.grade.repository.GradeRepository;
 import vn.ptit.one.grade.repository.GradeRepository.ClassGradeRow;
+import vn.ptit.one.notification.model.AutoNotification;
+import vn.ptit.one.notification.model.NotificationTerms;
+import vn.ptit.one.notification.model.Recipient;
+import vn.ptit.one.notification.service.NotificationPublisher;
 import vn.ptit.one.shared.exception.ApiException;
 
 /**
@@ -43,13 +51,15 @@ public class GradeBookService {
     private final GradeRepository grades;
     private final ClassSectionService classes;
     private final GradePolicy policy;
+    private final NotificationPublisher notifications;
     private final Clock clock;
 
     public GradeBookService(GradeRepository grades, ClassSectionService classes,
-            GradePolicy policy, Clock clock) {
+            GradePolicy policy, NotificationPublisher notifications, Clock clock) {
         this.grades = grades;
         this.classes = classes;
         this.policy = policy;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -67,6 +77,8 @@ public class GradeBookService {
         requireTeacherOf(user, maLopHP);
         ClassSection lop = lockAndRequireOpen(maLopHP);
         requireNoDuplicates(rows);
+        Map<String, ClassGradeRow> truoc = grades.findByClass(maLopHP).stream()
+                .collect(Collectors.toMap(ClassGradeRow::maSinhVien, Function.identity()));
 
         for (SaveGradesRequest.Row row : rows) {
             String maSinhVien = row.maSinhVien().trim();
@@ -80,6 +92,17 @@ public class GradeBookService {
                                         .formatted(maSinhVien))
                         : new ApiException(HttpStatus.BAD_REQUEST, "GRADE_STUDENT_NOT_ENROLLED",
                                 "Sinh viên %s không có trong lớp %s.".formatted(maSinhVien, maLopHP));
+            }
+            ClassGradeRow cu = truoc.get(maSinhVien);
+            if (cu != null && cu.ngayCongBo() != null && changed(cu, row)) {
+                // Sinh viên đã thấy điểm cũ: báo riêng người đó. Khoá theo phiên bản mới.
+                notifications.publish(new AutoNotification(NotificationTerms.SUA_DIEM,
+                        "SUA_DIEM:%s:%s:%d".formatted(maLopHP, maSinhVien, cu.version() + 1),
+                        NotificationTerms.QUAN_TRONG,
+                        "Điểm %s vừa được cập nhật".formatted(lop.tenMonHoc()),
+                        "Giảng viên đã sửa điểm đã công bố của lớp %s. Điểm tổng kết hiện tại: %s."
+                                .formatted(maLopHP, tongKet == null ? "chưa có" : tongKet.toPlainString()),
+                        bangDiemLink(lop), maLopHP, List.of(Recipient.student(maSinhVien))));
             }
         }
         return sheetOf(lop);
@@ -100,7 +123,19 @@ public class GradeBookService {
                     "Còn %d sinh viên chưa đủ điểm thành phần: %s."
                             .formatted(thieu.size(), String.join(", ", thieu)));
         }
-        grades.publish(maLopHP, clock.instant());
+        List<Recipient> moiCongBo = grades.findByClass(maLopHP).stream()
+                .filter(row -> row.ngayCongBo() == null)
+                .map(row -> Recipient.student(row.maSinhVien()))
+                .toList();
+        Instant now = clock.instant();
+        grades.publish(maLopHP, now);
+        // Chỉ báo những người vừa được công bố lần này; gọi lại khi không còn nháp thì không phát gì.
+        notifications.publish(new AutoNotification(NotificationTerms.CONG_BO_DIEM,
+                "CONG_BO_DIEM:%s:%d".formatted(maLopHP, now.toEpochMilli()),
+                NotificationTerms.THONG_THUONG,
+                "Đã có điểm %s".formatted(lop.tenMonHoc()),
+                "Điểm lớp %s học kỳ %s đã được công bố.".formatted(maLopHP, lop.maHocKy()),
+                bangDiemLink(lop), maLopHP, moiCongBo));
         return sheetOf(lop);
     }
 
@@ -178,6 +213,21 @@ public class GradeBookService {
                         "Sinh viên %s xuất hiện hai lần trong cùng một lần lưu.".formatted(row.maSinhVien()));
             }
         }
+    }
+
+    private static boolean changed(ClassGradeRow cu, SaveGradesRequest.Row moi) {
+        return !same(cu.diemChuyenCan(), moi.diemChuyenCan())
+                || !same(cu.diemGiuaKy(), moi.diemGiuaKy())
+                || !same(cu.diemCuoiKy(), moi.diemCuoiKy());
+    }
+
+    /** So theo giá trị: 8 và 8.0 là một. */
+    private static boolean same(BigDecimal a, BigDecimal b) {
+        return a == null ? b == null : b != null && a.compareTo(b) == 0;
+    }
+
+    private static String bangDiemLink(ClassSection lop) {
+        return "/sinh-vien/bang-diem?maHocKy=" + lop.maHocKy();
     }
 
     private static List<String> incomplete(List<ClassGradeRow> rows) {

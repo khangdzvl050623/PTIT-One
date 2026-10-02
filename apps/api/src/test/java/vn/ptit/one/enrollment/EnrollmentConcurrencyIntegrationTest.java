@@ -76,6 +76,11 @@ class EnrollmentConcurrencyIntegrationTest {
     @AfterEach
     void dropFixture() {
         String like = PREFIX + "%";
+        jdbc.update("""
+                DELETE n FROM dbo.ThongBaoNguoiNhan n JOIN dbo.ThongBao t ON t.MaThongBao = n.MaThongBao
+                 WHERE t.MaLopHP = ?
+                """, LOP);
+        jdbc.update("DELETE FROM dbo.ThongBao WHERE MaLopHP = ?", LOP);
         jdbc.update("DELETE FROM dbo.Diem WHERE MaSinhVien LIKE ?", like);
         jdbc.update("DELETE FROM dbo.DangKyMonHoc WHERE MaSinhVien LIKE ?", like);
         jdbc.update("DELETE FROM dbo.DangKyHocPhan WHERE MaSinhVien LIKE ?", like);
