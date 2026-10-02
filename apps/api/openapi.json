@@ -9,6 +9,30 @@
         },
         "type" : "object"
       },
+      "Capacity" : {
+        "properties" : {
+          "soLopConCho" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soLopDay" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tiLeLapDay" : {
+            "type" : "number"
+          },
+          "tongDaDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tongSucChua" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ClassRoster" : {
         "properties" : {
           "lop" : {
@@ -108,6 +132,24 @@
               "$ref" : "#/components/schemas/CourseSummary"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "CourseReport" : {
+        "properties" : {
+          "capNhatLuc" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "monHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Row"
+            },
+            "type" : "array"
+          },
+          "phamVi" : {
+            "$ref" : "#/components/schemas/ReportScope"
           }
         },
         "type" : "object"
@@ -326,6 +368,23 @@
         },
         "type" : "object"
       },
+      "GradeProgress" : {
+        "properties" : {
+          "chuaCongBo" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "daCongBo" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "daKhoa" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "GradeSheet" : {
         "properties" : {
           "diem" : {
@@ -424,6 +483,58 @@
           },
           "loaiDangKy" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Registrations" : {
+        "properties" : {
+          "luotDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soLop" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soSinhVien" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ReportScope" : {
+        "properties" : {
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ReportSummary" : {
+        "properties" : {
+          "capNhatLuc" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "dangKy" : {
+            "$ref" : "#/components/schemas/Registrations"
+          },
+          "phamVi" : {
+            "$ref" : "#/components/schemas/ReportScope"
+          },
+          "sucChua" : {
+            "$ref" : "#/components/schemas/Capacity"
+          },
+          "tienDoDiem" : {
+            "$ref" : "#/components/schemas/GradeProgress"
           }
         },
         "type" : "object"
@@ -1942,6 +2053,79 @@
           }
         },
         "tags" : [ "catalog-controller" ]
+      }
+    },
+    "/api/reports/courses" : {
+      "get" : {
+        "operationId" : "courses",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "maCoSo",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CourseReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "report-controller" ]
+      }
+    },
+    "/api/reports/summary" : {
+      "get" : {
+        "operationId" : "summary",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "maCoSo",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "maMonHoc",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReportSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "report-controller" ]
       }
     },
     "/api/teachers" : {
