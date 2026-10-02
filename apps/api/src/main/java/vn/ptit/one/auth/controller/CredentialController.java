@@ -56,6 +56,13 @@ public class CredentialController {
         return credentials.changeEmail(user, body.email(), body.matKhauHienTai());
     }
 
+    /** Gửi lại mã tới email đang chờ xác minh. {@code 202}; thư đi sau. */
+    @PostMapping("/email/resend")
+    public ResponseEntity<Void> resendEmailVerification(@AuthenticationPrincipal AuthenticatedUser user) {
+        credentials.resendEmailVerification(user);
+        return ResponseEntity.accepted().build();
+    }
+
     @PostMapping("/email/verify")
     public AccountEmail verifyEmail(@AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody VerifyEmailRequest body) {

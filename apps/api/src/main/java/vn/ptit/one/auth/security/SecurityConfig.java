@@ -66,7 +66,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh",
                         "/api/auth/logout").permitAll()
                 // Người chưa kích hoạt / quên mật khẩu chưa đăng nhập được.
-                .requestMatchers(HttpMethod.POST, "/api/auth/activate", "/api/auth/forgot-password",
+                .requestMatchers(HttpMethod.POST, "/api/auth/activate", "/api/auth/activate/resend",
+                        "/api/auth/forgot-password",
                         "/api/auth/reset-password").permitAll()
                 .requestMatchers("/error").permitAll()
                 /* Swagger UI phải tải được TRƯỚC khi đăng nhập, nếu không thì

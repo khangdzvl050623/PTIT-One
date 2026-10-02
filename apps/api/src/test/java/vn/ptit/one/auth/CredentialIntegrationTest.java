@@ -68,7 +68,8 @@ class CredentialIntegrationTest {
         when(mailer.enabled()).thenReturn(true);
         // Bộ đếm sống cùng context Spring: ca trước không được làm ca sau bị 429.
         for (String key : new String[] { "login:user:b99test002", "login:ip:127.0.0.1", "password:user:b99test002",
-                "recover:user:b99test002", "recover:ip:127.0.0.1", "reset:ip:127.0.0.1" }) {
+                "recover:user:b99test002", "recover:ip:127.0.0.1", "reset:ip:127.0.0.1", "activation:user:b99test002",
+                "activation:ip:127.0.0.1", "verify:user:b99test002" }) {
             limiter.reset(key);
         }
     }
@@ -110,6 +111,53 @@ class CredentialIntegrationTest {
         assertThat(activate(find(ACTIVATION, reissued.body())).statusCode()).isEqualTo(204);
         assertThat(jdbc.queryForObject("SELECT EmailDaXacMinh FROM dbo.TaiKhoan WHERE TenDangNhap = ?",
                 Boolean.class, SV)).isFalse();
+    }
+
+    /** Người dùng tự xin gửi lại: mã mới tới email Admin đã lưu, mã cũ mất hiệu lực; tài khoản không có thì vẫn 202. */
+    @Test
+    void tuGuiLaiMaKichHoatToiEmailDaLuu() throws Exception {
+        provision(EMAIL);
+        String first = find(ACTIVATION, lastMailTo(EMAIL));
+
+        assertThat(anonymous().post("/api/auth/activate/resend", "{\"tenDangNhap\":\"" + SV + "\"}").statusCode())
+                .isEqualTo(202);
+        String second = find(ACTIVATION, lastMailTo(EMAIL));
+        assertThat(second).isNotEqualTo(first);
+        assertThat(activate(first).statusCode()).isEqualTo(400);
+        assertThat(activate(second).statusCode()).isEqualTo(204);
+
+        long mails = sentCount();
+        assertThat(anonymous().post("/api/auth/activate/resend", "{\"tenDangNhap\":\"" + SV + "\"}").statusCode())
+                .as("đã kích hoạt").isEqualTo(202);
+        assertThat(anonymous().post("/api/auth/activate/resend", "{\"tenDangNhap\":\"KHONGCO999\"}").statusCode())
+                .as("không có tài khoản").isEqualTo(202);
+        assertThat(sentCount()).isEqualTo(mails);
+    }
+
+    /** /me mang trạng thái email để UI nhắc; gửi lại mã xác minh không cần mật khẩu. */
+    @Test
+    void meBaoEmailVaGuiLaiMaXacMinh() throws Exception {
+        provision(null);
+        activate(find(ACTIVATION, admin().post("/api/accounts/" + SV + "/activation-code", "").body()));
+        Browser sv = signedIn(PASSWORD);
+
+        assertThat(sv.get("/api/auth/me").body()).contains("\"email\":null", "\"emailDaXacMinh\":false");
+        assertThat(sv.post("/api/auth/email/resend", "").body()).contains("EMAIL_NOT_SET");
+
+        sv.put("/api/auth/email", "{\"email\":\"" + EMAIL + "\",\"matKhauHienTai\":\"" + PASSWORD + "\"}");
+        String first = find(OTP, lastMailTo(EMAIL));
+        assertThat(sv.post("/api/auth/email/resend", "").statusCode()).isEqualTo(202);
+        String latest = find(OTP, lastMailTo(EMAIL));
+        assertThat(mailsTo(EMAIL)).hasSize(2);
+        if (!latest.equals(first)) {
+            assertThat(sv.post("/api/auth/email/verify", "{\"maXacThuc\":\"" + first + "\"}").statusCode())
+                    .isEqualTo(400);
+        }
+        assertThat(sv.post("/api/auth/email/verify", "{\"maXacThuc\":\"" + latest + "\"}").statusCode())
+                .isEqualTo(200);
+
+        assertThat(sv.get("/api/auth/me").body()).contains("\"email\":\"" + EMAIL + "\"", "\"emailDaXacMinh\":true");
+        assertThat(sv.post("/api/auth/email/resend", "").body()).contains("EMAIL_ALREADY_VERIFIED");
     }
 
     /** Mã khôi phục chỉ đi tới email ĐÃ LƯU và đã xác minh; email gõ vào chỉ để đối chiếu. */
@@ -241,6 +289,11 @@ class CredentialIntegrationTest {
                 .filter(args -> to.equals(args[0]))
                 .map(args -> (String) args[2])
                 .toList();
+    }
+
+    private long sentCount() {
+        return Mockito.mockingDetails(mailer).getInvocations().stream()
+                .filter(call -> call.getMethod().getName().equals("sendAfterCommit")).count();
     }
 
     private String lastMailTo(String to) {

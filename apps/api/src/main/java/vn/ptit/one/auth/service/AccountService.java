@@ -127,6 +127,24 @@ public class AccountService {
     }
 
     /**
+     * Người dùng tự xin gửi lại mã kích hoạt. Chỉ gửi tới email ADMIN ĐÃ LƯU khi
+     * cấp hồ sơ, và chỉ cho tài khoản chưa kích hoạt còn hoạt động. Không đủ điều
+     * kiện thì im lặng bỏ qua — người gọi luôn trả cùng một phản hồi.
+     */
+    @Transactional
+    public void resendActivationToStoredEmail(String username) {
+        AccountContact contact = accounts.findContact(username).orElse(null);
+        if (contact == null || contact.source() != AccountRecord.Source.SITE || contact.hasPassword()
+                || contact.email() == null || !HOAT_DONG.equals(contact.status())) {
+            log.info("Bỏ qua yêu cầu gửi lại mã kích hoạt cho {}", username);
+            return;
+        }
+        Instant now = clock.instant();
+        codes.revokeLive(username, now);
+        issueCode(username, contact.email(), true, now);
+    }
+
+    /**
      * Khoá ({@code NGUNG}) hoặc mở lại ({@code HOAT_DONG}). Khoá thì thu hồi mọi
      * phiên và tăng phiên bản trong CÙNG giao dịch — access token cũ bị từ chối
      * ở request kế tiếp.

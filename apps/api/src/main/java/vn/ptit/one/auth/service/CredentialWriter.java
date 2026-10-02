@@ -74,6 +74,12 @@ public class CredentialWriter {
         issue(username, VerificationPurpose.XAC_MINH_EMAIL, email);
     }
 
+    /** Gửi lại mã tới email ĐANG CHỜ xác minh; mã cũ mất hiệu lực. */
+    @Transactional
+    public void resendEmailVerification(String username, String email) {
+        issue(username, VerificationPurpose.XAC_MINH_EMAIL, email);
+    }
+
     @Transactional
     public Outcome verifyEmail(String username, Source source, String presented) {
         Instant now = clock.instant();

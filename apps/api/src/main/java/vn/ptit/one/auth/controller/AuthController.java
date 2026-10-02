@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import vn.ptit.one.auth.dto.CsrfResponse;
 import vn.ptit.one.auth.dto.LoginRequest;
 import vn.ptit.one.auth.dto.SessionUserResponse;
+import vn.ptit.one.auth.service.CredentialService;
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.security.AuthCookies;
 import vn.ptit.one.auth.security.AuthenticatedUserToken;
@@ -34,13 +35,15 @@ import vn.ptit.one.shared.exception.ApiException;
 public class AuthController {
 
     private final AuthenticationService authentication;
+    private final CredentialService credentials;
     private final AuthCookies cookies;
     private final CsrfTokenRepository csrfTokens;
     private final Clock clock;
 
-    public AuthController(AuthenticationService authentication, AuthCookies cookies,
+    public AuthController(AuthenticationService authentication, CredentialService credentials, AuthCookies cookies,
             CsrfTokenRepository csrfTokens, Clock clock) {
         this.authentication = authentication;
+        this.credentials = credentials;
         this.cookies = cookies;
         this.csrfTokens = csrfTokens;
         this.clock = clock;
@@ -61,7 +64,8 @@ public class AuthController {
         cookies.writeRefresh(response, result.refreshToken().value(), result.user().sessionExpiresAt(), now);
         // Đổi CSRF token khi danh tính đổi, như CsrfAuthenticationStrategy của Spring.
         csrfTokens.saveToken(csrfTokens.generateToken(request), request, response);
-        return SessionUserResponse.of(result.user(), result.accessToken().expiresAt());
+        return SessionUserResponse.of(result.user(), result.accessToken().expiresAt(),
+                credentials.currentEmail(result.user()));
     }
 
     /**
@@ -83,7 +87,8 @@ public class AuthController {
         Instant now = clock.instant();
         cookies.writeAccess(response, result.accessToken().value(), result.accessToken().expiresAt(), now);
         cookies.writeRefresh(response, result.refreshToken().value(), result.user().sessionExpiresAt(), now);
-        return SessionUserResponse.of(result.user(), result.accessToken().expiresAt());
+        return SessionUserResponse.of(result.user(), result.accessToken().expiresAt(),
+                credentials.currentEmail(result.user()));
     }
 
     /** 204 chỉ sau khi việc thu hồi đã commit. */
@@ -107,6 +112,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public SessionUserResponse me(AuthenticatedUserToken authentication) {
-        return SessionUserResponse.of(authentication.getPrincipal(), authentication.getCredentials().getExpiresAt());
+        return SessionUserResponse.of(authentication.getPrincipal(), authentication.getCredentials().getExpiresAt(),
+                credentials.currentEmail(authentication.getPrincipal()));
     }
 }

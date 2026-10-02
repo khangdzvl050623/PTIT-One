@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 79 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 81 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -87,8 +87,8 @@ người dùng và đổi được bất cứ lúc nào.
 | POST | `/api/auth/login` · `refresh` · `logout` | public *(dùng cookie)* |
 | POST | `/api/auth/logout-all` | — |
 | GET | `/api/auth/me` | — |
-| POST | `/api/auth/activate` · `forgot-password` · `reset-password` | public |
-| GET · PUT · POST | `/api/auth/email` · `/api/auth/email/verify` · `/api/auth/change-password` | — |
+| POST | `/api/auth/activate` · `/activate/resend` · `forgot-password` · `reset-password` | public |
+| GET · PUT · POST | `/api/auth/email` · `/email/resend` · `/email/verify` · `/change-password` | — |
 | POST | `/api/students` · `/api/teachers` | `ADMIN_MASTER` |
 | GET · POST · PUT | `/api/accounts` · `/{tenDangNhap}/activation-code` · `/{tenDangNhap}/status` | `ADMIN_MASTER` |
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
@@ -373,6 +373,11 @@ bị từ chối.
   thu hồi; Admin cấp lại bằng `POST /api/accounts/{tenDangNhap}/activation-code`
   (mã cũ mất hiệu lực, chỉ cho tài khoản chưa kích hoạt). `?guiEmail=false` để
   nhận mã trao tay khi thư không tới được — khi đó kích hoạt không xác minh email.
+- Người dùng tự xin gửi lại: `POST /api/auth/activate/resend` `{tenDangNhap}`
+  (nút "Không nhận được mã?" ở trang kích hoạt). Mã mới đi tới **email Admin đã
+  lưu**, mã cũ mất hiệu lực. Luôn `202` — tài khoản không có, đã kích hoạt hay
+  không có email đều không gửi gì và không báo khác đi. Không có email thì phải
+  nhờ Admin Master cấp lại mã trao tay.
 - `PUT /api/accounts/{tenDangNhap}/status` `{trangThai: HOAT_DONG | NGUNG}`.
   Khoá thu hồi mọi phiên và tăng phiên bản trong cùng giao dịch — access token
   cũ bị từ chối ngay. Không khoá được Admin Master.
@@ -391,6 +396,10 @@ bị từ chối.
 - `PUT /api/auth/email` `{email, matKhauHienTai}` cần mật khẩu hiện tại; lưu email
   **chưa xác minh** và gửi mã tới chính địa chỉ đó. Xác minh bằng
   `POST /api/auth/email/verify` `{maXacThuc}`. Đổi email là mất trạng thái xác minh.
+  `POST /api/auth/email/resend` gửi lại mã tới email đang chờ, không cần mật khẩu.
+- `login`, `refresh`, `/me` trả thêm `email` và `emailDaXacMinh`. **UI hiện banner
+  nhắc** khi `emailDaXacMinh = false`: chưa có email thì mời thêm, có rồi thì nút
+  "Gửi lại mã" — chưa xác minh thì không tự khôi phục mật khẩu được.
 - `POST /api/auth/change-password` `{matKhauHienTai, matKhauMoi}` → `204`, thu hồi
   **mọi phiên kể cả phiên đang dùng** và xoá cookie — UI chuyển về đăng nhập.
 - Chưa cấu hình gửi thư (`PTITONE_MAIL_HOST`/`PTITONE_MAIL_FROM` trống) thì đổi
@@ -485,6 +494,8 @@ bị từ chối.
 | `EMAIL_CODE_INVALID` | 400 | Mã xác minh email sai, hết hạn hoặc đã dùng |
 | `RESET_CODE_INVALID` | 400 | Mã khôi phục sai, hết hạn hoặc đã dùng |
 | `MAIL_DISABLED` | 503 | Chưa cấu hình gửi thư |
+| `EMAIL_NOT_SET` | 409 | Gửi lại mã xác minh khi chưa có email |
+| `EMAIL_ALREADY_VERIFIED` | 409 | Gửi lại mã xác minh khi email đã xác minh |
 | `AUTH_TOO_MANY_ATTEMPTS` | 429 | Vượt giới hạn tần suất; đợi rồi thử lại |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
@@ -565,6 +576,9 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Đổi mật khẩu | mọi phiên `401`, đăng nhập bằng mật khẩu mới | ✓ |
 | Xin mã khôi phục lần 4 trong 15 phút | `429` | ✓ |
 | Đăng nhập sai 10 lần rồi đúng | `429` | ✓ |
+| Tự xin gửi lại mã kích hoạt | mã mới tới email đã lưu, mã cũ hỏng; tài khoản không có / đã kích hoạt vẫn `202`, không thư | ✓ |
+| `/me` khi chưa có email, rồi sau khi xác minh | `emailDaXacMinh` `false` → `true` | ✓ |
+| Gửi lại mã xác minh | mã trước mất hiệu lực; đã xác minh thì `409` | ✓ |
 | Profile `central` + SQL Server tắt | API vẫn khởi động | ✓ |
 | `/api/health/db` khi SQL Server tắt | `503`, thân báo `DOWN` | **✗** |
 | `openapi.json` lệch với code | build đỏ ở `OpenApiContractTest` | ✓ |

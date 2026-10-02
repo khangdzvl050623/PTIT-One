@@ -71,6 +71,23 @@ public class CredentialService {
         return new AccountEmail(normalized, false);
     }
 
+    /** Không cần mật khẩu: chỉ gửi tới địa chỉ đã lưu, không đổi được địa chỉ qua đây. */
+    public void resendEmailVerification(AuthenticatedUser user) {
+        requireMail();
+        AccountContact contact = requireContact(user.username());
+        if (contact.email() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_NOT_SET", "Tài khoản chưa có email.");
+        }
+        if (contact.emailVerified()) {
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_VERIFIED", "Email đã được xác minh.");
+        }
+        if (!limiter.tryAcquire("verify:user:" + user.username().toLowerCase(Locale.ROOT),
+                MAX_RECOVERY_REQUESTS_PER_USER, WINDOW)) {
+            throw tooManyAttempts();
+        }
+        writer.resendEmailVerification(user.username(), contact.email());
+    }
+
     public AccountEmail verifyEmail(AuthenticatedUser user, String code) {
         AccountContact contact = requireContact(user.username());
         if (writer.verifyEmail(user.username(), contact.source(), code) != Outcome.OK) {

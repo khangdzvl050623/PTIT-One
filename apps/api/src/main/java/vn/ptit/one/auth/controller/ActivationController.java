@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import vn.ptit.one.auth.dto.ActivateAccountRequest;
+import vn.ptit.one.auth.dto.ResendActivationRequest;
 import vn.ptit.one.auth.service.AccountActivationService;
 
 /**
@@ -30,5 +32,12 @@ public class ActivationController {
     public ResponseEntity<Void> activate(@Valid @RequestBody ActivateAccountRequest body) {
         activation.activate(body.tenDangNhap(), body.maKichHoat(), body.matKhauMoi());
         return ResponseEntity.noContent().build();
+    }
+
+    /** Luôn {@code 202} khi chưa chạm trần — mã chỉ tới email Admin đã lưu. */
+    @PostMapping("/activate/resend")
+    public ResponseEntity<Void> resend(@Valid @RequestBody ResendActivationRequest body, HttpServletRequest request) {
+        activation.resend(body.tenDangNhap(), request.getRemoteAddr());
+        return ResponseEntity.accepted().build();
     }
 }

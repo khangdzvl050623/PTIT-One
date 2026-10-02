@@ -914,6 +914,17 @@
         },
         "type" : "object"
       },
+      "ResendActivationRequest" : {
+        "properties" : {
+          "tenDangNhap" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "tenDangNhap" ],
+        "type" : "object"
+      },
       "ResetPasswordRequest" : {
         "properties" : {
           "maXacThuc" : {
@@ -1096,6 +1107,12 @@
           "accessExpiresAt" : {
             "format" : "date-time",
             "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "emailDaXacMinh" : {
+            "type" : "boolean"
           },
           "entityId" : {
             "type" : "string"
@@ -1599,6 +1616,27 @@
         "tags" : [ "activation-controller" ]
       }
     },
+    "/api/auth/activate/resend" : {
+      "post" : {
+        "operationId" : "resend",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResendActivationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "activation-controller" ]
+      }
+    },
     "/api/auth/change-password" : {
       "post" : {
         "operationId" : "changePassword",
@@ -1684,6 +1722,17 @@
                 }
               }
             },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "credential-controller" ]
+      }
+    },
+    "/api/auth/email/resend" : {
+      "post" : {
+        "operationId" : "resendEmailVerification",
+        "responses" : {
+          "200" : {
             "description" : "OK"
           }
         },
