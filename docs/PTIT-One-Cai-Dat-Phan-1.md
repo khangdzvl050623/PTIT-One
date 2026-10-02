@@ -167,8 +167,9 @@ CREATE USER ptitone_api FOR LOGIN ptitone_api WITH DEFAULT_SCHEMA = dbo;
 GO
 ```
 
-Chưa cấp quyền bảng nào — cấp sau khi T2 có schema. Không cấp `db_owner`,
-không dùng `sa` chạy ứng dụng.
+Cấp quyền và tạo thêm login migration: làm theo
+[bước 3 trong `db/central/README.md`](../db/central/README.md#bước-3--tạo-2-login-sql).
+Login API chỉ đọc/ghi — không cấp `db_owner`, không dùng `sa` chạy ứng dụng.
 
 **Kiểm bốn thứ bằng một lệnh** (TCP, Mixed Mode, login, mật khẩu):
 
@@ -238,7 +239,7 @@ Mở `http://localhost:5173`.
 
 ```
 PTITONE_MIGRATE_ON_START=true
-PTITONE_MIGRATION_USERNAME=<login có db_ddladmin>
+PTITONE_MIGRATION_USERNAME=ptitone_migrator   # login migration, xem db/central/README.md bước 3
 PTITONE_MIGRATION_PASSWORD=<mật khẩu>
 ```
 
