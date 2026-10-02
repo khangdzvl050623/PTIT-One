@@ -20,11 +20,14 @@ demo mặc định lúc ứng dụng khởi động.
 
 | File | Cần migration | Nội dung |
 |---|---|---|
-| `10-auth-seed.sql` | V1 | 3 cơ sở + 9 tài khoản demo (SV/GV/Admin cơ sở/Admin Master, có ca `CHO_KICH_HOAT`, `NGUNG`, khác cơ sở). Mật khẩu chung `PtitOne@2026`; bảng tài khoản ở đầu file |
+| `10-auth-seed.sql` | V1 | 3 cơ sở + 10 tài khoản demo (SV/GV/Admin cơ sở/Admin Master, có ca `CHO_KICH_HOAT`, `NGUNG`, khác cơ sở). Mật khẩu chung `PtitOne@2026`; bảng tài khoản ở đầu file |
+| `20-hoc-vu-seed.sql` | V2, sau `10` | Danh mục, học kỳ 2026-1, hồ sơ SV/GV khớp tài khoản, đợt mở/đóng, 10 lớp có lịch; ca tiên quyết đạt/trượt/chưa có, lớp đầy, trùng lịch, liên cơ sở. Danh sách ca ở đầu file |
 
 ```powershell
 sqlcmd -S "localhost\PTITONE" -d PTITONE_CENTRAL -E -C -b -f 65001 -i db\central\seed\10-auth-seed.sql
+sqlcmd -S "localhost\PTITONE" -d PTITONE_CENTRAL -E -C -b -f 65001 -i db\central\seed\20-hoc-vu-seed.sql
 ```
 
-Chạy lại không nhân đôi (kỳ vọng `3 9 8 1`). Hash sinh bằng `PasswordConfig` của
+Chạy lại không nhân đôi (kỳ vọng auth `3 10 9 1`; seed học vụ in bảng đối soát
+bộ đếm, cột `Lech` phải bằng 0). Hash sinh bằng `PasswordConfig` của
 API; `SeedPasswordHashTest` đỏ nếu encoder đổi mà seed không đổi theo.

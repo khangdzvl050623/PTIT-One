@@ -41,6 +41,13 @@ $scripts = @(
     @{ Path = 'tests/90-demo-nhan-ban.sql'; Sites = @('HCM') }
     @{ Path = 'central/00-create-database.sql'; Sites = @('CENTRAL'); Db = 'master'; CentralAction = 'CreateDatabase' }
     @{ Path = 'central/tests/00-verify-database.sql'; Sites = @('CENTRAL'); Db = 'PTITONE_CENTRAL'; CentralAction = 'VerifyDatabase' }
+    # Plain: Flyway hoac sqlcmd goi thang, KHONG co bien SQLCMD va khong qua runner.
+    # Chi kiem cu phap T-SQL; bien SQLCMD lot vao day la loi (Flyway khong hieu).
+    @{ Path = 'central/migrations/V1__auth_slice.sql'; Plain = $true }
+    @{ Path = 'central/migrations/V2__hoc_vu_schema.sql'; Plain = $true }
+    @{ Path = 'central/seed/10-auth-seed.sql'; Plain = $true }
+    @{ Path = 'central/seed/20-hoc-vu-seed.sql'; Plain = $true }
+    @{ Path = 'central/tests/10-verify-hoc-vu.sql'; Plain = $true }
 )
 
 # Khong file .sql nao duoc nam ngoai danh sach tren.
@@ -53,6 +60,22 @@ $cfg = Import-PowerShellDataFile (Join-Path $dbRoot 'config.ps1')
 $caseCount = 0
 foreach ($script in $scripts) {
     $source = Get-Content -LiteralPath (Join-Path $dbRoot $script.Path) -Raw -Encoding UTF8
+    if ($script.Plain) {
+        if ($source -match '\$\([A-Za-z][A-Za-z0-9]*\)|(?m)^:') {
+            throw "$($script.Path): file Plain khong duoc dung bien/directive SQLCMD."
+        }
+        $parseErrors = $null
+        $reader = New-Object IO.StringReader($source)
+        $null = $parser.Parse($reader, [ref] $parseErrors)
+        $reader.Dispose()
+        if ($parseErrors.Count -gt 0) {
+            $details = $parseErrors | ForEach-Object { "line $($_.Line): $($_.Message)" }
+            throw "$($script.Path): $($details -join '; ')"
+        }
+        $caseCount++
+        Write-Output "PASS syntax (plain): $($script.Path)"
+        continue
+    }
     foreach ($site in $script.Sites) {
         if ($script.CentralAction) {
             $preview = (& (Join-Path $dbRoot 'central/run.ps1') -Action $script.CentralAction -ConfigPath (Join-Path $dbRoot 'central/config.example.psd1') -WhatIf 6>&1 | Out-String -Width 32767)

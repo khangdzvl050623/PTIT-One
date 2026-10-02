@@ -15,6 +15,7 @@
    B26DCCN002                SINH_VIEN      HN     HOAT_DONG      fixture khác cơ sở
    B26DCCN003                SINH_VIEN      HCM    CHO_KICH_HOAT  phải bị từ chối
    B26DCCN004                SINH_VIEN      HCM    NGUNG          phải bị từ chối
+   B25DCCN001                SINH_VIEN      HCM    HOAT_DONG      có điểm 2025-1 (ca tiên quyết, xem 20-hoc-vu-seed)
    GVHCM001                  GIANG_VIEN     HCM    HOAT_DONG
    GVHN001                   GIANG_VIEN     HN     HOAT_DONG
    admin.hcm                 ADMIN_CO_SO    HCM    HOAT_DONG
@@ -53,6 +54,7 @@ INSERT INTO @DanhBa VALUES
     ('B26DCCN002',   'HN',  'SINH_VIEN',    'B26DCCN002', 'HOAT_DONG'),
     ('B26DCCN003',   'HCM', 'SINH_VIEN',    'B26DCCN003', 'CHO_KICH_HOAT'),
     ('B26DCCN004',   'HCM', 'SINH_VIEN',    'B26DCCN004', 'NGUNG'),
+    ('B25DCCN001',   'HCM', 'SINH_VIEN',    'B25DCCN001', 'HOAT_DONG'),
     ('GVHCM001',     'HCM', 'GIANG_VIEN',   'GVHCM001',   'HOAT_DONG'),
     ('GVHN001',      'HN',  'GIANG_VIEN',   'GVHN001',    'HOAT_DONG'),
     ('admin.hcm',    'HCM', 'ADMIN_CO_SO',  NULL,         'HOAT_DONG'),
@@ -78,7 +80,7 @@ SELECT s.TenDangNhap, @Hash, N'Quản trị Phòng Đào tạo (demo)'
 
 COMMIT TRANSACTION;
 
--- Đối soát: kỳ vọng 3 cơ sở, 9 danh bạ, 8 TaiKhoan, 1 TaiKhoanMaster (khi DB chỉ có fixture này).
+-- Đối soát: kỳ vọng 3 cơ sở, 10 danh bạ, 9 TaiKhoan, 1 TaiKhoanMaster (khi DB chỉ có fixture này).
 SELECT (SELECT COUNT(*) FROM dbo.CoSo)            AS CoSo,
        (SELECT COUNT(*) FROM dbo.DanhBaNguoiDung) AS DanhBa,
        (SELECT COUNT(*) FROM dbo.TaiKhoan)        AS TaiKhoan,
