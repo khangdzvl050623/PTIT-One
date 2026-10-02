@@ -20,7 +20,7 @@ cd apps/api && ./mvnw test -Dtest=OpenApiContractTest -Dptitone.openapi.write=tr
 ```
 
 **Ba thứ springdoc không sinh được**, nên chúng ở đây và phải sửa tay: quyền theo
-vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 65 mã lỗi (ném
+vai trò (phần lớn kiểm trong service, không phải `@PreAuthorize`), 73 mã lỗi (ném
 từ service qua `ApiException` — spec chỉ có `200`/`201`), và quy tắc nghiệp vụ.
 
 ---
@@ -87,6 +87,9 @@ người dùng và đổi được bất cứ lúc nào.
 | POST | `/api/auth/login` · `refresh` · `logout` | public *(dùng cookie)* |
 | POST | `/api/auth/logout-all` | — |
 | GET | `/api/auth/me` | — |
+| POST | `/api/auth/activate` | public |
+| POST | `/api/students` · `/api/teachers` | `ADMIN_MASTER` |
+| GET · POST · PUT | `/api/accounts` · `/{tenDangNhap}/activation-code` · `/{tenDangNhap}/status` | `ADMIN_MASTER` |
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
 | GET | `/api/faculties` · `/api/terms` · `/api/teachers` | — |
@@ -347,6 +350,29 @@ bị từ chối.
   hay `//…`) — thông báo chính thức không được dẫn sang trang lạ.
 - Bản soạn của người khác trả `404`, không lộ là có tồn tại.
 
+### Cấp và kích hoạt tài khoản (F02)
+
+- **Chỉ `ADMIN_MASTER` cấp tài khoản** (chốt 02/10/2026). Danh bạ là bảng Master
+  sở hữu, B3 cho Admin cơ sở chỉ đọc, và ở Phần 2 site bị `DENY` ghi bảng nhân
+  bản — nên UI đừng hiện nút "Thêm sinh viên/giảng viên" cho Admin cơ sở.
+- `POST /api/students` / `POST /api/teachers` tạo hồ sơ + danh bạ + tài khoản
+  **chưa có mật khẩu** trong **một** giao dịch; lỗi ở bước nào thì không để lại
+  gì. Tên đăng nhập chính là mã SV/GV. Response có `kichHoat.maKichHoat` dạng
+  `XXXX-XXXX-XXXX-XXXX`, hạn 7 ngày — **lần duy nhất mã gốc xuất hiện**, server
+  chỉ giữ hash. Admin đưa mã cho người dùng (Phần 1 chưa gửi email).
+- Người dùng gọi `POST /api/auth/activate` `{tenDangNhap, maKichHoat, matKhauMoi}`
+  khi chưa đăng nhập (vẫn cần CSRF). Thành công `204`, **không tự đăng nhập**.
+  Mã gõ thường hay thiếu gạch vẫn khớp. Mật khẩu 8–128 ký tự, không chứa tên
+  đăng nhập.
+- Mọi lý do từ chối kích hoạt — sai mã, hết hạn, đã dùng, tài khoản bị ngừng,
+  không có tài khoản — đều là `400 ACTIVATION_INVALID`. Sai **5 lần** thì mã bị
+  thu hồi; Admin cấp lại bằng `POST /api/accounts/{tenDangNhap}/activation-code`
+  (mã cũ mất hiệu lực, chỉ cho tài khoản chưa kích hoạt).
+- `PUT /api/accounts/{tenDangNhap}/status` `{trangThai: HOAT_DONG | NGUNG}`.
+  Khoá thu hồi mọi phiên và tăng phiên bản trong cùng giao dịch — access token
+  cũ bị từ chối ngay. Không khoá được Admin Master.
+- `GET /api/accounts?maCoSo=&loaiNguoiDung=` liệt kê danh bạ, có `daKichHoat`.
+
 ### Phiên đăng nhập
 
 - `401 AUTH_INVALID_CREDENTIALS` cho **mọi** lý do từ chối: sai mật khẩu, chưa
@@ -392,7 +418,7 @@ bị từ chối.
 | `COURSE_REGISTRATION_OPEN` | 409 | Đổi tiên quyết khi môn có lớp trong kỳ đang mở đợt |
 | `FACULTY_UNKNOWN` | 400 | Mã khoa không có |
 | `TERM_NOT_FOUND` | 400 | Mã học kỳ không có (tạo lớp, thời khoá biểu) |
-| `PROGRAM_NOT_FOUND` | 404 | Không có chương trình đào tạo |
+| `PROGRAM_NOT_FOUND` | 404 / 400 | Không có chương trình đào tạo (`400` khi cấp hồ sơ SV) |
 | `GRADE_VERSION_CONFLICT` | 409 | Dòng điểm đã bị người khác sửa sau khi tải |
 | `GRADE_STUDENT_NOT_ENROLLED` | 400 | Sinh viên không thuộc lớp |
 | `GRADE_INCOMPLETE` | 409 | Công bố khi còn SV thiếu điểm thành phần |
@@ -419,6 +445,14 @@ bị từ chối.
 | `NOTIFICATION_ALREADY_SENT` | 409 | Sửa, xoá hoặc gửi lại bản đã gửi |
 | `NOTIFICATION_NO_RECIPIENTS` | 409 | Phạm vi hiện không có ai nhận |
 | `CAMPUS_NOT_FOUND` | 400 | Mã cơ sở không có |
+| `ACCOUNT_EXISTS` | 409 | Mã SV/GV đã có tài khoản |
+| `STUDENT_EXISTS` | 409 | Đã có hồ sơ sinh viên mã này |
+| `TEACHER_EXISTS` | 409 | Đã có hồ sơ giảng viên mã này |
+| `ACCOUNT_NOT_FOUND` | 404 | Không có tài khoản |
+| `ACCOUNT_ALREADY_ACTIVATED` | 409 | Cấp lại mã cho tài khoản đã kích hoạt |
+| `ACCOUNT_NOT_MANAGEABLE` | 409 | Khoá/cấp mã cho Admin Master, hoặc tài khoản đang chuyển cơ sở |
+| `ACTIVATION_INVALID` | 400 | Mã kích hoạt sai, hết hạn, đã dùng, hoặc tài khoản không kích hoạt được |
+| `PASSWORD_TOO_WEAK` | 400 | Mật khẩu chứa tên đăng nhập |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
 | `CLASS_CANCEL_RETRY` | 409 | Có thay đổi đăng ký đúng lúc huỷ lớp; thử lại |
@@ -484,6 +518,13 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | `logout-all` rồi gọi API bằng access cũ | `401 AUTH_SESSION_INVALID` ngay | ✓ |
 | Chữ ký đúng nhưng phiên đã chết | `401`, không cho qua | ✓ |
 | Tài khoản chưa kích hoạt đăng nhập | `401`, không nói rõ lý do | ✓ |
+| Admin Master cấp SV → kích hoạt → đăng nhập | `201` có mã · `204` · `200` | ✓ |
+| Dùng lại mã đã kích hoạt | `400 ACTIVATION_INVALID`, mật khẩu không đổi | ✓ |
+| `ADMIN_CO_SO` / GV / SV cấp hồ sơ | `403`, không ghi gì | ✓ |
+| Cấp SV với CTĐT không có | `400 PROGRAM_NOT_FOUND`, không còn hồ sơ hay danh bạ mồ côi | ✓ |
+| Nhập sai mã 5 lần rồi nhập đúng | `400` — mã đã bị thu hồi | ✓ |
+| Cấp lại mã | mã trước mất hiệu lực, mã mới dùng được | ✓ |
+| Khoá tài khoản đang có phiên | phiên cũ `401` ngay; đăng nhập lại `401`; mở lại thì vào được | ✓ |
 | Profile `central` + SQL Server tắt | API vẫn khởi động | ✓ |
 | `/api/health/db` khi SQL Server tắt | `503`, thân báo `DOWN` | **✗** |
 | `openapi.json` lệch với code | build đỏ ở `OpenApiContractTest` | ✓ |
@@ -572,16 +613,19 @@ backend kiểm ở mỗi request; ẩn nút không thay thế được điều �
 
 | Gói | Nội dung |
 |---|---|
-| F02 | Cấp hồ sơ, kích hoạt tài khoản, quên mật khẩu |
+| A1 | Quên mật khẩu qua email, giới hạn tần suất (`429 AUTH_TOO_MANY_ATTEMPTS`) |
 
 
 Gọi các đường dẫn chưa có trả `404` — đó là hành vi đúng.
 
-### Vấn đề còn treo
+### Đã chốt: cấp tài khoản chỉ ở Master
 
 B3 ghi `DanhBaNguoiDung` là **R only** với Admin cơ sở, và ở Phần 2 Subscriber bị
-`DENY INSERT/UPDATE/DELETE`, nên Admin cơ sở **không thể** tạo tài khoản dù code
-hiện cho phép. F02 phải chọn: cấp tài khoản chỉ ở Master, hay đổi B3.
+`DENY INSERT/UPDATE/DELETE`. Nhóm chốt ngày 02/10/2026: **giữ B3, cấp tài khoản
+chỉ ở Master** — Phần 2 đi đúng luồng "Vòng đời sinh viên" (danh bạ + Outbox ở
+Master, worker dựng hồ sơ và tài khoản ở site nhà). Trạng thái kích hoạt nằm ở
+`TaiKhoan.MatKhauHash` (site), không ở danh bạ, nên kích hoạt không phải ghi bảng
+nhân bản.
 
 ---
 

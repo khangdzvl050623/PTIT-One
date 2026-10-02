@@ -1,5 +1,6 @@
 package vn.ptit.one.student.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +32,25 @@ public class StudentRepository {
                 SELECT MaSinhVien FROM dbo.SinhVien
                  WHERE MaCoSoNha = ? AND TrangThai IN ('DANG_HOC', 'BAO_LUU')
                 """, String.class, maCoSo);
+    }
+
+    /**
+     * Ghi kèm điều kiện chương trình đào tạo có thật, để báo lỗi rõ thay vì
+     * dựa vào FK.
+     *
+     * @return 0 nếu không có chương trình {@code maCTDT}
+     */
+    public int insert(String maSinhVien, String hoTen, LocalDate ngaySinh, String maCoSoNha, String maCTDT) {
+        return jdbc.update("""
+                INSERT INTO dbo.SinhVien (MaSinhVien, HoTen, NgaySinh, MaCoSoNha, MaCTDT)
+                SELECT ?, ?, ?, ?, c.MaCTDT FROM dbo.ChuongTrinhDaoTao c WHERE c.MaCTDT = ?
+                """, maSinhVien, hoTen, ngaySinh, maCoSoNha, maCTDT);
+    }
+
+    public boolean exists(String maSinhVien) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.SinhVien WHERE MaSinhVien = ?",
+                Integer.class, maSinhVien);
+        return count != null && count > 0;
     }
 
     public Optional<StudentProfile> findOne(String maSinhVien) {

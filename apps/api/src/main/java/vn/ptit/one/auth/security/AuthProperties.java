@@ -14,13 +14,15 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param accessTtl    hạn access token
  * @param sessionTtl   hạn tuyệt đối của phiên tính từ lúc đăng nhập
  * @param cookieSecure bật khi chạy HTTPS
+ * @param activationTtl hạn mã kích hoạt tài khoản (F02)
  */
 @ConfigurationProperties("ptitone.auth")
 public record AuthProperties(
         String jwtSecret,
         @DefaultValue("PT15M") Duration accessTtl,
         @DefaultValue("P7D") Duration sessionTtl,
-        @DefaultValue("false") boolean cookieSecure) {
+        @DefaultValue("false") boolean cookieSecure,
+        @DefaultValue("P7D") Duration activationTtl) {
 
     public static final String ISSUER = "ptit-one-api";
     public static final String AUDIENCE = "ptit-one-web";

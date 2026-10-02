@@ -1,6 +1,66 @@
 {
   "components" : {
     "schemas" : {
+      "AccountSummary" : {
+        "properties" : {
+          "daKichHoat" : {
+            "type" : "boolean"
+          },
+          "loaiNguoiDung" : {
+            "enum" : [ "SINH_VIEN", "GIANG_VIEN", "ADMIN_CO_SO", "ADMIN_MASTER" ],
+            "type" : "string"
+          },
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "maThucThe" : {
+            "type" : "string"
+          },
+          "tenDangNhap" : {
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ActivateAccountRequest" : {
+        "properties" : {
+          "maKichHoat" : {
+            "maxLength" : 32,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "matKhauMoi" : {
+            "maxLength" : 128,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "tenDangNhap" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "maKichHoat", "matKhauMoi", "tenDangNhap" ],
+        "type" : "object"
+      },
+      "ActivationCode" : {
+        "properties" : {
+          "hetHan" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "maKichHoat" : {
+            "type" : "string"
+          },
+          "tenDangNhap" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AssignTeacherRequest" : {
         "properties" : {
           "maGiangVien" : {
@@ -104,6 +164,17 @@
             "type" : "integer"
           }
         },
+        "type" : "object"
+      },
+      "ChangeAccountStatusRequest" : {
+        "properties" : {
+          "trangThai" : {
+            "minLength" : 1,
+            "pattern" : "HOAT_DONG|NGUNG",
+            "type" : "string"
+          }
+        },
+        "required" : [ "trangThai" ],
         "type" : "object"
       },
       "ClassRoster" : {
@@ -302,6 +373,63 @@
           }
         },
         "required" : [ "maKhoa", "maMonHoc", "tenMonHoc" ],
+        "type" : "object"
+      },
+      "CreateStudentRequest" : {
+        "properties" : {
+          "hoTen" : {
+            "maxLength" : 150,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "maCTDT" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maCoSoNha" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maSinhVien" : {
+            "minLength" : 1,
+            "pattern" : "[A-Z0-9]{4,20}",
+            "type" : "string"
+          },
+          "ngaySinh" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "hoTen", "maCTDT", "maCoSoNha", "maSinhVien" ],
+        "type" : "object"
+      },
+      "CreateTeacherRequest" : {
+        "properties" : {
+          "hoTen" : {
+            "maxLength" : 150,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "hocVi" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "maCoSo" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "maGiangVien" : {
+            "minLength" : 1,
+            "pattern" : "[A-Z0-9]{4,20}",
+            "type" : "string"
+          },
+          "maKhoa" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "hoTen", "maCoSo", "maGiangVien", "maKhoa" ],
         "type" : "object"
       },
       "CsrfResponse" : {
@@ -598,6 +726,28 @@
               "$ref" : "#/components/schemas/ProgramCourse"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ProvisionedStudent" : {
+        "properties" : {
+          "kichHoat" : {
+            "$ref" : "#/components/schemas/ActivationCode"
+          },
+          "sinhVien" : {
+            "$ref" : "#/components/schemas/StudentProfile"
+          }
+        },
+        "type" : "object"
+      },
+      "ProvisionedTeacher" : {
+        "properties" : {
+          "giangVien" : {
+            "$ref" : "#/components/schemas/Teacher"
+          },
+          "kichHoat" : {
+            "$ref" : "#/components/schemas/ActivationCode"
           }
         },
         "type" : "object"
@@ -1000,6 +1150,26 @@
         },
         "type" : "object"
       },
+      "StudentProfile" : {
+        "properties" : {
+          "hoTen" : {
+            "type" : "string"
+          },
+          "maCTDT" : {
+            "type" : "string"
+          },
+          "maCoSoNha" : {
+            "type" : "string"
+          },
+          "maSinhVien" : {
+            "type" : "string"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "StudyProgram" : {
         "properties" : {
           "maCTDT" : {
@@ -1194,6 +1364,126 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/accounts" : {
+      "get" : {
+        "operationId" : "search_4",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maCoSo",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "loaiNguoiDung",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "SINH_VIEN", "GIANG_VIEN", "ADMIN_CO_SO", "ADMIN_MASTER" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/accounts/{tenDangNhap}/activation-code" : {
+      "post" : {
+        "operationId" : "reissueActivationCode",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tenDangNhap",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivationCode"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/accounts/{tenDangNhap}/status" : {
+      "put" : {
+        "operationId" : "changeStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tenDangNhap",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeAccountStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/auth/activate" : {
+      "post" : {
+        "operationId" : "activate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ActivateAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "activation-controller" ]
+      }
+    },
     "/api/auth/csrf" : {
       "get" : {
         "operationId" : "csrf",
@@ -1331,7 +1621,7 @@
     },
     "/api/classes" : {
       "get" : {
-        "operationId" : "search_2",
+        "operationId" : "search_3",
         "parameters" : [ {
           "in" : "query",
           "name" : "maHocKy",
@@ -1372,7 +1662,7 @@
         "tags" : [ "class-section-controller" ]
       },
       "post" : {
-        "operationId" : "create_3",
+        "operationId" : "create_5",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1729,7 +2019,7 @@
     },
     "/api/courses" : {
       "get" : {
-        "operationId" : "search_1",
+        "operationId" : "search_2",
         "parameters" : [ {
           "in" : "query",
           "name" : "maKhoa",
@@ -1763,7 +2053,7 @@
         "tags" : [ "course-controller" ]
       },
       "post" : {
-        "operationId" : "create_2",
+        "operationId" : "create_4",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1887,7 +2177,7 @@
     },
     "/api/enrollment-periods" : {
       "get" : {
-        "operationId" : "search",
+        "operationId" : "search_1",
         "parameters" : [ {
           "in" : "query",
           "name" : "maHocKy",
@@ -1914,7 +2204,7 @@
         "tags" : [ "enrollment-period-controller" ]
       },
       "post" : {
-        "operationId" : "create_1",
+        "operationId" : "create_3",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2378,7 +2668,7 @@
         "tags" : [ "notification-controller" ]
       },
       "post" : {
-        "operationId" : "create",
+        "operationId" : "create_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2659,9 +2949,37 @@
         "tags" : [ "report-controller" ]
       }
     },
+    "/api/students" : {
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateStudentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProvisionedStudent"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      }
+    },
     "/api/teachers" : {
       "get" : {
-        "operationId" : "search_3",
+        "operationId" : "search",
         "parameters" : [ {
           "in" : "query",
           "name" : "maKhoa",
@@ -2683,6 +3001,32 @@
               }
             },
             "description" : "OK"
+          }
+        },
+        "tags" : [ "teacher-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateTeacherRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProvisionedTeacher"
+                }
+              }
+            },
+            "description" : "Created"
           }
         },
         "tags" : [ "teacher-controller" ]

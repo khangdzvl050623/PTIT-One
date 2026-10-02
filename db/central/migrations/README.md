@@ -39,6 +39,8 @@ cho mỗi file SQL mới và kiểm chứng riêng trên SQL Server.
 - `V3__dot_dang_ky_mot_dot_mo.sql` — mỗi cơ sở chỉ một đợt `DANG_MO` mỗi học kỳ.
 - `V4__thong_bao.sql` — `ThongBao`, `ThongBaoNguoiNhan` cho module `notification`
   (nhóm cho phép ngày 02/10/2026): thông báo soạn tay và tự sinh, trạng thái đọc.
+- `V5__kich_hoat_tai_khoan.sql` — F02: `TaiKhoan.MatKhauHash` cho phép `NULL`
+  (= chưa kích hoạt) và bảng `MaKichHoat` (hash mã kích hoạt một lần).
 
 Tài khoản chạy migration cần `db_ddladmin` (hoặc cao hơn). Login chỉ có
 `CONNECT` sẽ báo `CREATE TABLE permission denied`.

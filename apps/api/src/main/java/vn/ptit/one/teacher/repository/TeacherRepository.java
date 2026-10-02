@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import vn.ptit.one.teacher.model.Teacher;
 
-/** Đọc hồ sơ giảng viên. Module `student` sở hữu bảng `GiangVien`. */
+/** Hồ sơ giảng viên. Module `teacher` sở hữu bảng `GiangVien`. */
 @Repository
 @Profile("central")
 public class TeacherRepository {
@@ -40,6 +40,14 @@ public class TeacherRepository {
         }
         sql.append(" ORDER BY MaGiangVien");
         return jdbc.query(sql.toString(), (rs, rowNum) -> map(rs), args.toArray());
+    }
+
+    /** @return 0 nếu không có khoa {@code maKhoa} — báo lỗi rõ thay vì dựa vào FK */
+    public int insert(String maGiangVien, String hoTen, String maCoSo, String maKhoa, String hocVi) {
+        return jdbc.update("""
+                INSERT INTO dbo.GiangVien (MaGiangVien, HoTen, MaCoSo, MaKhoa, HocVi)
+                SELECT ?, ?, ?, k.MaKhoa, ? FROM dbo.Khoa k WHERE k.MaKhoa = ?
+                """, maGiangVien, hoTen, maCoSo, hocVi, maKhoa);
     }
 
     public Optional<Teacher> findOne(String maGiangVien) {
