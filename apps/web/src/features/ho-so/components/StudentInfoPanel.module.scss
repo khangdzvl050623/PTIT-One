@@ -9,41 +9,10 @@
   @media (max-width: tokens.$breakpoint-mobile) {
     grid-template-columns: minmax(0, 1fr);
 
-    .avatar {
+    > :last-child {
       order: -1;
     }
   }
-}
-
-/* Ảnh thẻ mặc định 3×4: bóng người đặt sát đáy như ảnh chân dung, logo
-   Học viện ở góc trên — viền đỏ thương hiệu thay cho viền xanh bản gốc. */
-.avatar {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  width: 120px;
-  height: 160px;
-  overflow: hidden;
-  background: linear-gradient(to bottom, var(--panel-bg) 0%, var(--tile-brand-bg) 100%);
-  border: 3px solid var(--ptit-red);
-  border-radius: tokens.$radius-sm;
-  box-sizing: border-box;
-}
-
-.avatarLogo {
-  position: absolute;
-  top: tokens.$space-xs;
-  left: tokens.$space-xs;
-  opacity: 0.9;
-}
-
-.avatarFigure {
-  width: 112px;
-  height: 112px;
-  margin-bottom: -14px;
-  color: var(--notice-meta);
-  opacity: 0.45;
 }
 
 .progress {

@@ -1,6 +1,7 @@
-import { Icon, Logo, Panel } from '@/shared/ui'
+import { Panel } from '@/shared/ui'
 
 import type { StudentProfile } from '../types'
+import { IdPhoto } from './IdPhoto'
 import { InfoTable } from './InfoTable'
 import styles from './StudentInfoPanel.module.scss'
 
@@ -45,13 +46,7 @@ export function StudentInfoPanel({ profile }: StudentInfoPanelProps) {
               { label: 'Cơ sở', value: profile.tenCoSo },
             ]}
           />
-          {/* Hệ thống chưa lưu ảnh thẻ — khung ảnh mặc định kèm logo Học viện. */}
-          <div className={styles.avatar} role="img" aria-label="Chưa có ảnh thẻ">
-            <span className={styles.avatarLogo}>
-              <Logo size="md" variant="tile" alt="" />
-            </span>
-            <Icon name="user" className={styles.avatarFigure} />
-          </div>
+          <IdPhoto />
         </div>
       </Panel>
 

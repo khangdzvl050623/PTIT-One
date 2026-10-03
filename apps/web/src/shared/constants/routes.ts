@@ -24,9 +24,11 @@ export const ROUTES = {
   gvLopPhuTrach: '/giang-vien/lop-phu-trach',
   gvNhapDiem: '/giang-vien/nhap-diem',
 
-  // Quản trị đào tạo (ADMIN_CO_SO) — F02, F04
+  // Quản trị — tổng quan (cả hai), F02 (ADMIN_MASTER), F04 (ADMIN_CO_SO)
+  qtTongQuan: '/quan-tri/tong-quan',
   qtHoSo: '/quan-tri/ho-so',
   qtLopHocPhan: '/quan-tri/lop-hoc-phan',
+  qtDangKy: '/quan-tri/dang-ky-hoc-phan',
 
   // Quản trị danh mục (ADMIN_MASTER) — F03
   qtDanhMuc: '/quan-tri/danh-muc',

@@ -4,6 +4,9 @@ import { Route, Routes } from 'react-router-dom'
 import { DefaultLayout } from '@/app/layouts'
 import { RequireAuth } from '@/features/auth'
 import { AccountPage } from '@/pages/AccountPage'
+import { AdminClassesPage } from '@/pages/AdminClassesPage'
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
+import { AdminRegistrationPage } from '@/pages/AdminRegistrationPage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { GradesPage } from '@/pages/GradesPage'
 import { HomePage } from '@/pages/HomePage'
@@ -32,6 +35,9 @@ import { NAV_ITEMS } from './navigation'
  */
 /** Màn đã dựng xong, theo đường dẫn. Mục chưa có ở đây dùng trang giữ chỗ. */
 const SCREENS: Partial<Record<string, ReactNode>> = {
+  [ROUTES.qtTongQuan]: <AdminDashboardPage />,
+  [ROUTES.qtDangKy]: <AdminRegistrationPage />,
+  [ROUTES.qtLopHocPhan]: <AdminClassesPage />,
   [ROUTES.svDangKy]: <RegistrationPage />,
   [ROUTES.svDotDangKy]: <PeriodPage />,
   [ROUTES.svMonHoc]: <PrerequisitePage />,
