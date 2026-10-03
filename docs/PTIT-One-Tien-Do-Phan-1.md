@@ -80,6 +80,68 @@ trên SQL Server thật:
 - **Hợp đồng API không lệch code**: `openapi.json` sinh từ controller/DTO,
   `OpenApiContractTest` làm build đỏ nếu file lệch.
 
+### Quyền sử dụng endpoint
+
+Gom theo vai trò cho dễ đối chiếu với B3. Chi tiết từng endpoint vẫn ở
+[API Contract](PTIT-One-API-Contract.md); bảng này để thấy toàn bộ bề mặt API
+trong một chỗ.
+
+Quyền đến từ ba nơi trong code: `SecurityConfig` (route công khai),
+`@PreAuthorize` (chỉ 6 chỗ), và **phần lớn là phép kiểm trong service** —
+nên không đọc `@PreAuthorize` mà suy ra quyền được.
+
+**Công khai — không cần đăng nhập** (9)
+
+`GET /api/health` · `GET /api/auth/csrf` ·
+`POST /api/auth/login` `refresh` `logout` ·
+`POST /api/auth/activate` `activate/resend` ·
+`POST /api/auth/forgot-password` `reset-password`
+
+Bốn endpoint cuối phải công khai vì người chưa kích hoạt hoặc quên mật khẩu thì
+chưa đăng nhập được.
+
+**Chỉ cần đăng nhập, mọi vai trò** (18)
+
+| Nhóm | Endpoint |
+|---|---|
+| Phiên | `POST /api/auth/logout-all` · `GET /api/auth/me` |
+| Email & mật khẩu | `GET`/`PUT /api/auth/email` · `POST /api/auth/email/resend` `email/verify` · `POST /api/auth/change-password` |
+| Danh mục | `GET /api/courses` `/{maMonHoc}` · `/api/faculties` · `/api/terms` · `/api/programs` `/{maCTDT}` |
+| Có giới hạn phạm vi cơ sở | `GET /api/classes` `/{maLopHP}` `/{maLopHP}/schedule` · `/api/teachers` · `/api/enrollment-periods` |
+
+Năm endpoint cuối ai đăng nhập cũng gọi được, nhưng **chỉ thấy dữ liệu cơ sở của
+mình**; `ADMIN_MASTER` thấy mọi cơ sở. Phạm vi lấy từ JWT, không nhận tham số
+`maCoSo`.
+
+**Theo vai trò** (41)
+
+| Vai trò | Endpoint |
+|---|---|
+| `SINH_VIEN` | `GET /api/me/timetable` · `GET`/`POST /api/me/enrollments` · `DELETE /api/me/enrollments/{maLopHP}` · `GET /api/me/grades` |
+| `SINH_VIEN` + `GIANG_VIEN` | `GET /api/me/notifications` `unread-count` · `POST /api/me/notifications/{maThongBao}/read` `read-all` |
+| `GIANG_VIEN` | `GET /api/me/teaching-classes` · `GET /api/me/teaching-schedule` |
+| **GV phụ trách lớp đó** | `PUT /api/classes/{maLopHP}/grades` · `POST /api/classes/{maLopHP}/grades/publish` |
+| **GV phụ trách lớp · Admin cơ sở của lớp · Admin Master** | `GET /api/classes/{maLopHP}/students` · `GET /api/classes/{maLopHP}/grades` |
+| `ADMIN_CO_SO`, **chỉ cơ sở mình** | `POST /api/classes` · `PUT /api/classes/{maLopHP}` `/{maLopHP}/teacher` `/{maLopHP}/schedule` · `POST /api/classes/{maLopHP}/cancel` `/{maLopHP}/grades/lock` · `POST /api/enrollment-periods` · `PUT /api/enrollment-periods/{maDot}` |
+| `ADMIN_CO_SO` + `ADMIN_MASTER` | `GET /api/health/db` · `GET /api/reports/summary` `/api/reports/courses` |
+| `ADMIN_MASTER` | `GET /api/accounts` · `POST /api/accounts/{tenDangNhap}/activation-code` · `PUT /api/accounts/{tenDangNhap}/status` · `POST /api/courses` · `PUT /api/courses/{maMonHoc}` · `PUT /api/courses/{maMonHoc}/prerequisites` · `POST /api/students` · `POST /api/teachers` |
+| Mọi vai trò **trừ** `SINH_VIEN` | `GET`/`POST /api/notifications` · `POST /api/notifications/preview` · `GET`/`PUT`/`DELETE /api/notifications/{maThongBao}` · `POST /api/notifications/{maThongBao}/send` |
+
+**Bốn chỗ quyền phụ thuộc dữ liệu, không chỉ vai trò**
+
+| Nơi | Quy tắc |
+|---|---|
+| Nhập / công bố điểm | Phải là **giảng viên đang được phân công lớp đó** (`requireTeacherOf`); GV khác bị `403` |
+| Xem danh sách SV và bảng điểm lớp | `requireStaffAccess` — **sinh viên không qua được, kể cả sinh viên của lớp**, vì danh sách chứa thông tin người khác |
+| Khoá điểm | `ADMIN_CO_SO` của lớp, **không phải** giảng viên — tách khỏi quyền nhập điểm có chủ đích |
+| Phạm vi gửi thông báo | `TOAN_TRUONG` chỉ `ADMIN_MASTER`; `CO_SO` là Admin cơ sở (cơ sở mình) hoặc Master, GV bị từ chối; `LOP_HOC_PHAN` thì GV chỉ gửi được cho lớp mình dạy |
+
+Thống kê cũng thu hẹp theo vai trò: `ADMIN_MASTER` xem mọi cơ sở, `ADMIN_CO_SO`
+bị ép về cơ sở mình ngay cả khi truyền `?maCoSo=` của cơ sở khác (`403`).
+
+Cộng lại: **9 công khai + 18 chỉ cần đăng nhập + 41 theo vai trò = 68 endpoint**,
+khớp số ở mục 1.
+
 ---
 
 ## 4. Chưa làm — Phần 1
