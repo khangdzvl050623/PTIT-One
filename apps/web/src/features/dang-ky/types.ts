@@ -132,3 +132,11 @@ export interface StudyRecord {
   diemTongKet: number | null
   ketQua: 'DAT' | 'KHONG_DAT' | null
 }
+
+/** Học kỳ mà màn đăng ký đang làm việc, kèm thông tin để hiển thị. */
+export interface CurrentTerm {
+  maHocKy: string
+  tenHocKy: string
+  /** `HocKy.NgayBatDau` (ISO) — popup thời khoá biểu đổi tuần ra ngày. */
+  ngayBatDau: string
+}

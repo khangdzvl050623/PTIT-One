@@ -24,3 +24,17 @@ export type {
   StudentEnrollments,
   StudyRecord,
 } from './types'
+export {
+  cancel,
+  courseCatalog,
+  currentPeriod,
+  currentTerm,
+  listOpenClasses,
+  listPeriods,
+  listRelations,
+  myBestResults,
+  myEnrollments,
+  myProgram,
+  register,
+} from './api/enrollmentApi'
+export type { CurrentTerm } from './types'

@@ -6,6 +6,9 @@ import {
   CATALOG,
   COURSE_NAMES,
   DEMO_CLASSES,
+  DEMO_MA_HOC_KY,
+  DEMO_NGAY_BAT_DAU,
+  DEMO_TEN_HOC_KY,
   DEMO_ENROLLED,
   DEMO_PERIOD,
   DEMO_PERIODS,
@@ -17,6 +20,7 @@ import type {
   BestResults,
   ClassOffer,
   CourseRelation,
+  CurrentTerm,
   CourseSummary,
   EnrolledCourse,
   EnrollmentPeriod,
@@ -271,4 +275,14 @@ export async function cancel(maLopHP: string, maHocKy: string): Promise<StudentE
 /** Chỉ bản giả: trả dữ liệu demo về như lúc đầu. */
 export function resetDemo(): void {
   save(initial())
+}
+
+/** Bản giả làm việc trên đúng một học kỳ. */
+export async function currentTerm(): Promise<CurrentTerm> {
+  await delay()
+  return {
+    maHocKy: DEMO_MA_HOC_KY,
+    tenHocKy: DEMO_TEN_HOC_KY,
+    ngayBatDau: DEMO_NGAY_BAT_DAU,
+  }
 }

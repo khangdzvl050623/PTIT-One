@@ -1,4 +1,4 @@
-export { apiFetch, setReauthenticator } from './http'
+export { apiFetch, apiRequest, setReauthenticator } from './http'
 export type { ApiRequest } from './http'
 export { ApiError } from './errors'
 export type { ApiErrorBody } from './errors'

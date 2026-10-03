@@ -23,12 +23,22 @@ export interface ScopeContext {
 }
 
 export function scopeOptions(program: StudentProgram | null): { value: Scope; label: string }[] {
-  const keHoach = program
-    ? `Môn theo kế hoạch học kỳ ${program.hocKyHienTai} - ${program.maCTDT}`
-    : 'Môn theo kế hoạch học kỳ'
+  /* KE_HOACH cần biết sinh viên đang ở học kỳ thứ mấy. API thật CHƯA có số đó
+     (hocKyHienTai = 0), nên ẩn hẳn mục này thay vì hiện một bộ lọc luôn rỗng —
+     bộ lọc không ra kết quả nào trông như lỗi dữ liệu. Có số thật thì mục tự
+     hiện lại, không phải sửa gì ở đây. */
+  const coKeHoach = (program?.hocKyHienTai ?? 0) > 0
+  const keHoach: { value: Scope; label: string }[] = coKeHoach
+    ? [
+        {
+          value: 'KE_HOACH',
+          label: `Môn theo kế hoạch học kỳ ${program?.hocKyHienTai} - ${program?.maCTDT}`,
+        },
+      ]
+    : []
   return [
     { value: 'MON_HOC', label: 'Lọc theo môn học' },
-    { value: 'KE_HOACH', label: keHoach },
+    ...keHoach,
     { value: 'CTDT', label: 'Môn trong chương trình đào tạo kế hoạch' },
     { value: 'CHUA_HOC', label: 'Môn chưa học trong CTĐT kế hoạch' },
     { value: 'HOC_LAI', label: 'Môn sinh viên cần học lại (đã rớt)' },

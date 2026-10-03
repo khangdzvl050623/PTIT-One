@@ -1,31 +1,38 @@
 import { useAuth } from '@/features/auth'
-import {
-  DEMO_MA_HOC_KY,
-  DEMO_NGAY_BAT_DAU,
-  DEMO_TEN_HOC_KY,
-  EnrollmentBoard,
-} from '@/features/dang-ky'
+import { currentTerm, EnrollmentBoard } from '@/features/dang-ky'
+import { API_MODE } from '@/shared/api'
+import { useAsyncData } from '@/shared/lib'
 import { Panel } from '@/shared/ui'
 
 import { StudentShell } from './StudentShell'
 
 /**
- * Đăng ký học phần (F08). Đang chạy bản giả `features/dang-ky/api/mockEnrollmentApi`
- * — kiểm tra cùng thứ tự và cùng mã lỗi với `POST /api/me/enrollments`.
+ * Đăng ký học phần (F08).
+ *
+ * Học kỳ KHÔNG viết cứng: lấy từ đợt đăng ký đang mở, vì đợt cho kỳ sau thường
+ * mở trong khi kỳ hiện tại còn đang học. Bản giả trả đúng một học kỳ demo.
  */
 export function RegistrationPage() {
   const { user } = useAuth()
+  const { data: term, loading, error } = useAsyncData(currentTerm)
+
+  const title = term ? `ĐĂNG KÝ MÔN HỌC ${term.tenHocKy.toLocaleUpperCase('vi')}` : 'ĐĂNG KÝ MÔN HỌC'
 
   return (
     <StudentShell>
-      <Panel title={`ĐĂNG KÝ MÔN HỌC ${DEMO_TEN_HOC_KY.toLocaleUpperCase('vi')}`} icon="book">
-        <EnrollmentBoard
-          maHocKy={DEMO_MA_HOC_KY}
-          tenHocKy={DEMO_TEN_HOC_KY}
-          ngayBatDau={DEMO_NGAY_BAT_DAU}
-          studentLabel={[user?.username, user?.hoTen].filter(Boolean).join(' · ')}
-          demo
-        />
+      <Panel title={title} icon="book">
+        {loading ? <p>Đang tải đợt đăng ký…</p> : null}
+        {error ? <p role="alert">{error}</p> : null}
+        {term ? (
+          <EnrollmentBoard
+            maHocKy={term.maHocKy}
+            tenHocKy={term.tenHocKy}
+            ngayBatDau={term.ngayBatDau}
+            studentLabel={[user?.username, user?.hoTen].filter(Boolean).join(' · ')}
+            // Nút đặt lại dữ liệu chỉ có nghĩa khi đang chạy bản giả.
+            demo={API_MODE === 'mock'}
+          />
+        ) : null}
       </Panel>
     </StudentShell>
   )

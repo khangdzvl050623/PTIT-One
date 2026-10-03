@@ -35,8 +35,17 @@ function isAuthEndpoint(path: string): boolean {
   return path.startsWith('/api/auth/')
 }
 
-export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promise<T> {
-  const response = await send(path, request)
+/**
+ * Như {@link apiFetch} nhưng trả kèm mã trạng thái.
+ *
+ * Cần khi 200 và 201 có nghĩa khác nhau — ví dụ `POST /api/me/enrollments`:
+ * 201 là vừa đăng ký, 200 là bấm lại đúng lớp đang giữ.
+ */
+export async function apiRequest<T>(
+  path: string,
+  request: ApiRequest = {},
+): Promise<{ data: T; status: number }> {
+  let response = await send(path, request)
 
   if (response.status === 401 && reauthenticate && !isAuthEndpoint(path)) {
     /* Access hết hạn. 401 nghĩa là server CHƯA xử lý gì, nên thử lại an toàn
@@ -44,11 +53,15 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
        không phải access hết hạn. */
     const renewed = await reauthenticate()
     if (renewed) {
-      return parse<T>(await send(path, request), path)
+      response = await send(path, request)
     }
   }
 
-  return parse<T>(response, path)
+  return { data: await parse<T>(response, path), status: response.status }
+}
+
+export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promise<T> {
+  return (await apiRequest<T>(path, request)).data
 }
 
 async function send(path: string, request: ApiRequest): Promise<Response> {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError } from '@/shared/api'
 
-import * as api from '../api/mockEnrollmentApi'
+import * as api from '../api/enrollmentApi'
 import type {
   BestResults,
   ClassOffer,
