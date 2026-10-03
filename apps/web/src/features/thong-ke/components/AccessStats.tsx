@@ -13,7 +13,7 @@ export function AccessStats() {
       <ul className={styles.list}>
         {ACCESS_STATS.map((stat) => (
           <li key={stat.id} className={styles.row}>
-            <Icon name={stat.icon} size="12px" className={styles.icon} />
+            <Icon name={stat.icon} size="15px" className={styles.icon} />
             <span className={styles.label}>{stat.label}:</span>
             <strong className={styles.value}>{stat.value}</strong>
           </li>

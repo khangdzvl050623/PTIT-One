@@ -6,11 +6,19 @@ export const ROUTES = {
   home: '/',
   login: '/dang-nhap',
   account: '/tai-khoan',
+  userInfo: '/thong-tin',
+  thongBao: '/thong-bao',
+  doiMatKhau: '/tai-khoan/doi-mat-khau',
+  email: '/tai-khoan/email',
 
   // Sinh viên — F07, F08, F09
   svDangKy: '/sinh-vien/dang-ky',
   svBangDiem: '/sinh-vien/bang-diem',
   svLichHoc: '/sinh-vien/lich-hoc',
+  svLichHocHocKy: '/sinh-vien/lich-hoc-hoc-ky',
+  svChuongTrinh: '/sinh-vien/chuong-trinh-dao-tao',
+  svMonHoc: '/sinh-vien/mon-hoc',
+  svDotDangKy: '/sinh-vien/dot-dang-ky',
 
   // Giảng viên — F05, F06
   gvLopPhuTrach: '/giang-vien/lop-phu-trach',

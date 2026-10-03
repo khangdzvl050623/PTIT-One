@@ -1,0 +1,36 @@
+@use '@/styles/tokens' as tokens;
+
+.table {
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: tokens.$space-lg;
+  padding: tokens.$space-xs 0;
+  /* Xếp dày như phiếu thông tin gốc: 14 dòng vẫn vừa một màn hình. */
+  line-height: 1.4;
+  border-bottom: 1px dashed var(--notice-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+}
+
+.label {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+.value {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  color: var(--notice-text);
+  overflow-wrap: anywhere;
+}

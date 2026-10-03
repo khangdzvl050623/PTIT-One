@@ -24,17 +24,46 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 32px;
+  width: 40px;
   font-size: tokens.$font-size-sm;
   color: var(--field-icon-text);
   background: var(--field-icon-bg);
   border-right: 1px solid var(--field-border);
 }
 
+/* Ô bên phải ô mật khẩu — cùng khối nền xám với ô icon bên trái. */
+.reveal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  padding: 0;
+  color: var(--field-icon-text);
+  background: var(--field-icon-bg);
+  border: none;
+  border-left: 1px solid var(--field-border);
+  cursor: pointer;
+  transition: color tokens.$transition-fast;
+
+  &:hover:not(:disabled) {
+    color: var(--accent-red);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
 .input {
   width: 100%;
   min-width: 0;
-  padding: tokens.$space-xs tokens.$space-md;
+  padding: tokens.$space-sm tokens.$space-md;
   border: none;
   outline: none;
   font: inherit;

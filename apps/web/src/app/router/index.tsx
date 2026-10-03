@@ -1,13 +1,18 @@
+import type { ReactNode } from 'react'
 import { Route, Routes } from 'react-router-dom'
 
 import { DefaultLayout } from '@/app/layouts'
 import { RequireAuth } from '@/features/auth'
 import { AccountPage } from '@/pages/AccountPage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
+import { GradesPage } from '@/pages/GradesPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { SemesterTimetablePage } from '@/pages/SemesterTimetablePage'
+import { TimetablePage } from '@/pages/TimetablePage'
+import { UserInfoPage } from '@/pages/UserInfoPage'
 import { ROUTES } from '@/shared/constants'
 
 import { NAV_ITEMS } from './navigation'
@@ -21,6 +26,13 @@ import { NAV_ITEMS } from './navigation'
  * ⚠️ `RequireAuth` chỉ là lớp trải nghiệm. Quyền thật do backend kiểm ở mỗi
  * request — ẩn menu hay chặn tuyến không thay thế được điều đó.
  */
+/** Màn đã dựng xong, theo đường dẫn. Mục chưa có ở đây dùng trang giữ chỗ. */
+const SCREENS: Partial<Record<string, ReactNode>> = {
+  [ROUTES.svLichHoc]: <TimetablePage />,
+  [ROUTES.svBangDiem]: <GradesPage />,
+  [ROUTES.svLichHocHocKy]: <SemesterTimetablePage />,
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -31,13 +43,16 @@ export function AppRoutes() {
 
         <Route element={<RequireAuth />}>
           <Route path={ROUTES.account} element={<AccountPage />} />
+          <Route path={ROUTES.userInfo} element={<UserInfoPage />} />
         </Route>
 
         {NAV_ITEMS.map((item) => (
           <Route key={item.path} element={<RequireAuth roles={item.roles} />}>
             <Route
               path={item.path}
-              element={<PlaceholderPage title={item.label} feature={item.feature} />}
+              element={
+                SCREENS[item.path] ?? <PlaceholderPage title={item.label} feature={item.feature} />
+              }
             />
           </Route>
         ))}

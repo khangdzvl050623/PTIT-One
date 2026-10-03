@@ -1,3 +1,4 @@
+import { ROLES } from '@/features/auth'
 import type { Role } from '@/features/auth'
 import { ROUTES } from '@/shared/constants'
 
@@ -8,6 +9,11 @@ export interface NavItem {
   roles: Role[]
   /** Gói chức năng trong kế hoạch Phần 1 — hiện trên trang giữ chỗ. */
   feature: string
+  /**
+   * `false`: vẫn có tuyến và người gác, nhưng không lên thanh menu trên cùng —
+   * chỉ mở từ lối tắt (khung TÍNH NĂNG). Bỏ trống là có trong menu.
+   */
+  inMenu?: boolean
 }
 
 /**
@@ -70,10 +76,61 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ['ADMIN_MASTER'],
     feature: 'F03',
   },
+
+  // --- Ngoài menu: lối tắt ở trang Thông tin ---------------------------
+  {
+    path: ROUTES.thongBao,
+    label: 'Thông báo',
+    roles: ['SINH_VIEN', 'GIANG_VIEN'],
+    feature: 'Thông báo',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.svLichHocHocKy,
+    label: 'Thời khoá biểu dạng học kỳ',
+    roles: ['SINH_VIEN'],
+    feature: 'F09',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.svChuongTrinh,
+    label: 'Chương trình đào tạo',
+    roles: ['SINH_VIEN'],
+    feature: 'F03',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.svMonHoc,
+    label: 'Môn học và môn tiên quyết',
+    roles: ['SINH_VIEN'],
+    feature: 'F03',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.svDotDangKy,
+    label: 'Lịch đợt đăng ký',
+    roles: ['SINH_VIEN'],
+    feature: 'F08',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.doiMatKhau,
+    label: 'Đổi mật khẩu',
+    roles: [...ROLES],
+    feature: 'A1',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.email,
+    label: 'Email và xác minh',
+    roles: [...ROLES],
+    feature: 'A1',
+    inMenu: false,
+  },
 ]
 
 /** Menu của một vai trò. Chưa đăng nhập thì không có mục nào. */
 export function navItemsFor(role: Role | null | undefined): NavItem[] {
   if (!role) return []
-  return NAV_ITEMS.filter((item) => item.roles.includes(role))
+  return NAV_ITEMS.filter((item) => item.inMenu !== false && item.roles.includes(role))
 }

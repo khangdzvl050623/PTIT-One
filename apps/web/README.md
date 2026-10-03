@@ -18,7 +18,13 @@ TypeScript và build Vite). Xem [CI Phần 1](../../docs/PTIT-One-CI.md).
 
 API được dựng ở `apps/api`, mặc định cổng 8080. Vite cổng 5173 đã proxy
 `/api` tới `http://127.0.0.1:8080`; truy cập `/api/health` qua Vite để kiểm
-kết nối. Backend hiện là skeleton, form đăng nhập chưa nối auth.
+kết nối.
+
+**Đăng nhập mặc định chạy bản giả** để dựng UI không cần backend: mật khẩu
+bất kỳ, tài khoản `B26DCCN001` (SV) · `GVHCM001` (GV) · `admin.hcm` ·
+`admin.master`. Gọi API thật: tạo `apps/web/.env.local` chứa
+`VITE_AUTH_MODE=api` rồi chạy lại `npm run dev`. Chỗ chuyển là
+`src/features/auth/api/authApi.ts`.
 Xem [hướng dẫn backend](../api/README.md). UI tiếp tục làm song song
 theo kế hoạch Phần 1; không cần chờ cổng phân tán của lịch cũ.
 

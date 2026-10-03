@@ -1,0 +1,35 @@
+@use '@/styles/tokens' as tokens;
+
+.list {
+  margin: calc(-1 * #{tokens.$space-lg});
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--notice-border);
+  }
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-md;
+  padding: tokens.$space-md tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-text);
+  text-decoration: none;
+  transition:
+    background-color tokens.$transition-fast,
+    color tokens.$transition-fast;
+
+  svg {
+    flex-shrink: 0;
+    color: var(--accent-red);
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--accent-red);
+    background: var(--notice-hover-bg);
+  }
+}

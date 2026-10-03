@@ -1,0 +1,302 @@
+@use '@/styles/tokens' as tokens;
+
+/* Lưới rộng hơn màn điện thoại: cuộn ngang TRONG khung, trang không tràn. */
+.scroll {
+  overflow-x: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 72px repeat(7, minmax(108px, 1fr)) 64px;
+  min-width: 900px;
+  font-size: tokens.$font-size-xs;
+  /* Ghi đè line-height 145% của :root — tính trên 18px ra ~26px, quá cao cho ô tiết. */
+  line-height: 1.25;
+}
+
+/* --- Tiêu đề ngày và nút chuyển tuần ---------------------------------- */
+
+.dayHead,
+.nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--ptit-on-brand);
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  border-right: 1px solid var(--ptit-red-border);
+}
+
+.dayHead {
+  font-weight: 600;
+
+  small {
+    font-size: tokens.$font-size-2xs;
+    font-weight: 400;
+    color: var(--ptit-on-brand-soft);
+  }
+}
+
+/* Hôm nay: thanh tiêu đề đậm hơn, vạch trắng ở cạnh giáp lưới. */
+.today {
+  background: linear-gradient(to bottom, var(--panel-header-hover-from), var(--panel-header-hover-to));
+  box-shadow: inset 0 -3px 0 var(--ptit-on-brand);
+}
+
+.bottom.today {
+  box-shadow: inset 0 3px 0 var(--ptit-on-brand);
+}
+
+/* Hàng đáy: viền trên tách khỏi tiết 12. */
+.bottom {
+  border-top: 1px solid var(--ptit-red-border);
+}
+
+.nav {
+  padding: 0;
+  font: inherit;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  transition: filter tokens.$transition-fast;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.12);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ptit-on-brand);
+    outline-offset: -3px;
+  }
+}
+
+/* --- Cột tiết, ô trống, rìa phải -------------------------------------- */
+
+.period {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--ptit-on-brand);
+  background: var(--panel-header-to);
+  border-bottom: 1px solid var(--ptit-red-border);
+
+  small {
+    font-size: tokens.$font-size-2xs;
+    font-weight: 400;
+    color: var(--ptit-on-brand-muted);
+  }
+}
+
+.cell {
+  background: var(--panel-bg);
+  border-right: 1px solid var(--notice-border);
+  border-bottom: 1px solid var(--notice-border);
+}
+
+.todayCell {
+  background: var(--notice-hover-bg);
+}
+
+/* Vạch nghỉ trưa giữa tiết 5 (11:50) và tiết 6 (13:00). */
+.noonBreak {
+  border-bottom: 2px solid var(--panel-border);
+}
+
+.rail {
+  background: var(--panel-header-to);
+  border-bottom: 1px solid var(--ptit-red-border);
+  opacity: 0.85;
+}
+
+/* --- Thẻ buổi học ----------------------------------------------------- */
+
+.entry {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  /* Bề ngang và lề trái đặt inline theo làn (xem laneLayout). */
+  justify-self: start;
+  /* width tính theo % ô: phải gồm cả padding và viền, nếu không thẻ lấn sang cột kế. */
+  box-sizing: border-box;
+  min-width: 0;
+  margin-block: 2px;
+  padding: tokens.$space-xs tokens.$space-sm;
+  overflow: hidden;
+  line-height: 1.35;
+  color: var(--notice-text);
+  background: var(--tile-brand-bg);
+  border: 1px solid var(--tile-brand-border);
+  border-left: 3px solid var(--accent-red);
+  border-radius: tokens.$radius-sm;
+  animation: entry-in 0.35s ease both;
+
+  /* Dòng phụ tối đa 2 dòng, dài hơn thì "…" — đủ thông tin có trong tooltip `title`. */
+  p {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  b {
+    font-weight: 600;
+  }
+
+  /* Không cho flex ép dẹt từng dòng (chữ sẽ đè nhau) — thiếu chỗ thì thẻ cắt đáy. */
+  > * {
+    flex-shrink: 0;
+  }
+}
+
+.compact p:not(.time) {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+/* Thẻ ngắn: bỏ dòng Lớp (có trong tooltip) để dòng giờ và nhãn không bị đẩy khỏi thẻ. */
+.compact .lop {
+  display: none;
+}
+
+.compact .course {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.online {
+  background: var(--tile-warm-bg);
+  border-color: var(--tile-warm-border);
+  border-left-color: var(--tile-warm-text);
+}
+
+/* `.entry.` để thắng `.online` dù khai báo trước. */
+.entry.makeup {
+  background: var(--makeup-bg);
+  border-color: var(--makeup-border);
+  border-left-color: var(--makeup-text);
+
+  .course {
+    color: var(--makeup-text);
+  }
+}
+
+.entry.clash {
+  background: var(--clash-bg);
+  border-color: var(--clash-border);
+  border-left-color: var(--clash-text);
+  box-shadow:
+    0 0 0 1px var(--clash-border),
+    -3px 2px 6px rgba(0, 0, 0, 0.12);
+
+  .course {
+    color: var(--clash-text);
+  }
+}
+
+.course {
+  display: -webkit-box;
+  margin: 0 0 2px;
+  overflow: hidden;
+  font-size: tokens.$font-size-xs;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--accent-red);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.online .course {
+  color: var(--tile-warm-text);
+}
+
+/* `.entry .time` để thắng `.entry p` (dạng -webkit-box cắt 2 dòng) — dòng giờ
+   luôn hiện đủ nhãn. */
+.entry .time {
+  display: flex;
+  flex-wrap: wrap;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+  align-items: center;
+  gap: tokens.$space-xs;
+  margin-top: auto;
+  padding-top: tokens.$space-2xs;
+  color: var(--notice-meta);
+  border-top: 1px dashed var(--tile-brand-border);
+}
+
+.badge.badgeMakeup {
+  background: var(--makeup-text);
+}
+
+.badge.badgeClash {
+  color: var(--notice-text);
+  background: var(--clash-border);
+}
+
+.timeRange {
+  white-space: nowrap;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 0 tokens.$space-xs;
+  white-space: nowrap;
+  font-size: tokens.$font-size-2xs;
+  font-weight: 600;
+  color: var(--ptit-on-brand);
+  background: var(--tile-warm-text);
+  border-radius: 3px;
+}
+
+@keyframes entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry {
+    animation: none;
+  }
+}
+
+/* In: bỏ khung cuộn, giữ nguyên lưới trên giấy ngang. */
+@media print {
+  .scroll {
+    overflow: visible;
+  }
+
+  .grid {
+    min-width: 0;
+  }
+
+  .entry {
+    animation: none;
+  }
+
+  /* Giữ ô để lưới không xô lệch, chỉ ẩn chữ nút chuyển tuần. */
+  .nav {
+    visibility: hidden;
+  }
+}

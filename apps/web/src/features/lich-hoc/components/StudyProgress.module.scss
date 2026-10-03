@@ -1,0 +1,372 @@
+@use '@/styles/tokens' as tokens;
+
+$dot: 18px;
+$track: 4px;
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-2xl;
+}
+
+/* --- Dòng thời gian học kỳ --------------------------------------------- */
+
+.timeline {
+  position: relative;
+  display: flex;
+  margin: 0;
+  padding: tokens.$space-xs 0 0;
+  list-style: none;
+
+  /* Thanh nền: từ tâm chấm đầu tới tâm chấm cuối. */
+  &::before,
+  &::after {
+    position: absolute;
+    top: calc(#{tokens.$space-xs} + (#{$dot} - #{$track}) / 2);
+    left: calc(50% / var(--n));
+    height: $track;
+    content: '';
+    border-radius: $track;
+  }
+
+  &::before {
+    right: calc(50% / var(--n));
+    background: var(--progress-future);
+  }
+
+  /* Phần đã đi: tới chấm của kỳ đang học. */
+  &::after {
+    width: calc((100% - 100% / var(--n)) * var(--reached) / var(--steps));
+    background: linear-gradient(to right, var(--panel-header-from), var(--panel-header-to));
+    animation: fill-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: left;
+  }
+
+  @media (max-width: tokens.$breakpoint-compact) {
+    .tooltip {
+      display: none;
+    }
+  }
+}
+
+.step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: tokens.$space-sm;
+  min-width: 0;
+
+  &:hover .tooltip,
+  &:focus-within .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.dot {
+  width: $dot;
+  height: $dot;
+  padding: 0;
+  border: 3px solid var(--panel-bg);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--panel-border);
+  cursor: pointer;
+  transition: transform tokens.$transition-fast;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+.done {
+  background: var(--progress-done);
+}
+
+.current {
+  background: var(--ptit-red);
+  box-shadow: 0 0 0 4px var(--tile-brand-border);
+}
+
+.future {
+  background: var(--progress-future);
+}
+
+/* Kỳ chứa ngày đang chọn trên lịch. */
+.dotActive {
+  transform: scale(1.25);
+}
+
+.stepLabel {
+  max-width: 100%;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--notice-text);
+}
+
+/* Hiện BÊN DƯỚI nhãn: phía trên là thanh tiêu đề khung, sẽ che mất. */
+.tooltip {
+  position: absolute;
+  top: calc(100% + #{tokens.$space-sm});
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-2xs;
+  width: max-content;
+  padding: tokens.$space-md tokens.$space-lg;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--notice-text);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity tokens.$transition-fast,
+    transform tokens.$transition-fast;
+
+  strong {
+    padding-bottom: tokens.$space-xs;
+    margin-bottom: tokens.$space-2xs;
+    color: var(--accent-red);
+    border-bottom: 1px solid var(--tile-brand-border);
+  }
+}
+
+/* --- Lịch tháng ------------------------------------------------------- */
+
+.calendar {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.monthBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: tokens.$space-xl;
+  margin-bottom: tokens.$space-lg;
+}
+
+.monthTitle {
+  display: flex;
+  gap: tokens.$space-2xl;
+  min-width: 180px;
+  justify-content: center;
+  font-size: tokens.$font-size-lg;
+  color: var(--notice-text);
+}
+
+.monthNav {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--notice-text);
+  background: var(--field-icon-bg);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    color tokens.$transition-fast,
+    background-color tokens.$transition-fast;
+
+  &:hover {
+    color: var(--ptit-on-brand);
+    background: var(--accent-red);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+.flip {
+  transform: rotate(180deg);
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: tokens.$space-xs;
+}
+
+.head {
+  padding: tokens.$space-sm 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: 700;
+  text-align: center;
+  color: var(--notice-text);
+}
+
+.day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 54px;
+  padding: tokens.$space-xs 0 0;
+  font: inherit;
+  color: var(--notice-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: none;
+
+    .num {
+      outline: 2px solid var(--callout-border);
+      outline-offset: 2px;
+    }
+  }
+
+  &:hover .num {
+    background: var(--field-icon-bg);
+  }
+}
+
+.num {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: tokens.$font-size-md;
+  border-radius: 50%;
+  transition: background-color tokens.$transition-fast;
+}
+
+.outside {
+  color: var(--progress-future);
+}
+
+.sunday {
+  color: var(--accent-red);
+}
+
+.outside.sunday {
+  opacity: 0.55;
+}
+
+.selected .num,
+.selected:hover .num {
+  background: var(--notice-border);
+}
+
+/* Hôm nay nổi nhất: thắng cả "đang chọn". */
+.today .num,
+.today:hover .num {
+  font-weight: 700;
+  color: var(--ptit-on-brand);
+  background: var(--progress-done);
+}
+
+.mark {
+  width: 5px;
+  height: 5px;
+  margin-top: 3px;
+  background: var(--accent-red);
+  border-radius: 50%;
+}
+
+/* --- Buổi học của ngày đang chọn --------------------------------------- */
+
+.detail {
+  margin-top: tokens.$space-lg;
+  padding-top: tokens.$space-lg;
+  border-top: 1px solid var(--notice-border);
+}
+
+.detailTitle {
+  margin: 0 0 tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  color: var(--accent-red);
+
+  small {
+    font-weight: 400;
+    color: var(--notice-meta);
+  }
+}
+
+.none {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: tokens.$space-xs tokens.$space-lg;
+    padding: tokens.$space-sm tokens.$space-md;
+    font-size: tokens.$font-size-sm;
+    background: var(--tile-brand-bg);
+    border-left: 3px solid var(--accent-red);
+    border-radius: tokens.$radius-sm;
+  }
+
+  li.makeup {
+    background: var(--makeup-bg);
+    border-left-color: var(--makeup-text);
+  }
+}
+
+.when {
+  font-weight: 600;
+  color: var(--notice-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.what {
+  color: var(--notice-text);
+}
+
+.tag {
+  margin-left: tokens.$space-sm;
+  padding: 0 tokens.$space-xs;
+  font-size: tokens.$font-size-2xs;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ptit-on-brand);
+  background: var(--makeup-text);
+  border-radius: 3px;
+}
+
+@keyframes fill-in {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline::after {
+    animation: none;
+  }
+}

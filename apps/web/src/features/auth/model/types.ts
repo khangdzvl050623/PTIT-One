@@ -21,6 +21,12 @@ export interface SessionUser {
   entityId: string | null
   /** `null` với `ADMIN_MASTER` — Master không thuộc cơ sở nào. */
   homeCampus: string | null
+  /**
+   * Họ tên hiển thị. **Backend chưa trả** (`SessionUserResponse` thiếu, dù
+   * `TaiKhoan.HoTen` có trong DB) — chỉ bản auth giả điền. Thiếu thì UI hiện
+   * vai trò thay thế.
+   */
+  hoTen?: string | null
   /** Hạn tuyệt đối của phiên, ISO-8601. */
   expiresAt: string
   /** Hạn access hiện tại; làm mới trước mốc này. */

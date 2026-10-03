@@ -1,0 +1,262 @@
+@use '@/styles/tokens' as tokens;
+
+$axis-width: 24px;
+$plot-height: 180px;
+
+.card {
+  /* Neo bảng srOnly vào khung và chặn tooltip ẩn làm tràn ngang trang. */
+  position: relative;
+  overflow-x: clip;
+  padding: tokens.$space-lg tokens.$space-xl;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: var(--panel-shadow);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  padding-bottom: tokens.$space-md;
+  margin-bottom: tokens.$space-xl;
+  border-bottom: 1px solid var(--notice-border);
+}
+
+.title {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  color: var(--accent-red);
+}
+
+.select {
+  flex: 1;
+  min-width: 0;
+  max-width: 260px;
+}
+
+.empty {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+.plot {
+  display: grid;
+  grid-template-columns: $axis-width minmax(0, 1fr);
+  grid-template-rows: $plot-height auto;
+  column-gap: tokens.$space-sm;
+}
+
+.axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* Nhãn trục căn giữa đúng vạch lưới: bù nửa dòng chữ hai đầu. */
+  margin: -0.5em 0;
+  font-size: tokens.$font-size-2xs;
+  line-height: 1;
+  text-align: right;
+  color: var(--notice-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.area {
+  position: relative;
+}
+
+/* Lưới mờ: đường mảnh, nhạt hơn mọi dấu dữ liệu. */
+.grid {
+  position: absolute;
+  inset-inline: 0;
+  height: 1px;
+  background: var(--notice-border);
+}
+
+.passLine {
+  position: absolute;
+  inset-inline: 0;
+  border-top: 1px dashed var(--notice-meta);
+}
+
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: tokens.$space-sm;
+  margin-top: tokens.$space-md;
+  font-size: tokens.$font-size-2xs;
+  color: var(--notice-meta);
+}
+
+.noteLine {
+  width: 16px;
+  border-top: 1px dashed var(--notice-meta);
+}
+
+.notePending {
+  width: 10px;
+  height: 10px;
+  margin-left: tokens.$space-md;
+  border: 1px dashed var(--field-border);
+}
+
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  /* Khe giữa các cột tách từng môn; vùng hover nằm ở .slot. */
+  gap: tokens.$space-md;
+}
+
+/* Vùng hover rộng hơn cột để dễ trỏ. */
+.slot {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+  min-width: 0;
+
+  &:hover .tooltip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  &:hover .bar {
+    filter: brightness(0.88);
+  }
+}
+
+.bar {
+  width: min(28px, 70%);
+  /* Mọc từ trục 0 lên, lần lượt từng môn trái sang phải. */
+  transform-origin: bottom;
+  animation: grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  border-radius: 4px 4px 0 0;
+  transition: filter tokens.$transition-fast;
+}
+
+/* Chưa công bố điểm: khung nét đứt cao hết cỡ, không phải cột 0. */
+.pending {
+  width: min(28px, 70%);
+  animation: fade-in 0.5s ease both;
+  animation-delay: calc(var(--i, 0) * 70ms + 0.3s);
+  height: 100%;
+  border: 1px dashed var(--field-border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(var(--bar-top, 100%) + #{tokens.$space-sm});
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-2xs;
+  width: max-content;
+  max-width: 180px;
+  padding: tokens.$space-sm tokens.$space-md;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.35;
+  color: var(--notice-text);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity tokens.$transition-fast,
+    transform tokens.$transition-fast;
+}
+
+/* Cột sát mép: tooltip căn vào trong thay vì giữa, để không bị cắt. */
+.slot:first-child .tooltip {
+  left: 0;
+  transform: translate(0, 4px);
+}
+
+.slot:last-child .tooltip {
+  right: 0;
+  left: auto;
+  transform: translate(0, 4px);
+}
+
+.slot:first-child:hover .tooltip,
+.slot:last-child:hover .tooltip {
+  transform: translate(0, 0);
+}
+
+.labels {
+  grid-column: 2;
+  display: flex;
+  gap: tokens.$space-md;
+  padding-top: tokens.$space-sm;
+  border-top: 1px solid var(--notice-meta);
+
+  /* Mã môn xoay dọc như cổng gốc — đủ chỗ cho mã 7 ký tự dù nhiều môn. */
+  span {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+    font-size: tokens.$font-size-2xs;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--notice-meta);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.passLine {
+  animation: fade-in 0.4s ease 0.5s both;
+}
+
+@keyframes grow {
+  from {
+    transform: scaleY(0);
+  }
+
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Người dùng tắt chuyển động trong hệ điều hành thì hiện ngay kết quả cuối. */
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .pending,
+  .passLine {
+    animation: none;
+  }
+}

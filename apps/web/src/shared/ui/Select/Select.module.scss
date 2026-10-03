@@ -1,0 +1,119 @@
+@use '@/styles/tokens' as tokens;
+
+.root {
+  position: relative;
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  width: 100%;
+  padding: tokens.$space-sm tokens.$space-md;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--notice-text);
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+  transition: border-color tokens.$transition-fast;
+
+  &:hover:not(:disabled) {
+    border-color: var(--notice-meta);
+  }
+
+  &[aria-expanded='true'],
+  &:focus-visible {
+    border-color: var(--accent-red);
+    outline: 2px solid var(--callout-border);
+    outline-offset: 0;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret,
+.caretOpen {
+  flex-shrink: 0;
+  color: var(--notice-meta);
+  transition: transform tokens.$transition-fast;
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+}
+
+.list {
+  position: absolute;
+  top: calc(100% + #{tokens.$space-xs});
+  right: 0;
+  left: 0;
+  z-index: 20;
+  max-height: 280px;
+  margin: 0;
+  padding: tokens.$space-xs 0;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: var(--shadow);
+  animation: drop-in 0.14s ease-out;
+}
+
+.option {
+  padding: tokens.$space-sm tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.4;
+  color: var(--notice-text);
+  cursor: pointer;
+}
+
+/* Mục đang trỏ (chuột hoặc phím). */
+.active {
+  background: var(--notice-hover-bg);
+}
+
+/* Mục đang chọn: nền đỏ nhạt + chữ đỏ đậm, như dòng xanh của cổng gốc. */
+.selected {
+  font-weight: 600;
+  color: var(--accent-red);
+  background: var(--tile-brand-bg);
+}
+
+.selected.active {
+  background: var(--tile-brand-border);
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list {
+    animation: none;
+  }
+}

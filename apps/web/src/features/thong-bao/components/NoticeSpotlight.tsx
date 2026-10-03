@@ -16,7 +16,7 @@ export function NoticeSpotlight({ notice }: NoticeSpotlightProps) {
   return (
     <article className={styles.spotlight}>
       <div className={styles.callout}>
-        <Icon name="bullhorn" size="30px" className={styles.calloutIcon} />
+        <Icon name="bullhorn" size="34px" className={styles.calloutIcon} />
         <span className={styles.calloutTitle}>{LABELS.notices}</span>
       </div>
 

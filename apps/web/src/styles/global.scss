@@ -47,6 +47,28 @@
   --field-icon-bg: #f1f5f9;
   --field-icon-text: #64748b;
 
+  // Chiều cao header dính — Header đo và ghi đè lúc chạy; đây là giá trị dự phòng.
+  --header-h: 41px;
+
+  // Ô số liệu nhanh ở trang Thông tin
+  --tile-brand-bg: #fff1f1;
+  --tile-brand-border: #fecaca;
+  --tile-warm-bg: #fff7ed;
+  --tile-warm-border: #fed7aa;
+  --tile-warm-text: #c2410c;
+
+  // Thời khoá biểu: dạy bù (tím) và trùng lịch (vàng) — theo chú thích cổng gốc
+  --makeup-bg: #f5f3ff;
+  --makeup-border: #c4b5fd;
+  --makeup-text: #6d28d9;
+  --clash-bg: #fefce8;
+  --clash-border: #facc15;
+  --clash-text: #a16207;
+
+  // Tiến trình học tập
+  --progress-done: #16a34a;
+  --progress-future: #cbd5e1;
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -108,6 +130,14 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+/* Phần tử gắn `data-print="hide"` (thanh trên, chân trang, cột phụ, thanh
+   công cụ) không lên giấy khi bấm In. */
+@media print {
+  [data-print='hide'] {
+    display: none !important;
+  }
 }
 
 #root {

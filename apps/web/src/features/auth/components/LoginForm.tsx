@@ -27,6 +27,7 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -47,7 +48,7 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
     <form className={styles.form} onSubmit={handleSubmit}>
       <label className={styles.field}>
         <span className={styles.fieldIcon}>
-          <Icon name="user" />
+          <Icon name="user" size="18px" />
         </span>
         <input
           className={styles.input}
@@ -64,11 +65,11 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
 
       <label className={styles.field}>
         <span className={styles.fieldIcon}>
-          <Icon name="lock" />
+          <Icon name="lock" size="18px" />
         </span>
         <input
           className={styles.input}
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           name="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
@@ -77,10 +78,21 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
           disabled={pending}
           required
         />
+        {/* Icon theo trạng thái hiện tại như cổng gốc: đang ẩn thì mắt gạch chéo. */}
+        <button
+          className={styles.reveal}
+          type="button"
+          onClick={() => setShowPassword((shown) => !shown)}
+          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+          aria-pressed={showPassword}
+          disabled={pending}
+        >
+          <Icon name={showPassword ? 'eye' : 'eyeOff'} size="18px" />
+        </button>
       </label>
 
       <button className={styles.submit} type="submit" disabled={pending}>
-        <Icon name="signIn" size="12px" />
+        <Icon name="signIn" size="15px" />
         <span>{pending ? LABELS.loginSubmitting : LABELS.loginSubmit}</span>
       </button>
 
