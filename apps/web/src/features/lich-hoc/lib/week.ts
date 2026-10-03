@@ -116,8 +116,8 @@ export interface Lane {
 
 /**
  * Tìm buổi chồng tiết (cùng thứ, khoảng tiết giao nhau) và chia làn để các
- * thẻ đứng cạnh nhau thay vì đè lên nhau. Trùng lịch không tới được từ luồng
- * đăng ký (server chặn) nhưng vẫn xảy ra khi có lịch dạy bù.
+ * thẻ đứng cạnh nhau thay vì đè lên nhau. Luồng đăng ký đã chặn trùng lịch ở
+ * server — đây là lưới an toàn khi lịch lớp bị sửa sau khi sinh viên đã đăng ký.
  */
 export function laneLayout(entries: readonly TimetableEntry[]): Lane[] {
   const end = (e: TimetableEntry) => e.tietBatDau + e.soTiet - 1

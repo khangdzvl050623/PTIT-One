@@ -122,12 +122,10 @@ export function WeekGrid({ term, tuan, entries, today, onPrev, onNext, canPrev, 
           const { lane, lanes, clash } = layout[index] ?? { lane: 0, lanes: 1, clash: false }
           return (
             <article
-              key={`${e.maLopHP}-${e.thu}-${e.tietBatDau}-${e.laDayBu ? 'bu' : 'chinh'}`}
+              key={`${e.maLopHP}-${e.thu}-${e.tietBatDau}`}
               className={[
                 styles.entry,
                 e.hinhThucHoc === 'TRUC_TUYEN' ? styles.online : '',
-                e.laDayBu ? styles.makeup : '',
-                // Trùng lịch đè màu dạy bù: cảnh báo quan trọng hơn.
                 clash ? styles.clash : '',
                 e.soTiet <= COMPACT_MAX_TIET || lanes > 1 ? styles.compact : '',
               ].join(' ')}
@@ -136,7 +134,6 @@ export function WeekGrid({ term, tuan, entries, today, onPrev, onNext, canPrev, 
                 `Lớp: ${e.maLopHP}`,
                 `Phòng: ${e.phongHoc ?? '—'}`,
                 `GV: ${e.tenGiangVien ?? 'Chưa phân công'}`,
-                e.laDayBu ? 'Buổi dạy bù' : null,
                 clash ? 'Trùng lịch với buổi khác cùng tiết' : null,
               ]
                 .filter(Boolean)
@@ -169,7 +166,6 @@ export function WeekGrid({ term, tuan, entries, today, onPrev, onNext, canPrev, 
                   {formatTime(e.gioBatDau)} – {formatTime(e.gioKetThuc)}
                 </span>
                 {clash ? <span className={`${styles.badge} ${styles.badgeClash}`}>Trùng lịch</span> : null}
-                {e.laDayBu ? <span className={`${styles.badge} ${styles.badgeMakeup}`}>Dạy bù</span> : null}
                 {hinhThuc ? <span className={styles.badge}>{hinhThuc}</span> : null}
               </p>
             </article>

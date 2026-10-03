@@ -9,7 +9,11 @@ import { GradesPage } from '@/pages/GradesPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { PeriodPage } from '@/pages/PeriodPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { PrerequisitePage } from '@/pages/PrerequisitePage'
+import { ProgramPage } from '@/pages/ProgramPage'
+import { RegistrationPage } from '@/pages/RegistrationPage'
 import { SemesterTimetablePage } from '@/pages/SemesterTimetablePage'
 import { TimetablePage } from '@/pages/TimetablePage'
 import { UserInfoPage } from '@/pages/UserInfoPage'
@@ -28,6 +32,10 @@ import { NAV_ITEMS } from './navigation'
  */
 /** Màn đã dựng xong, theo đường dẫn. Mục chưa có ở đây dùng trang giữ chỗ. */
 const SCREENS: Partial<Record<string, ReactNode>> = {
+  [ROUTES.svDangKy]: <RegistrationPage />,
+  [ROUTES.svDotDangKy]: <PeriodPage />,
+  [ROUTES.svMonHoc]: <PrerequisitePage />,
+  [ROUTES.svChuongTrinh]: <ProgramPage />,
   [ROUTES.svLichHoc]: <TimetablePage />,
   [ROUTES.svBangDiem]: <GradesPage />,
   [ROUTES.svLichHocHocKy]: <SemesterTimetablePage />,

@@ -169,14 +169,13 @@ export function StudyProgress({ terms, timetableOf, today = new Date() }: StudyP
           ) : (
             <ul className={styles.sessions}>
               {daySessions.map((e) => (
-                <li key={`${e.maLopHP}-${e.tietBatDau}`} className={e.laDayBu ? styles.makeup : ''}>
+                <li key={`${e.maLopHP}-${e.tietBatDau}`}>
                   <span className={styles.when}>
                     {formatTime(e.gioBatDau)} – {formatTime(e.gioKetThuc)}
                   </span>
                   <span className={styles.what}>
                     <b>{e.tenMonHoc}</b> · Phòng {e.phongHoc ?? '—'} · Tiết {e.tietBatDau}–
                     {e.tietBatDau + e.soTiet - 1}
-                    {e.laDayBu ? <em className={styles.tag}>Dạy bù</em> : null}
                   </span>
                 </li>
               ))}

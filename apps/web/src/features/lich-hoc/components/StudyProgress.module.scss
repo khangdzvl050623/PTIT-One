@@ -327,11 +327,6 @@ $track: 4px;
     border-left: 3px solid var(--accent-red);
     border-radius: tokens.$radius-sm;
   }
-
-  li.makeup {
-    background: var(--makeup-bg);
-    border-left-color: var(--makeup-text);
-  }
 }
 
 .when {
@@ -342,17 +337,6 @@ $track: 4px;
 
 .what {
   color: var(--notice-text);
-}
-
-.tag {
-  margin-left: tokens.$space-sm;
-  padding: 0 tokens.$space-xs;
-  font-size: tokens.$font-size-2xs;
-  font-style: normal;
-  font-weight: 600;
-  color: var(--ptit-on-brand);
-  background: var(--makeup-text);
-  border-radius: 3px;
 }
 
 @keyframes fill-in {
