@@ -12,7 +12,7 @@ Phân công và nghiệm thu: [kế hoạch Phần 1](PTIT-One-Ke-Hoach-Chung-8-
 
 - `apps/api` Spring Boot 4.1.1, JDK 21; profile `central` nối một DataSource tới
   `PTITONE_CENTRAL`, profile mặc định không nối DB.
-- Schema `V1`–`V6` chạy tự động bằng Flyway lúc API khởi động — cách chạy ở
+- Schema `V1`–`V7` chạy tự động bằng Flyway lúc API khởi động — cách chạy ở
   [hướng dẫn cài Phần 1](PTIT-One-Cai-Dat-Phan-1.md#migration-và-seed).
 - **A0** xác thực: đăng nhập, refresh có rotation, logout/logout-all, phân quyền.
 - **F02** Admin Master cấp hồ sơ SV/GV kèm tài khoản, kích hoạt bằng mã một lần,
