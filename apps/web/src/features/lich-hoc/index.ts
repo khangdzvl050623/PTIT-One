@@ -11,5 +11,5 @@ export type { WeekGridProps } from './components/WeekGrid'
 export { WeekTimetable } from './components/WeekTimetable'
 export type { WeekTimetableProps } from './components/WeekTimetable'
 
-export { DEMO_TERMS, DEMO_TIMETABLES, PERIODS, demoTimetableOf } from './data/timetable'
-export type { HinhThucHoc, Period, Term, Timetable, TimetableEntry } from './types'
+export { DEMO_TERMS, DEMO_TIMETABLES, demoTimetableOf } from './data/timetable'
+export type { HinhThucHoc, Term, Timetable, TimetableEntry } from './types'

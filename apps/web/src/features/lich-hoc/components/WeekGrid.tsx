@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
 
-import { PERIODS } from '../data/timetable'
+import { PERIODS } from '@/shared/lib'
 import {
   WEEKDAYS,
   WEEKDAY_LABELS,

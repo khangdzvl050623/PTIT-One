@@ -1,0 +1,292 @@
+@use '@/styles/tokens' as tokens;
+
+/* Bảng lớp phụ trách — cùng ngôn ngữ với bảng quản trị ở feature `dang-ky`
+   và với bảng nhập điểm bên cạnh. Style để riêng vì feature không import nhau. */
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+}
+
+.termSelect {
+  min-width: 260px;
+}
+
+.summary {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Bảng ----------------------------------------------------------------- */
+
+.scroll {
+  overflow-x: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: tokens.$font-size-sm;
+
+  th,
+  td {
+    padding: tokens.$space-sm tokens.$space-md;
+    text-align: center;
+    border-bottom: 1px solid var(--notice-border);
+  }
+
+  th {
+    font-size: tokens.$font-size-xs;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--ptit-on-brand);
+    background: linear-gradient(
+      to bottom,
+      var(--panel-header-from) 0%,
+      var(--panel-header-to) 100%
+    );
+  }
+
+  td {
+    color: var(--notice-text);
+  }
+
+  tbody tr:hover td {
+    background: var(--notice-hover-bg);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.left {
+  text-align: left !important;
+}
+
+.center {
+  text-align: center;
+}
+
+.code {
+  font-family: var(--mono);
+  font-size: tokens.$font-size-xs;
+  white-space: nowrap;
+}
+
+.sub {
+  display: block;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+/* Nhiều buổi trong tuần thì mỗi buổi một dòng. */
+.lich {
+  display: block;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.seats {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$space-sm;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meter {
+  display: block;
+  width: 56px;
+  height: 6px;
+  overflow: hidden;
+  background: var(--field-icon-bg);
+  border-radius: 999px;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--accent-red);
+  }
+}
+
+.empty {
+  padding: tokens.$space-2xl;
+  text-align: center;
+  color: var(--notice-meta);
+}
+
+.muted {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+.error {
+  padding: tokens.$space-md tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  color: var(--accent-red);
+  background: var(--tile-brand-bg);
+  border: 1px solid var(--tile-brand-border);
+  border-radius: tokens.$radius-sm;
+}
+
+/* --- Badge trạng thái lớp ------------------------------------------------- */
+
+.badge {
+  display: inline-block;
+  padding: 1px tokens.$space-sm;
+  font-size: tokens.$font-size-2xs;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+
+.lop_DU_KIEN {
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+}
+
+.lop_MO {
+  color: var(--progress-done);
+  background: color-mix(in srgb, var(--progress-done) 12%, transparent);
+}
+
+.lop_DA_KHOA {
+  color: var(--tile-warm-text);
+  background: var(--tile-warm-bg);
+}
+
+.lop_DA_HUY {
+  color: var(--accent-red);
+  background: var(--tile-brand-bg);
+}
+
+/* --- Nút ------------------------------------------------------------------ */
+
+/* Không đặt `display: flex` lên `<td>`: ô thôi là table-cell thì đường kẻ
+   hàng lệch khỏi các cột còn lại. Giãn cách bằng lề giữa hai nút. */
+.actions {
+  white-space: nowrap;
+  text-align: center;
+
+  > * + * {
+    margin-left: tokens.$space-sm;
+  }
+}
+
+.ghost,
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$space-sm;
+  padding: tokens.$space-2xs tokens.$space-lg;
+  font: inherit;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+.ghost {
+  color: var(--notice-text);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+
+  &:hover:not(:disabled) {
+    color: var(--accent-red);
+    border-color: var(--accent-red);
+  }
+}
+
+.primary {
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+  border: 1px solid var(--ptit-red-border);
+
+  &:hover:not(:disabled) {
+    background: var(--ptit-red-dark);
+  }
+}
+
+/* --- Hộp thoại danh sách sinh viên ---------------------------------------- */
+
+.dialogTitle {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-2xs;
+  margin: 0;
+  font-size: tokens.$font-size-md;
+  font-weight: 600;
+  color: var(--notice-text);
+
+  small {
+    font-size: tokens.$font-size-sm;
+    font-weight: 400;
+    color: var(--notice-meta);
+  }
+}
+
+.match,
+.mismatch {
+  font-size: tokens.$font-size-xs;
+  font-weight: 500;
+}
+
+.match {
+  color: var(--progress-done);
+}
+
+.mismatch {
+  color: var(--accent-red);
+}
+
+.rosterTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: tokens.$font-size-sm;
+
+  th,
+  td {
+    padding: tokens.$space-sm tokens.$space-md;
+    text-align: left;
+    border-bottom: 1px solid var(--notice-border);
+  }
+
+  th {
+    font-size: tokens.$font-size-xs;
+    font-weight: 700;
+    color: var(--notice-meta);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: tokens.$breakpoint-compact) {
+  .termSelect {
+    min-width: 100%;
+  }
+}

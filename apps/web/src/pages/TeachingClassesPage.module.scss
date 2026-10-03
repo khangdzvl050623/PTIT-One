@@ -1,0 +1,7 @@
+@use '@/styles/tokens' as tokens;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}

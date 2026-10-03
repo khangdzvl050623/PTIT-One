@@ -1,6 +1,5 @@
-import { downloadCsv } from '@/shared/lib'
+import { diemChu, diemHe4, downloadCsv } from '@/shared/lib'
 
-import { diemChu, diemHe4 } from './grading'
 import type { TermSummary } from '../types'
 
 const HEADER = [

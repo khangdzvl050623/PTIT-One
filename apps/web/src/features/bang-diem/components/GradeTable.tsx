@@ -1,9 +1,10 @@
 import { Fragment, useMemo, useState } from 'react'
 
+import { TRONG_SO, diemChu, diemHe4 } from '@/shared/lib'
 import { Icon } from '@/shared/ui'
 
 import { downloadGradesCsv } from '../lib/exportCsv'
-import { TRONG_SO, diemChu, diemHe4, summarize } from '../lib/grading'
+import { summarize } from '../lib/grading'
 import type { StudentGrade, TermSummary } from '../types'
 import styles from './GradeTable.module.scss'
 

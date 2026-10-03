@@ -37,9 +37,5 @@ export interface Timetable {
   buoiHoc: readonly TimetableEntry[]
 }
 
-/** Một dòng `KhungGioTiet`. */
-export interface Period {
-  soTiet: number
-  gioBatDau: string
-  gioKetThuc: string
-}
+/* `Period` (một dòng `KhungGioTiet`) nằm ở `shared/lib/periods` — lịch dạy
+   giảng viên dựng lưới theo cùng bảng giờ này. */
