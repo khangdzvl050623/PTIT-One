@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import vn.ptit.one.course.model.CourseRelation;
 import vn.ptit.one.course.model.CourseSummary;
 import vn.ptit.one.course.model.Faculty;
 import vn.ptit.one.course.model.ProgramCourse;
@@ -255,6 +256,27 @@ public class CourseRepository {
                 "SELECT COUNT(*) FROM dbo.LopHocPhan WHERE MaMonHoc = ? AND MaHocKy IN (" + placeholders + ")",
                 Integer.class, args.toArray());
         return count != null && count > 0;
+    }
+
+    /**
+     * MỌI quan hệ tiên quyết trong danh mục, kèm tên hai môn.
+     *
+     * <p>Màn đăng ký cần cả đồ thị để tô môn chưa đủ điều kiện. Không có
+     * endpoint này thì giao diện phải gọi {@code GET /api/courses/{ma}} cho
+     * từng môn — N request chỉ để mở một màn.
+     */
+    public List<CourseRelation> allPrerequisites() {
+        return jdbc.query("""
+                SELECT tq.MaMonHoc, m.TenMonHoc,
+                       tq.MaMonTienQuyet, mtq.TenMonHoc AS TenMonTienQuyet
+                  FROM dbo.MonHocTienQuyet tq
+                  JOIN dbo.MonHoc m   ON m.MaMonHoc = tq.MaMonHoc
+                  JOIN dbo.MonHoc mtq ON mtq.MaMonHoc = tq.MaMonTienQuyet
+                 ORDER BY tq.MaMonHoc, tq.MaMonTienQuyet
+                """, (rs, rowNum) -> new CourseRelation(
+                        CourseRelation.TIEN_QUYET,
+                        rs.getString("MaMonHoc"), rs.getString("TenMonHoc"),
+                        rs.getString("MaMonTienQuyet"), rs.getString("TenMonTienQuyet")));
     }
 
     public void deletePrerequisites(String maMonHoc) {

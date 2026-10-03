@@ -256,6 +256,34 @@
         },
         "type" : "object"
       },
+      "ClassScheduleEntry" : {
+        "properties" : {
+          "buoiHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ScheduleSlot"
+            },
+            "type" : "array"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassSchedules" : {
+        "properties" : {
+          "lopHocPhan" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassScheduleEntry"
+            },
+            "type" : "array"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ClassSection" : {
         "properties" : {
           "choPhepLienCoSo" : {
@@ -323,6 +351,26 @@
               "$ref" : "#/components/schemas/CourseSummary"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "CourseRelation" : {
+        "properties" : {
+          "loai" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "maMonYeuCau" : {
+            "type" : "string"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "tenMonYeuCau" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -3262,6 +3310,27 @@
         "tags" : [ "notification-controller" ]
       }
     },
+    "/api/prerequisites" : {
+      "get" : {
+        "operationId" : "prerequisites",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CourseRelation"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-controller" ]
+      }
+    },
     "/api/programs" : {
       "get" : {
         "operationId" : "programs",
@@ -3380,6 +3449,32 @@
           }
         },
         "tags" : [ "report-controller" ]
+      }
+    },
+    "/api/schedules" : {
+      "get" : {
+        "operationId" : "byTerm",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSchedules"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "term-schedule-controller" ]
       }
     },
     "/api/students" : {

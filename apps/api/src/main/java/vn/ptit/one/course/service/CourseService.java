@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.ptit.one.course.model.CourseDetail;
+import vn.ptit.one.course.model.CourseRelation;
 import vn.ptit.one.course.model.CourseSummary;
 import vn.ptit.one.course.model.Faculty;
 import vn.ptit.one.course.model.ProgramDetail;
@@ -37,6 +38,11 @@ public class CourseService {
 
     public List<CourseSummary> search(String maKhoa, String tuKhoa) {
         return courses.search(maKhoa, tuKhoa);
+    }
+
+    /** Mọi quan hệ tiên quyết; dùng cho màn đăng ký để tô môn chưa đủ điều kiện. */
+    public List<CourseRelation> prerequisites() {
+        return courses.allPrerequisites();
     }
 
     public List<Faculty> faculties() {
