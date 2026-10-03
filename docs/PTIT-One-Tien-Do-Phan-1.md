@@ -57,7 +57,7 @@ Trên CI (không có SQL Server) các ca tích hợp **skip chứ không đỏ**
 | F05 | GV xem lớp phụ trách, danh sách SV, sĩ số, lịch dạy | Xong |
 | F06 | Nhập điểm (kiểm phiên bản), công bố, khoá điểm | Xong |
 | F07 | SV xem bảng điểm | Xong |
-| F08 | Đăng ký và huỷ học phần | Xong — **trừ tìm lớp liên cơ sở**, xem mục 6 |
+| F08 | Đăng ký và huỷ học phần, **chỉ lớp cùng cơ sở** (quyết định 02/10/2026) | Xong |
 | F09 | SV xem thời khoá biểu | Xong |
 | — | Thống kê (module `report`, chỉ đọc) | Xong |
 | — | Thông báo soạn tay + tự sinh (module `notification`) | Xong phần chính |
@@ -93,7 +93,8 @@ Trong 11 thư mục `features/` của `apps/web`, chỉ **3** có code thật:
 | `auth/` | 688 | Có |
 | `thong-bao/` | 357 | Có |
 | `thong-ke/` | 90 | Có |
-| `bang-diem/` `bao-cao/` `dang-ky/` `danh-muc/` `lich-hoc/` `lien-co-so/` `nhap-diem/` `xray/` | 1 mỗi thư mục | **Rỗng, chỉ có khung** |
+| `bang-diem/` `bao-cao/` `dang-ky/` `danh-muc/` `lich-hoc/` `nhap-diem/` `xray/` | 1 mỗi thư mục | **Rỗng, chỉ có khung** |
+| `lien-co-so/` | 1 | Rỗng — **đúng, vì liên cơ sở thuộc Phần 2** |
 
 Các trang hiện có phần lớn là `PlaceholderPage`. Toàn bộ màn hình nghiệp vụ của
 F03–F09 chưa dựng, dù API đã sẵn — đây là việc nên ưu tiên ngay.
@@ -103,7 +104,8 @@ F03–F09 chưa dựng, dù API đã sẵn — đây là việc nên ưu tiên n
 - **Bootstrap Admin Master đầu tiên.** Hiện phụ thuộc tài khoản `admin.master`
   của seed. Máy mới không chạy seed thì không có đường tạo admin đầu tiên.
 - **Hai sự kiện thông báo**: đổi lịch / đổi phòng, và nhắc đợt đăng ký sắp đóng.
-- **Tìm lớp liên cơ sở** (xem mục 6 — đây là lỗi chặn, không phải việc còn lại).
+Liên cơ sở **không** nằm trong danh sách này: Phần 1 chỉ đăng ký lớp cùng cơ sở
+theo quyết định 02/10/2026, phần liên cơ sở để Phần 2.
 
 ---
 
@@ -112,6 +114,9 @@ F03–F09 chưa dựng, dù API đã sẵn — đây là việc nên ưu tiên n
 Phần 2 chưa bắt đầu, **theo đúng quyết định chia phạm vi ngày 24/09/2026**, không
 phải chậm tiến độ. Những việc còn nguyên:
 
+- **Đăng ký liên cơ sở** (lớp trực tuyến, Home kiểm và Host tự kiểm lại). Phần 1
+  từ chối mọi lớp khác cơ sở; cờ `ChoPhepLienCoSo` và ràng buộc
+  `CROSS_CAMPUS_REQUIRES_ONLINE` đã có sẵn làm nền cho Phần 2.
 - Phân mảnh ngang theo cơ sở; vị từ dẫn xuất `DangKyHocPhan ⋉ LopHocPhan`
   (và `Diem` dẫn xuất bậc 2).
 - Nhân bản một chiều Master → site, trigger `NOT FOR REPLICATION` ở Subscriber,
@@ -132,24 +137,21 @@ Hai điểm đã ghi nhận trước để Phần 2 không vỡ:
 
 ## 6. Nợ kỹ thuật và rủi ro đã biết
 
-Bốn mục dưới đây đã đối chiếu với source hôm nay.
+Bốn mục dưới đây đã đối chiếu với source hôm nay. Không mục nào chặn tiến độ.
 
-### 6.1 Lớp liên cơ sở đăng ký được nhưng không tìm được — **chặn F08**
+### 6.1 Một chỗ đọc mở sớm hơn nhu cầu (nhỏ, không chặn gì)
 
-`POST /api/me/enrollments` hỗ trợ đăng ký liên cơ sở (có fixture và test cho ca
-từ chối `ENROLLMENT_CROSS_CAMPUS`). Nhưng `GET /api/classes` **lọc cứng theo cơ
-sở của người gọi**:
+Phần 1 **chỉ đăng ký lớp cùng cơ sở** theo quyết định 02/10/2026;
+`EnrollmentService` từ chối mọi lớp khác cơ sở **vô điều kiện**, không xét
+`ChoPhepLienCoSo`. `GET /api/classes` lọc cứng theo cơ sở người gọi — đúng hành
+vi, không phải lỗ hổng.
 
-```java
-String campusScope = user.role() == Role.ADMIN_MASTER ? null : user.homeCampus();
-```
-
-Sinh viên HN do đó **không thấy** lớp trực tuyến liên cơ sở của HCM trong danh
-sách, dù `GET /api/classes/{id}` cho đọc nếu biết mã. Thư mục frontend
-`lien-co-so/` đang rỗng — hợp lý, vì chưa có đường để dựng.
-
-Cần một đường tìm lớp liên cơ sở (lọc `ChoPhepLienCoSo = 1`) trước khi tính F08
-là xong trọn vẹn.
+Chỉ còn một chỗ hơi lệch: `ClassSectionService.requireReadable` cho sinh viên cơ
+sở khác **đọc chi tiết** lớp có `ChoPhepLienCoSo = 1`, kèm chú thích "đó là điều
+kiện để sinh viên nơi khác biết mà đăng ký". Ở Phần 1 họ không đăng ký được, nên
+đường đọc đó chưa phục vụ gì — nó là phần dọn trước cho Phần 2. Không sai về bảo
+mật (lớp đó cố ý công khai), chỉ là chú thích dễ gây hiểu nhầm rằng Phần 1 có
+liên cơ sở. Sửa chú thích là đủ.
 
 ### 6.2 Tài liệu API Contract lệch ở hai chỗ nhỏ
 
@@ -186,12 +188,14 @@ Không ảnh hưởng CI vì CI không có database.
 
 1. **Dựng màn hình frontend cho F03–F09.** API đã xong; đây là đường tới sản
    phẩm chạy được và là phần còn thiếu lớn nhất của Phần 1.
-2. **Mở đường tìm lớp liên cơ sở** (mục 6.1) — việc backend nhỏ nhưng đang chặn
-   một chức năng đã làm gần hết.
-3. Bootstrap Admin Master đầu tiên, để máy mới không phải dựa vào seed.
-4. Hai sự kiện thông báo còn thiếu; hai ca test biên ở mục 6.3.
-5. Sửa hai chỗ lệch của API Contract (mục 6.2) — sửa cùng lúc, mất vài phút.
-6. Sau khi Phần 1 chạy được đầu-cuối: bắt đầu Phần F cài đặt vật lý của Phần 2.
+2. Bootstrap Admin Master đầu tiên, để máy mới không phải dựa vào seed.
+3. Hai sự kiện thông báo còn thiếu; hai ca test biên ở mục 6.3.
+4. Sửa hai chỗ lệch của API Contract (mục 6.2) và chú thích ở mục 6.1 — gộp một
+   lần, mất vài phút.
+5. Sau khi Phần 1 chạy được đầu-cuối: bắt đầu Phần F cài đặt vật lý của Phần 2.
+
+**Backend Phần 1 không còn việc nào đáng kể.** Toàn bộ đường tới sản phẩm chạy
+được nằm ở mục 1.
 
 ---
 
