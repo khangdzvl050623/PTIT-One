@@ -107,7 +107,7 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/enrollment-periods` | — |
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
-| GET | `/api/me/grades` · `/api/me/timetable` · `/api/me/enrollments` | `SINH_VIEN` |
+| GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 | GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |

@@ -279,6 +279,27 @@ SELECT l.MaLopHP, l.SoLuongDaDangKy,
   FROM dbo.LopHocPhan l
  WHERE l.SoLuongDaDangKy > 0 OR EXISTS (SELECT 1 FROM dbo.DangKyHocPhan d WHERE d.MaLopHP = l.MaLopHP);
 
+/* ---------- Lý lịch sinh viên (V8) ----------
+
+   Chỉ điền cho B26DCCN001 để màn "Thông tin sinh viên" có dữ liệu thật mà xem;
+   bốn hồ sơ còn lại để trống ĐÚNG CHỦ Ý, để thấy giao diện xử lý ô rỗng thế
+   nào. Dùng UPDATE chứ không sửa INSERT ở trên vì seed chạy lại nhiều lần và
+   phần INSERT có `WHERE NOT EXISTS` nên sẽ không ghi lại.
+
+   Không điền AnhDaiDien: chưa có tài khoản Cloudinary, và URL chết thì tệ hơn
+   là không có ảnh — giao diện đã có sẵn cách hiện chữ cái đầu của họ tên. */
+UPDATE dbo.SinhVien
+   SET GioiTinh    = 'NAM',
+       DienThoai   = '0901234567',
+       SoCCCD      = '079208001234',
+       EmailCaNhan = N'nguyenminhan.dev@gmail.com',
+       NoiSinh     = N'TP. Hồ Chí Minh',
+       DanToc      = N'Kinh',
+       TonGiao     = N'Không',
+       HoKhau      = N'97 Man Thiện, P. Hiệp Phú, TP. Thủ Đức, TP. Hồ Chí Minh'
+ WHERE MaSinhVien = 'B26DCCN001' AND GioiTinh IS NULL;
+GO
+
 -- Kỳ vọng khi DB chỉ có fixture này: 12 tiết, 5 khoa, 14 môn, 4 học kỳ, 5 SV, 3 GV, 11 lớp, 5 ghi danh, 5 dòng điểm (2 đã công bố + 3 rỗng).
 SELECT (SELECT COUNT(*) FROM dbo.KhungGioTiet)  AS KhungGioTiet,
        (SELECT COUNT(*) FROM dbo.Khoa)          AS Khoa,

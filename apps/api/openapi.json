@@ -1181,6 +1181,77 @@
         },
         "type" : "object"
       },
+      "StudentDetail" : {
+        "properties" : {
+          "anhDaiDien" : {
+            "type" : "string"
+          },
+          "danToc" : {
+            "type" : "string"
+          },
+          "dienThoai" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "emailCaNhan" : {
+            "type" : "string"
+          },
+          "gioiTinh" : {
+            "type" : "string"
+          },
+          "hoKhau" : {
+            "type" : "string"
+          },
+          "hoTen" : {
+            "type" : "string"
+          },
+          "maCTDT" : {
+            "type" : "string"
+          },
+          "maCoSoNha" : {
+            "type" : "string"
+          },
+          "maSinhVien" : {
+            "type" : "string"
+          },
+          "ngaySinh" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "noiSinh" : {
+            "type" : "string"
+          },
+          "soCCCD" : {
+            "type" : "string"
+          },
+          "soTinChiTichLuy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenCTDT" : {
+            "type" : "string"
+          },
+          "tenCoSo" : {
+            "type" : "string"
+          },
+          "tenKhoa" : {
+            "type" : "string"
+          },
+          "tonGiao" : {
+            "type" : "string"
+          },
+          "tongTinChiCTDT" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "StudentEnrollments" : {
         "properties" : {
           "dangKy" : {
@@ -1208,6 +1279,9 @@
           "daCongBo" : {
             "type" : "boolean"
           },
+          "diemChu" : {
+            "type" : "string"
+          },
           "diemChuyenCan" : {
             "type" : "number"
           },
@@ -1215,6 +1289,9 @@
             "type" : "number"
           },
           "diemGiuaKy" : {
+            "type" : "number"
+          },
+          "diemHe4" : {
             "type" : "number"
           },
           "diemTongKet" : {
@@ -1398,6 +1475,46 @@
           "tuanKetThuc" : {
             "format" : "int32",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "TranscriptTerm" : {
+        "properties" : {
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "monHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/StudentGrade"
+            },
+            "type" : "array"
+          },
+          "tbHocKy10" : {
+            "type" : "number"
+          },
+          "tbHocKy4" : {
+            "type" : "number"
+          },
+          "tbTichLuy10" : {
+            "type" : "number"
+          },
+          "tbTichLuy4" : {
+            "type" : "number"
+          },
+          "tenHocKy" : {
+            "type" : "string"
+          },
+          "tinChiDatHocKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tinChiTichLuy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "xepLoaiHocKy" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -2827,6 +2944,24 @@
         "tags" : [ "inbox-controller" ]
       }
     },
+    "/api/me/profile" : {
+      "get" : {
+        "operationId" : "myProfile",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
     "/api/me/teaching-classes" : {
       "get" : {
         "operationId" : "teachingClasses",
@@ -2922,6 +3057,27 @@
           }
         },
         "tags" : [ "student-enrollment-controller" ]
+      }
+    },
+    "/api/me/transcript" : {
+      "get" : {
+        "operationId" : "transcript",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TranscriptTerm"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-grade-controller" ]
       }
     },
     "/api/notifications" : {

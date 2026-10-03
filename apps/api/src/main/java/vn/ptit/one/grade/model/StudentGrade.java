@@ -23,6 +23,10 @@ public record StudentGrade(
         BigDecimal diemGiuaKy,
         BigDecimal diemCuoiKy,
         BigDecimal diemTongKet,
+        /** Điểm chữ quy đổi từ {@code diemTongKet}; {@code null} khi chưa có điểm. */
+        String diemChu,
+        /** Điểm thang 4 quy đổi từ {@code diemTongKet}; {@code null} khi chưa có điểm. */
+        BigDecimal diemHe4,
         String ketQua,
         boolean daCongBo,
         Instant ngayCongBo) {
