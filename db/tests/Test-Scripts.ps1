@@ -49,6 +49,7 @@ $scripts = @(
     @{ Path = 'central/migrations/V4__thong_bao.sql'; Plain = $true }
     @{ Path = 'central/migrations/V5__kich_hoat_tai_khoan.sql'; Plain = $true }
     @{ Path = 'central/migrations/V6__email_va_ma_xac_thuc.sql'; Plain = $true }
+    @{ Path = 'central/migrations/V7__ma_co_so_chu_hoa.sql'; Plain = $true }
     @{ Path = 'central/seed/10-auth-seed.sql'; Plain = $true }
     @{ Path = 'central/seed/20-hoc-vu-seed.sql'; Plain = $true }
     @{ Path = 'central/tests/10-verify-hoc-vu.sql'; Plain = $true }

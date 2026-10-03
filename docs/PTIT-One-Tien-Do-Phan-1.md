@@ -14,7 +14,7 @@ nằm gần hết ở frontend.
 |---|---|
 | Endpoint | **68** (trên 55 đường dẫn) |
 | Module nghiệp vụ | 11 |
-| Migration | 6 (`V1`–`V6`) |
+| Migration | 7 (`V1`–`V7`) |
 | Mã lỗi | 82 |
 | File test / số ca test | 22 / **137** |
 | Dòng code `apps/api` (main / test) | 10.090 / 3.982 |
@@ -43,7 +43,7 @@ Trên CI (không có SQL Server) các ca tích hợp **skip chứ không đỏ**
 
 | Gói | Nội dung | Trạng thái |
 |---|---|---|
-| F00 | Spring Boot 4.1.1 / JDK 21, profile `central` một DataSource, Flyway `V1`–`V6`, CI hai job | Xong |
+| F00 | Spring Boot 4.1.1 / JDK 21, profile `central` một DataSource, Flyway `V1`–`V7`, CI hai job | Xong |
 | F01 / A0 | Đăng nhập, phiên, refresh có rotation (replay thu hồi cả phiên), logout / logout-all, phân quyền theo vai trò, CSRF double-submit | Xong |
 | F02 | Admin Master cấp hồ sơ SV/GV kèm tài khoản, kích hoạt bằng mã một lần, cấp lại mã, khoá/mở tài khoản | Xong |
 | A1 | Email + xác minh, đổi mật khẩu, quên mật khẩu bằng mã 6 số qua Brevo, giới hạn tần suất `429` | Xong |
@@ -199,7 +199,8 @@ Hai điểm đã ghi nhận trước để Phần 2 không vỡ:
 
 ## 6. Nợ kỹ thuật và rủi ro đã biết
 
-Bốn mục dưới đây đã đối chiếu với source hôm nay. Không mục nào chặn tiến độ.
+Bốn mục dưới đây đã đối chiếu với source hôm nay. Mục 6.4 từng chặn thật và
+đã vá; ba mục còn lại không chặn gì.
 
 ### 6.1 Một chỗ đọc mở sớm hơn nhu cầu (nhỏ, không chặn gì)
 
@@ -230,19 +231,43 @@ phần viết tay (quyền, mã lỗi, quy tắc) mới trôi được — đún
 - Đặt lịch rỗng để xoá hết lịch của lớp.
 - `/api/health/db` trả `503` kèm `DOWN` khi SQL Server tắt.
 
-### 6.4 Dữ liệu thử còn sót trong database máy dev
+### 6.4 Mã cơ sở lưu sai chữ hoa — **đã xảy ra thật, đã vá bằng `V7`**
 
-Database `PTITONE_CENTRAL` trên máy đang phát triển có hai hồ sơ tạo tay khi thử
-F02: `N23DVCN027` và `N23DVCN0277`, cả hai `MaCoSoNha = 'hcm'` **chữ thường**.
+Bản đầu của báo cáo này xếp mục đó là "dữ liệu cũ, không ảnh hưởng gì". **Đánh
+giá đó sai mức độ.** Ngày 03/10/2026 nó làm một tài khoản sinh viên **không đăng
+ký được học phần nào**, báo `ENROLLMENT_CROSS_CAMPUS` dù sinh viên và lớp cùng ở
+TP.HCM.
 
-Lưu ý: code hiện tại **có** chuẩn hoá mã cơ sở — `findCampus` trả về giá trị
-chuẩn từ bảng `CoSo` — nên đây là dữ liệu cũ, không phải lỗi đang chạy. Nhưng vì
-SQL Server dùng collation không phân biệt hoa thường còn so sánh trong Java thì
-có, hồ sơ lưu sai hoa thường sẽ hành xử không nhất quán. Nên xoá hai dòng này
-cùng các dòng liên quan (`DanhBaNguoiDung`, `TaiKhoan`, `MaKichHoat`,
-`PhienDangNhap`) theo thứ tự an toàn khoá ngoại.
+Cơ chế của lỗi — đáng ghi lại vì nó sẽ lặp ở Phần 2 với mọi cột mã:
 
-Không ảnh hưởng CI vì CI không có database.
+- Hồ sơ lưu `MaCoSoNha = 'hcm'`, lớp có `MaCoSoHost = 'HCM'`.
+- `EnrollmentService` so sánh bằng `String.equals` của Java → **phân biệt hoa
+  thường** → coi là khác cơ sở.
+- SQL Server dùng collation `Vietnamese_CI_AS` → **không** phân biệt hoa thường
+  → khoá ngoại tới `dbo.CoSo` nhận `'hcm'` mà không báo gì.
+- Tầng SQL thấy hợp lệ, tầng Java thấy khác nhau. Sai lệch im lặng, không log.
+
+Ba lớp đã vá:
+
+| Lớp | Cách vá |
+|---|---|
+| Đường ghi | `fdd68a0` — `findCampus` lấy giá trị chuẩn từ `dbo.CoSo`, không lưu nguyên chuỗi client gửi |
+| Dữ liệu cũ | `V7` sửa cả 9 cột mã cơ sở trên 9 bảng, chạy trên mọi máy qua Flyway |
+| Phòng tái diễn | `V7` thêm 10 CHECK constraint ép chữ hoa |
+
+⚠️ **Bài học kỹ thuật:** trong database collation CI, `CHECK (MaCoSo =
+UPPER(MaCoSo))` là **vô dụng** — hai vế luôn bằng nhau nên ràng buộc không bao
+giờ chặn. Phải ép collation nhị phân:
+
+```sql
+CHECK (MaCoSo COLLATE Latin1_General_BIN2 = UPPER(MaCoSo) COLLATE Latin1_General_BIN2)
+```
+
+Cùng lý do, `WHERE MaCoSo <> 'HCM'` **không** tìm ra dòng lưu `'hcm'`. Muốn soát
+dữ liệu sai hoa thường thì phải `COLLATE` nhị phân.
+
+Đã nghiệm thu trên DB thật: 0 dòng còn sai, 10 CHECK có hiệu lực, và thử ghi lại
+`'hcm'` thì bị từ chối đúng như mong đợi.
 
 ---
 
