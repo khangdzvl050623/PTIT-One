@@ -70,7 +70,6 @@ interface Session {
   phongHoc: string
   tuanBatDau: number
   tuanKetThuc: number
-  laDayBu?: boolean
 }
 
 /* Giờ suy từ khung tiết như server làm — không gõ tay để khỏi lệch. */
@@ -159,36 +158,6 @@ export const DEMO_TIMETABLES: Readonly<Record<string, readonly TimetableEntry[]>
       phongHoc: '2E15-Ngoại ngữ',
       tuanBatDau: 1,
       tuanKetThuc: 15,
-    }),
-    // Dạy bù tuần 5 (chiều thứ 7 — hôm nay trong demo).
-    entry({
-      maLopHP: 'INT1358-2026-1-HCM02',
-      maMonHoc: 'INT1358',
-      tenMonHoc: 'Toán rời rạc 1',
-      tenGiangVien: 'Đỗ Như Lực',
-      hinhThucHoc: 'TRUC_TIEP',
-      thu: 7,
-      tietBatDau: 6,
-      soTiet: 3,
-      phongHoc: '2B25-2B25',
-      tuanBatDau: 5,
-      tuanKetThuc: 5,
-      laDayBu: true,
-    }),
-    // Dạy bù tuần 5 chồng tiết 8–9 với INT1340 thứ 5 → trùng lịch.
-    entry({
-      maLopHP: 'BAS1203-2026-1-HCM01',
-      maMonHoc: 'BAS1203',
-      tenMonHoc: 'Giải tích 2',
-      tenGiangVien: 'Bùi Thái Thanh Danh',
-      hinhThucHoc: 'TRUC_TIEP',
-      thu: 5,
-      tietBatDau: 8,
-      soTiet: 3,
-      phongHoc: '2E27-2E27',
-      tuanBatDau: 5,
-      tuanKetThuc: 5,
-      laDayBu: true,
     }),
     // Chỉ từ tuần 6 — đổi tuần để thấy lịch thay đổi theo tuần.
     entry({

@@ -27,11 +27,6 @@ export interface TimetableEntry {
   tuanKetThuc: number
   gioBatDau: string
   gioKetThuc: string
-  /**
-   * Buổi dạy bù (thường chỉ một tuần: `tuanBatDau = tuanKetThuc`).
-   * **Backend chưa có** — `LichHoc` không có cờ này; chỉ dữ liệu demo điền.
-   */
-  laDayBu?: boolean
 }
 
 /** Khớp `Timetable`: `tuan = null` nghĩa là cả học kỳ. */

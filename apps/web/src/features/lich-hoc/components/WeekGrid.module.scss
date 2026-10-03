@@ -184,16 +184,6 @@
 }
 
 /* `.entry.` để thắng `.online` dù khai báo trước. */
-.entry.makeup {
-  background: var(--makeup-bg);
-  border-color: var(--makeup-border);
-  border-left-color: var(--makeup-text);
-
-  .course {
-    color: var(--makeup-text);
-  }
-}
-
 .entry.clash {
   background: var(--clash-bg);
   border-color: var(--clash-border);
@@ -237,10 +227,6 @@
   padding-top: tokens.$space-2xs;
   color: var(--notice-meta);
   border-top: 1px dashed var(--tile-brand-border);
-}
-
-.badge.badgeMakeup {
-  background: var(--makeup-text);
 }
 
 .badge.badgeClash {

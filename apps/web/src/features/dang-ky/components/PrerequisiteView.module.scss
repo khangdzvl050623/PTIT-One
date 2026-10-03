@@ -6,6 +6,11 @@
   gap: tokens.$space-lg;
 }
 
+.muted {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -13,17 +18,40 @@
   gap: tokens.$space-md;
 }
 
-.termSelect {
-  flex: 0 1 320px;
+.kindSelect {
+  flex: 0 1 260px;
 
-  /* Nút của Select cao bằng hai nút In / Xuất Excel bên cạnh. */
   > button {
     height: 100%;
   }
 }
 
-.nowrap {
-  white-space: nowrap;
+.search {
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: tokens.$space-sm;
+  padding: 0 tokens.$space-md;
+  color: var(--accent-red);
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+  border-radius: tokens.$radius-sm;
+
+  &:focus-within {
+    border-color: var(--accent-red);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: tokens.$space-sm 0;
+    font: inherit;
+    font-size: tokens.$font-size-sm;
+    color: var(--notice-text);
+    background: transparent;
+    border: none;
+    outline: none;
+  }
 }
 
 .tool {
@@ -39,9 +67,6 @@
   border: 1px solid var(--accent-red);
   border-radius: tokens.$radius-sm;
   cursor: pointer;
-  transition:
-    color tokens.$transition-fast,
-    background-color tokens.$transition-fast;
 
   &:hover:not(:disabled) {
     color: var(--ptit-on-brand);
@@ -59,10 +84,18 @@
   }
 }
 
-.empty {
-  font-size: tokens.$font-size-sm;
-  text-align: center;
+.hint {
+  margin: 0;
+  font-size: tokens.$font-size-xs;
   color: var(--notice-meta);
+
+  b {
+    color: var(--accent-red);
+  }
+
+  @media print {
+    display: none;
+  }
 }
 
 .printTitle {
@@ -76,7 +109,6 @@
   }
 }
 
-/* Bảng rộng hơn màn điện thoại: cuộn ngang trong khung, trang không tràn. */
 .scroll {
   overflow-x: auto;
   border: 1px solid var(--panel-border);
@@ -85,7 +117,7 @@
 
 .table {
   width: 100%;
-  min-width: 980px;
+  min-width: 760px;
   font-size: tokens.$font-size-sm;
   line-height: 1.4;
   color: var(--notice-text);
@@ -93,8 +125,8 @@
 
   th,
   td {
-    padding: tokens.$space-md;
-    vertical-align: middle;
+    padding: tokens.$space-sm tokens.$space-md;
+    border-bottom: 1px solid var(--notice-border);
   }
 
   thead th {
@@ -104,19 +136,9 @@
     white-space: nowrap;
     color: var(--ptit-on-brand);
     background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
-    border-right: 1px solid var(--ptit-red-border);
-  }
-}
-
-/* Mỗi lớp một nhóm: viền đậm giữa các lớp, viền mảnh giữa các buổi cùng lớp. */
-.group {
-  border-top: 2px solid var(--tile-brand-border);
-
-  tr + tr td {
-    border-top: 1px dashed var(--notice-border);
   }
 
-  &:hover {
+  tbody tr:hover {
     background: var(--notice-hover-bg);
   }
 }
@@ -127,33 +149,63 @@
 
 .center {
   text-align: center;
-  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .code {
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.sortBtn {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--ptit-on-brand);
+    outline-offset: 2px;
+  }
+}
+
+.empty {
+  padding: tokens.$space-xl !important;
+  font-style: italic;
   text-align: center;
-  color: var(--accent-red);
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+
+  small {
+    display: block;
+    margin-top: tokens.$space-xs;
+    font-style: normal;
+  }
 }
 
-.name {
-  font-weight: 600;
-}
-
-.mode {
+.badge {
   display: inline-block;
-  margin-left: tokens.$space-sm;
-  padding: 0 tokens.$space-xs;
-  font-size: tokens.$font-size-2xs;
+  padding: 1px tokens.$space-sm;
+  font-size: tokens.$font-size-xs;
   font-weight: 600;
-  color: var(--ptit-on-brand);
-  background: var(--tile-warm-text);
+  white-space: nowrap;
   border-radius: 3px;
 }
 
-.dates {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+.pass {
+  color: var(--progress-done);
+  background: color-mix(in srgb, var(--progress-done) 12%, transparent);
+}
+
+.fail {
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+}
+
+.none {
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
 }
 
 @media print {

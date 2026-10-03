@@ -66,6 +66,8 @@ export const DEMO_GRADES: readonly StudentGrade[] = [
     ['BAS1210', 'Lý thuyết xác suất và thống kê', 3, 'HCM02', [8, 7.5, 8], '2026-06-10T09:00:00Z'],
     ['BAS1224', 'Vật lý 1 và thí nghiệm', 4, 'HCM01', [7, 3, 3], '2026-06-10T09:00:00Z'],
     ['INT1155', 'Tin học cơ sở 2', 2, 'HCM01', [9, 8, 8.5], '2026-06-12T09:00:00Z'],
+    // Rớt — màn đăng ký coi đây là môn cần học lại, đang chặn tiên quyết INT14148.
+    ['INT1313', 'Cơ sở dữ liệu', 3, 'HCM01', [6, 3, 2.5], '2026-06-11T09:00:00Z'],
     ['SKD1101', 'Kỹ năng thuyết trình', 1, 'HCM08', [10, 9, 9], '2026-06-03T09:00:00Z'],
   ]),
   ...term('2025-2026-HK1', [

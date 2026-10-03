@@ -26,7 +26,6 @@ const CSV_HEADER = [
   'Giảng viên',
   'Từ ngày',
   'Đến ngày',
-  'Ghi chú',
 ]
 
 interface ClassGroup {
@@ -82,7 +81,6 @@ export function SemesterTimetable({
         s.tenGiangVien,
         shortDate(dayOf(t, s.tuanBatDau, s.thu)),
         shortDate(dayOf(t, s.tuanKetThuc, s.thu)),
-        s.laDayBu ? 'Dạy bù' : null,
       ]),
     )
     downloadCsv([CSV_HEADER, ...rows], `${exportName}-${t.maHocKy}.csv`)
@@ -173,7 +171,6 @@ export function SemesterTimetable({
                     <td className={styles.dates}>
                       {shortDate(dayOf(term, s.tuanBatDau, s.thu))} đến{' '}
                       {shortDate(dayOf(term, s.tuanKetThuc, s.thu))}
-                      {s.laDayBu ? <span className={styles.makeup}>Dạy bù</span> : null}
                     </td>
                   </tr>
                 ))}

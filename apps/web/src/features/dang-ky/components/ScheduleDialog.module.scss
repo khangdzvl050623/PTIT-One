@@ -1,0 +1,56 @@
+@use '@/styles/tokens' as tokens;
+
+.info {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: tokens.$space-xs tokens.$space-2xl;
+  margin: 0;
+  font-size: tokens.$font-size-md;
+
+  dt {
+    color: var(--notice-meta);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+    color: var(--notice-text);
+  }
+}
+
+.title {
+  margin: 0 0 tokens.$space-md;
+  padding-bottom: tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  font-weight: 700;
+  color: var(--accent-red);
+  border-bottom: 2px solid var(--tile-brand-border);
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: tokens.$space-sm tokens.$space-md;
+    font-size: tokens.$font-size-sm;
+    line-height: 1.5;
+    background: var(--tile-brand-bg);
+    border-left: 3px solid var(--accent-red);
+    border-radius: tokens.$radius-sm;
+  }
+}
+
+.dates {
+  font-variant-numeric: tabular-nums;
+}
+
+.none {
+  font-size: tokens.$font-size-sm;
+  font-style: italic;
+  color: var(--notice-meta);
+}

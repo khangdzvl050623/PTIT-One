@@ -72,9 +72,6 @@ export function WeekTimetable({ terms, timetableOf, today = new Date() }: WeekTi
 
       <ul className={styles.legend} aria-label="Chú thích màu">
         <li>
-          <span className={`${styles.swatch} ${styles.swatchMakeup}`} /> Dạy bù
-        </li>
-        <li>
           <span className={`${styles.swatch} ${styles.swatchClash}`} /> Trùng lịch
         </li>
         <li>
