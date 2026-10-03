@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 
 import { TRONG_SO, diemChu, downloadCsv, ketQuaCua, tongKet } from '@/shared/lib'
-import { Dialog, Icon, Select } from '@/shared/ui'
+import { Dialog, Icon, Select, Skeleton, SkeletonRows } from '@/shared/ui'
 
 import { TERM_NAMES } from '../data/demo'
 import { parseScore, useGradeBook } from '../hooks/useGradeBook'
@@ -112,7 +112,27 @@ export function GradeBook({ maHocKy: initialTerm, demo = false }: GradeBookProps
     )
   }
 
-  if (!book.classes) return <p className={styles.muted}>Đang tải danh sách lớp…</p>
+  /* Chưa có danh sách lớp thì chưa dựng được ô chọn lớp, nên dựng khung xương
+     theo đúng bố cục sắp hiện: thanh công cụ · đầu bảng · bảng điểm. */
+  if (!book.classes) {
+    return (
+      <div className={styles.block} aria-busy="true">
+        <div className={styles.toolbar}>
+          <Skeleton width="230px" height="34px" radius="6px" />
+          <Skeleton width="330px" height="34px" radius="6px" />
+          <Skeleton height="34px" radius="6px" />
+        </div>
+        <Skeleton height="66px" radius="6px" />
+        <div className={styles.scroll}>
+          <table className={styles.table}>
+            <tbody>
+              <SkeletonRows cols={10} rows={6} />
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.block}>
@@ -148,6 +168,22 @@ export function GradeBook({ maHocKy: initialTerm, demo = false }: GradeBookProps
         <p className={styles.empty}>Học kỳ này bạn chưa được phân công lớp nào.</p>
       ) : null}
 
+      {/* Lần tải đầu của một lớp: `sheet` còn `null` nên khối bên dưới chưa
+          dựng được. Không có nhánh này thì dưới thanh công cụ trống trơn,
+          người dùng không biết là đang tải hay lớp rỗng. */}
+      {lop && !sheet ? (
+        <>
+          <Skeleton height="66px" radius="6px" />
+          <div className={styles.scroll} aria-busy="true">
+            <table className={styles.table}>
+              <tbody>
+                <SkeletonRows cols={10} rows={8} />
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
+
       {lop && sheet ? (
         <>
           <ClassHeader lop={lop} trangThai={sheet.trangThai} daDuDiem={daDuDiem} daCongBo={daCongBo} tong={tongSo} />
@@ -177,7 +213,7 @@ export function GradeBook({ maHocKy: initialTerm, demo = false }: GradeBookProps
             </p>
           )}
 
-          <div className={styles.scroll}>
+          <div className={styles.scroll} aria-busy={book.loadingSheet}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -200,11 +236,7 @@ export function GradeBook({ maHocKy: initialTerm, demo = false }: GradeBookProps
               </thead>
               <tbody>
                 {book.loadingSheet ? (
-                  <tr>
-                    <td colSpan={10} className={styles.empty}>
-                      Đang tải bảng điểm…
-                    </td>
-                  </tr>
+                  <SkeletonRows cols={10} rows={8} />
                 ) : visible.length === 0 ? (
                   <tr>
                     <td colSpan={10} className={styles.empty}>

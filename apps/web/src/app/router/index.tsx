@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 
 import { DefaultLayout } from '@/app/layouts'
 import { RequireAuth } from '@/features/auth'
+import { AccountAdminPage } from '@/pages/AccountAdminPage'
 import { AccountPage } from '@/pages/AccountPage'
 import { AdminClassesPage } from '@/pages/AdminClassesPage'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
@@ -40,6 +41,7 @@ const SCREENS: Partial<Record<string, ReactNode>> = {
   [ROUTES.gvLopPhuTrach]: <TeachingClassesPage />,
   [ROUTES.gvNhapDiem]: <GradeEntryPage />,
   [ROUTES.qtTongQuan]: <AdminDashboardPage />,
+  [ROUTES.qtHoSo]: <AccountAdminPage />,
   [ROUTES.qtDangKy]: <AdminRegistrationPage />,
   [ROUTES.qtLopHocPhan]: <AdminClassesPage />,
   [ROUTES.svDangKy]: <RegistrationPage />,

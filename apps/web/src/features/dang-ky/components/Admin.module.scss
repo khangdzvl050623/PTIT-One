@@ -421,12 +421,28 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Ghim cả `thead` LẪN `th`: Blink/Gecko chỉ dính khi ghim ở `thead` (ghim
+     `th` ở đó không có tác dụng), còn WebKit lại dính ở `th`. Đặt cả hai thì
+     trình duyệt nào cũng có header đứng yên — nơi nào đã dính sẵn thì luật
+     kia thành vô hại vì cùng `top: 0`. */
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
   thead th {
     position: sticky;
     top: 0;
+    z-index: 1;
     font-size: tokens.$font-size-xs;
     color: var(--notice-meta);
     background: var(--panel-bg);
+    /* `border-collapse: collapse` không bảo đảm vẽ `border-bottom` của ô dính
+       khi cuộn, nên bỏ viền ở đây và thay bằng inset shadow — luôn vẽ, và chỉ
+       MỘT đường phân cách, không chồng thành hai nét. */
+    border-bottom: none;
+    box-shadow: inset 0 -1px 0 var(--notice-border);
   }
 }
 

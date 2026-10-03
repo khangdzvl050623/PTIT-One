@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { ApiError } from '@/shared/api'
 import { downloadCsv } from '@/shared/lib'
 import { ROUTES } from '@/shared/constants'
-import { Dialog, Icon, Select } from '@/shared/ui'
+import { Dialog, Icon, Select, Skeleton, SkeletonRows } from '@/shared/ui'
 
 import * as api from '../api/mockTeachingApi'
 import { TERM_NAMES } from '../data/demo'
@@ -85,10 +85,11 @@ export function TeachingClassList({ maHocKy, onChangeTerm, entries }: TeachingCl
     }
   }
 
-  if (!classes) return <p className={styles.muted}>Đang tải danh sách lớp…</p>
-
-  const tongSinhVien = classes.reduce((s, c) => s + c.soLuongDaDangKy, 0)
-  const tongTinChi = classes.reduce((s, c) => s + c.soTinChi, 0)
+  /* Giữ nguyên bộ khung lúc chờ: ô chọn học kỳ dùng được ngay, chỗ bảng là
+     khung xương — đổi học kỳ không làm cả khối nhảy một nhịp. */
+  const dangTai = classes === null
+  const tongSinhVien = classes?.reduce((s, c) => s + c.soLuongDaDangKy, 0) ?? 0
+  const tongTinChi = classes?.reduce((s, c) => s + c.soTinChi, 0) ?? 0
 
   return (
     <div className={styles.block}>
@@ -101,7 +102,13 @@ export function TeachingClassList({ maHocKy, onChangeTerm, entries }: TeachingCl
           onChange={onChangeTerm}
         />
         <span className={styles.summary}>
-          {classes.length} lớp · {tongSinhVien} sinh viên · {tongTinChi} tín chỉ giảng dạy
+          {dangTai ? (
+            <Skeleton width="260px" height="15px" />
+          ) : (
+            <>
+              {classes.length} lớp · {tongSinhVien} sinh viên · {tongTinChi} tín chỉ giảng dạy
+            </>
+          )}
         </span>
       </div>
 
@@ -111,7 +118,7 @@ export function TeachingClassList({ maHocKy, onChangeTerm, entries }: TeachingCl
         </p>
       ) : null}
 
-      <div className={styles.scroll}>
+      <div className={styles.scroll} aria-busy={dangTai}>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -129,7 +136,9 @@ export function TeachingClassList({ maHocKy, onChangeTerm, entries }: TeachingCl
             </tr>
           </thead>
           <tbody>
-            {classes.length === 0 ? (
+            {dangTai ? (
+              <SkeletonRows cols={7} rows={3} />
+            ) : classes.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.empty}>
                   Học kỳ này bạn chưa được phân công lớp nào.
