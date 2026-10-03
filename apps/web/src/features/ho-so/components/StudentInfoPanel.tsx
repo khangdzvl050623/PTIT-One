@@ -32,7 +32,7 @@ export function StudentInfoPanel({ profile }: StudentInfoPanelProps) {
               { label: 'Điện thoại', value: profile.dienThoai },
               { label: 'Số CMND/ CCCD', value: profile.soCCCD },
               { label: 'Email', value: profile.email },
-              { label: 'Email 2', value: profile.email2 },
+              { label: 'Email 2', value: profile.emailCaNhan },
               { label: 'Nơi sinh', value: profile.noiSinh },
               { label: 'Dân tộc', value: profile.danToc },
               { label: 'Tôn giáo', value: profile.tonGiao },

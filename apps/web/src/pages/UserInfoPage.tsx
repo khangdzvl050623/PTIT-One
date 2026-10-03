@@ -1,69 +1,84 @@
 import { LoginPanel, ROLE_LABELS, useAuth } from '@/features/auth'
 import type { SessionUser } from '@/features/auth'
 import {
-  DEMO_PROFILE,
-  DEMO_RESULTS,
-  DEMO_SUMMARY,
   FeatureLinks,
+  fetchProfile,
+  fetchResults,
+  fetchSummary,
   GradeChart,
   InfoTable,
   STUDENT_FEATURES,
   StatTile,
   StudentInfoPanel,
 } from '@/features/ho-so'
-import { DEMO_TERMS, StudyProgress, demoTimetableOf } from '@/features/lich-hoc'
+import { StudyProgress, useTimetables } from '@/features/lich-hoc'
 import { AccessStats } from '@/features/thong-ke'
 import { ROUTES } from '@/shared/constants'
+import { useAsyncData } from '@/shared/lib'
 import { Panel } from '@/shared/ui'
 
 import styles from './UserInfoPage.module.scss'
 
 /**
  * Trang Thông tin sau khi đăng nhập: hồ sơ · số liệu nhanh · kết quả học tập ·
- * tài khoản và lối tắt. Dữ liệu sinh viên hiện là bản demo trong
- * `features/ho-so/data` — backend chưa có endpoint hồ sơ của chính mình.
+ * tài khoản và lối tắt.
+ *
+ * Bốn nguồn dữ liệu tải ĐỘC LẬP nhau: một phần lỗi thì ba phần kia vẫn hiện.
+ * Đây là trang chủ của sinh viên nên trắng cả trang vì một con số là quá đắt.
  */
 export function UserInfoPage() {
   const { user } = useAuth()
-  if (!user) return null
 
+  if (!user) return null
   if (user.role !== 'SINH_VIEN') {
     return <AccountOnly user={user} />
   }
+  return <StudentHome />
+}
 
-  const { tinChiHocKy } = DEMO_SUMMARY
+function StudentHome() {
+  const profile = useAsyncData(fetchProfile)
+  const summary = useAsyncData(fetchSummary)
+  const results = useAsyncData(fetchResults)
+  const { terms, timetableOf, loading: loadingLich, error: errorLich } = useTimetables()
+
+  const tinChi = summary.data?.tinChiHocKy
 
   return (
     <div className={styles.page}>
       <div className={styles.columns}>
         <div className={styles.profileColumn}>
-          <StudentInfoPanel profile={DEMO_PROFILE} />
+          {profile.loading ? <p>Đang tải hồ sơ…</p> : null}
+          {profile.error ? <p role="alert">{profile.error}</p> : null}
+          {profile.data ? <StudentInfoPanel profile={profile.data} /> : null}
         </div>
 
         <div className={styles.summaryColumn}>
+          {/* Chưa có số thì hiện dấu gạch, không hiện 0 — 0 là một con số có
+              nghĩa, còn "chưa biết" thì không. */}
           <StatTile
             label="Thông báo mới, chưa xem"
-            value={DEMO_SUMMARY.thongBaoChuaDoc}
+            value={summary.data?.thongBaoChuaDoc ?? '—'}
             icon="bell"
             href={ROUTES.home}
           />
           <div className={styles.tilePair}>
             <StatTile
               label="Lịch học trong tuần"
-              value={DEMO_SUMMARY.buoiHocTrongTuan}
+              value={summary.data?.buoiHocTrongTuan ?? '—'}
               icon="calendar"
               href={ROUTES.svLichHoc}
               tone="brand"
             />
             <StatTile
               label="Tín chỉ học kỳ này"
-              value={`${tinChiHocKy.daDangKy}/${tinChiHocKy.tran}`}
+              value={tinChi ? `${tinChi.daDangKy}/${tinChi.tran}` : '—'}
               icon="book"
               href={ROUTES.svDangKy}
               tone="warm"
             />
           </div>
-          <GradeChart terms={DEMO_RESULTS} />
+          {results.data ? <GradeChart terms={results.data} /> : null}
         </div>
 
         <aside className={styles.asideColumn}>
@@ -73,7 +88,11 @@ export function UserInfoPage() {
       </div>
 
       <Panel title="TIẾN TRÌNH HỌC TẬP" icon="graduate">
-        <StudyProgress terms={DEMO_TERMS} timetableOf={demoTimetableOf} />
+        {loadingLich ? <p>Đang tải tiến trình…</p> : null}
+        {errorLich ? <p role="alert">{errorLich}</p> : null}
+        {!loadingLich && !errorLich ? (
+          <StudyProgress terms={terms} timetableOf={timetableOf} />
+        ) : null}
       </Panel>
 
       <div className={styles.stats}>

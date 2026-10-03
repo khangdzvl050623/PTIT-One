@@ -1,24 +1,29 @@
 import { useAuth } from '@/features/auth'
-import { DEMO_TERMS, SemesterTimetable, demoTimetableOf } from '@/features/lich-hoc'
+import { SemesterTimetable, useTimetables } from '@/features/lich-hoc'
 import { Panel } from '@/shared/ui'
 
 import { StudentShell } from './StudentShell'
 
 /**
- * Thời khoá biểu dạng học kỳ (F09) — cùng nguồn với dạng tuần:
- * `GET /api/me/timetable?maHocKy=` không gửi `tuan`.
+ * Thời khoá biểu dạng học kỳ (F09) — cùng nguồn với dạng tuần, chỉ khác cách
+ * hiển thị.
  */
 export function SemesterTimetablePage() {
   const { user } = useAuth()
+  const { terms, timetableOf, loading, error } = useTimetables()
 
   return (
     <StudentShell>
       <Panel title="THỜI KHOÁ BIỂU DẠNG HỌC KỲ" icon="calendar">
-        <SemesterTimetable
-          terms={DEMO_TERMS}
-          timetableOf={demoTimetableOf}
-          exportName={`thoi-khoa-bieu-${user?.username ?? 'sinh-vien'}`}
-        />
+        {loading ? <p>Đang tải thời khoá biểu…</p> : null}
+        {error ? <p role="alert">{error}</p> : null}
+        {!loading && !error ? (
+          <SemesterTimetable
+            terms={terms}
+            timetableOf={timetableOf}
+            exportName={`thoi-khoa-bieu-${user?.username ?? 'sinh-vien'}`}
+          />
+        ) : null}
       </Panel>
     </StudentShell>
   )

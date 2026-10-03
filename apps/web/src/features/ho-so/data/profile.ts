@@ -3,8 +3,8 @@ import { ROUTES } from '@/shared/constants'
 import type { FeatureLink, StudentProfile, StudentSummary, TermResults } from '../types'
 
 /**
- * Dữ liệu tạm để dựng giao diện — khớp seed `B26DCCN001`. Thay bằng API khi
- * backend có endpoint hồ sơ của chính sinh viên (hiện chưa có).
+ * Dữ liệu giả để dựng giao diện khi `VITE_API_MODE` chưa là `api` — khớp seed
+ * `B26DCCN001`. Bản thật lấy từ `GET /api/me/profile`.
  */
 export const DEMO_PROFILE: StudentProfile = {
   maSinhVien: 'B26DCCN001',
@@ -14,11 +14,12 @@ export const DEMO_PROFILE: StudentProfile = {
   gioiTinh: 'NAM',
   dienThoai: '0901 234 567',
   soCCCD: '079208001234',
-  email2: 'nguyenvanan.dev@gmail.com',
+  emailCaNhan: 'nguyenvanan.dev@gmail.com',
   noiSinh: 'TP. Hồ Chí Minh',
   danToc: 'Kinh',
   tonGiao: 'Không',
   hoKhau: '97 Man Thiện, P. Hiệp Phú, TP. Thủ Đức, TP. Hồ Chí Minh',
+  anhDaiDien: null,
   maCoSoNha: 'HCM',
   tenCoSo: 'Cơ sở TP. Hồ Chí Minh',
   trangThai: 'DANG_HOC',

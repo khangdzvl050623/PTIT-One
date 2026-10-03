@@ -9,8 +9,8 @@ import type { Role, SessionUser } from '../model/types'
  * Tài khoản lấy theo seed `db/central/seed/10-auth-seed.sql`, mật khẩu nhập
  * gì cũng được (trừ để trống). Phiên lưu ở localStorage để F5 không mất.
  *
- * ⚠️ Chỉ dùng khi phát triển. Bật API thật: `VITE_AUTH_MODE=api` — xem
- * `authApi.ts`.
+ * ⚠️ Chỉ dùng khi phát triển. Bật API thật: `VITE_API_MODE=api` — xem
+ * `shared/api/mode.ts`.
  */
 
 interface MockAccount {

@@ -13,3 +13,6 @@ export type { WeekTimetableProps } from './components/WeekTimetable'
 
 export { DEMO_TERMS, DEMO_TIMETABLES, PERIODS, demoTimetableOf } from './data/timetable'
 export type { HinhThucHoc, Period, Term, Timetable, TimetableEntry } from './types'
+export { fetchTerms, fetchTimetable } from './api/timetableApi'
+export { useTimetables } from './model/useTimetables'
+export type { Timetables } from './model/useTimetables'

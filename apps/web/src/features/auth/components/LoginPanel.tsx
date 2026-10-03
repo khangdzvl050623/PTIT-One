@@ -5,7 +5,7 @@ import { ApiError } from '@/shared/api'
 import { LABELS, ROUTES } from '@/shared/constants'
 import { Icon, Panel } from '@/shared/ui'
 
-import { AUTH_MODE } from '../api/authApi'
+import { API_MODE } from '@/shared/api'
 import { MOCK_ACCOUNTS } from '../api/mockAuthApi'
 import { useAuth } from '../model/AuthContext'
 import { ROLE_LABELS } from '../model/types'
@@ -98,7 +98,7 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
         pending={pending}
         errorMessage={error}
       />
-      {AUTH_MODE === 'mock' ? (
+      {API_MODE === 'mock' ? (
         <p className={styles.mockHint}>
           Chế độ demo, chưa nối API. Mật khẩu bất kỳ, tài khoản:{' '}
           {Object.entries(MOCK_ACCOUNTS)

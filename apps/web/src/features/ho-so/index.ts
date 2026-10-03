@@ -22,3 +22,4 @@ export type {
   StudentSummary,
   TermResults,
 } from './types'
+export { fetchProfile, fetchResults, fetchSummary } from './api/profileApi'

@@ -1,10 +1,10 @@
 /**
  * Hồ sơ hiển thị ở trang Thông tin.
  *
- * Trường có trong schema: `SinhVien`, `ChuongTrinhDaoTao`, `Khoa`, `CoSo`,
- * email của `TaiKhoan`. Nhóm trường "lý lịch" bên dưới (giới tính → hộ khẩu)
- * **chưa có cột trong DB** — UI dựng trước theo cổng gốc, cần nhóm chốt
- * migration trước khi nối API. Vì vậy tất cả đều có thể `null`.
+ * Khớp `StudentDetail` của `GET /api/me/profile`.
+ *
+ * Nhóm trường "lý lịch" (giới tính → hộ khẩu) và `anhDaiDien` do migration `V8`
+ * thêm vào `SinhVien`. Hồ sơ cũ chưa có dữ liệu nên tất cả đều `null` được.
  */
 export interface StudentProfile {
   maSinhVien: string
@@ -13,16 +13,18 @@ export interface StudentProfile {
   ngaySinh: string | null
   email: string | null
 
-  // --- Lý lịch: chưa có trong schema ---
+  // --- Lý lịch (V8) ---
   gioiTinh: 'NAM' | 'NU' | null
   dienThoai: string | null
   soCCCD: string | null
   /** Email cá nhân, ngoài email trường cấp. */
-  email2: string | null
+  emailCaNhan: string | null
   noiSinh: string | null
   danToc: string | null
   tonGiao: string | null
   hoKhau: string | null
+  /** URL ảnh trên Cloudinary; `null` thì hiển thị chữ cái đầu của họ tên. */
+  anhDaiDien: string | null
 
   maCoSoNha: string
   tenCoSo: string
