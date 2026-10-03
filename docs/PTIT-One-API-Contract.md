@@ -107,6 +107,7 @@ người dùng và đổi được bất cứ lúc nào.
 | PUT | `/api/classes/{maLopHP}/schedule` | `ADMIN_CO_SO` |
 | GET | `/api/enrollment-periods` | — |
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
+| POST | `/api/classes/{maLopHP}/students/{maSinhVien}/remove` | `ADMIN_CO_SO` *(cơ sở của lớp)* |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
 | GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
@@ -204,6 +205,26 @@ bị từ chối.
 - Huỷ lại lớp đã huỷ trả `200`, `soDangKyDaHuy: 0`, không báo lần hai.
 - Có SV đăng ký chen đúng lúc huỷ → `409 CLASS_CANCEL_RETRY`, thử lại.
 - Không mở lại được lớp đã huỷ.
+
+### Gỡ một sinh viên khỏi lớp
+
+- `POST /api/classes/{maLopHP}/students/{maSinhVien}/remove`, thân
+  `{"lyDo"}` **bắt buộc** (≤ 500 ký tự). Chỉ `ADMIN_CO_SO` của cơ sở sở hữu lớp.
+- Khác **huỷ lớp**: gỡ đúng một người, lớp vẫn `MO` và dôi ra một chỗ.
+- **KHÔNG kiểm đợt đăng ký còn mở** — đó chính là lý do endpoint này tồn tại.
+  Sinh viên chỉ tự huỷ được khi đợt mở; đăng ký sai lớp mà phát hiện sau khi
+  đợt đóng thì trước đây không còn đường nào ngoài sửa SQL tay.
+- **Gỡ được cả sinh viên đang `DANG_HOC`** (quyết định nhóm 03/10/2026): đăng ký
+  sai lớp thường xảy ra với người vẫn đang học. Giới hạn đặt ở **tình trạng lớp
+  và điểm**, không ở tình trạng sinh viên.
+- Chặn khi: lớp `DA_KHOA` (`GRADE_LOCKED`), lớp `DA_HUY` (`CLASS_CANCELLED`),
+  hoặc sinh viên **đã có điểm — kể cả điểm nháp** (`ENROLLMENT_HAS_GRADE`).
+- Dùng `POST` chứ không `DELETE` vì cần thân request cho lý do, và `DELETE` có
+  thân thì một số proxy bỏ mất.
+- Sinh viên nhận thông báo `GO_GHI_DANH` mức `QUAN_TRONG`, **kèm tên admin và
+  lý do** — đây là thao tác người khác làm trên dữ liệu của họ.
+- Năm bước ghi giống hệt huỷ lớp và sinh viên tự huỷ; sửa một chỗ phải sửa cả
+  ba, nếu không bộ đếm `SoLuongDaDangKy` sẽ lệch khỏi số ghi danh thật.
 
 ### Đợt đăng ký
 
@@ -614,6 +635,14 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Lớp cơ sở khác / lớp chưa mở | `409` | ✓ |
 | Môn đã trượt / đã đạt đăng ký lại | `HOC_LAI` / `CAI_THIEN` | ✓ |
 | Huỷ khi đã có điểm | `409 ENROLLMENT_HAS_GRADE`, sĩ số và tín chỉ giữ nguyên | ✓ |
+| Admin gỡ một SV | lớp vẫn `MO`, sĩ số giảm 1, người còn lại không đụng | ✓ |
+| Admin gỡ SV đang `DANG_HOC` | `200` — đúng mục đích chính | ✓ |
+| Đợt đã đóng: SV tự huỷ vs admin gỡ | SV `409 ENROLLMENT_PERIOD_CLOSED`; admin `200` | ✓ |
+| Gỡ khi đã có điểm nháp | `409 ENROLLMENT_HAS_GRADE`, không đổi gì | ✓ |
+| Gỡ khi lớp `DA_KHOA` | `409 GRADE_LOCKED` | ✓ |
+| Gỡ mà thiếu `lyDo` (rỗng hoặc toàn khoảng trắng) | `400 VALIDATION_ERROR` | ✓ |
+| Gỡ người không có ghi danh | `404 ENROLLMENT_NOT_FOUND` | ✓ |
+| Admin cơ sở khác / Master / GV / SV gỡ | `403` | ✓ |
 | Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |
 | Admin cơ sở lọc thống kê cơ sở khác | `403` | ✓ |

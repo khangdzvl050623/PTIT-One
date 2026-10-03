@@ -31,6 +31,8 @@ public final class NotificationTerms {
     public static final String CONG_BO_DIEM = "CONG_BO_DIEM";
     public static final String SUA_DIEM = "SUA_DIEM";
     public static final String LOP_BI_HUY = "LOP_BI_HUY";
+    /** Admin cơ sở gỡ một sinh viên khỏi một lớp. */
+    public static final String GO_GHI_DANH = "GO_GHI_DANH";
 
     private NotificationTerms() {
     }

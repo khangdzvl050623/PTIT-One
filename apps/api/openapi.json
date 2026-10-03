@@ -913,6 +913,17 @@
         },
         "type" : "object"
       },
+      "RemoveEnrollmentRequest" : {
+        "properties" : {
+          "lyDo" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "lyDo" ],
+        "type" : "object"
+      },
       "ReportScope" : {
         "properties" : {
           "maCoSo" : {
@@ -2414,6 +2425,49 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ClassRoster"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "roster-controller" ]
+      }
+    },
+    "/api/classes/{maLopHP}/students/{maSinhVien}/remove" : {
+      "post" : {
+        "operationId" : "removeStudent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "maSinhVien",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RemoveEnrollmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSection"
                 }
               }
             },
