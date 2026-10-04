@@ -1,4 +1,6 @@
 // Barrel export cho feature "danh-muc" — màn hình Admin Master (F02 · F03).
+export { CatalogManager } from './components/CatalogManager'
+
 export { AccountDirectory } from './components/AccountDirectory'
 export type { AccountDirectoryProps } from './components/AccountDirectory'
 
