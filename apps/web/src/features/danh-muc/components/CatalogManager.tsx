@@ -259,7 +259,7 @@ export function CatalogManager() {
     return (
       <div className={styles.loadFailure}>
         <p className={styles.muted} role="alert">{loadError ?? 'Không tải được danh mục môn học.'}</p>
-        <button type="button" className={styles.remove} onClick={() => void confirmReset()} disabled={saving}>
+        <button type="button" className={styles.primary} onClick={() => void confirmReset()} disabled={saving}>
           Khôi phục danh mục ban đầu
         </button>
       </div>
@@ -269,20 +269,22 @@ export function CatalogManager() {
 
   return (
     <div className={styles.block}>
-      <div className={styles.previewNote}>
-        <Icon name="gear" size="16px" />
-        <span><b>Thông tin:</b> thay đổi được lưu trên trình duyệt này, tải lại trang vẫn còn.</span>
-        <button type="button" className={styles.resetLink} onClick={() => setDialog('reset')} disabled={saving}>
+      <div className={styles.tabHeader}>
+        <div className={styles.tabs} role="tablist" aria-label="Danh mục môn học và tiên quyết">
+          <button type="button" role="tab" aria-selected={tab === 'courses'} onClick={() => setTab('courses')}>
+            Danh mục môn học <span>{courses.length}</span>
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'prerequisites'} onClick={() => setTab('prerequisites')}>
+            Môn tiên quyết <span>{relations.length}</span>
+          </button>
+        </div>
+        <button
+          type="button"
+          className={`${styles.primary} ${styles.resetLink}`}
+          onClick={() => setDialog('reset')}
+          disabled={saving}
+        >
           Khôi phục ban đầu
-        </button>
-      </div>
-
-      <div className={styles.tabs} role="tablist" aria-label="Danh mục môn học và tiên quyết">
-        <button type="button" role="tab" aria-selected={tab === 'courses'} onClick={() => setTab('courses')}>
-          Danh mục môn học <span>{courses.length}</span>
-        </button>
-        <button type="button" role="tab" aria-selected={tab === 'prerequisites'} onClick={() => setTab('prerequisites')}>
-          Môn tiên quyết <span>{relations.length}</span>
         </button>
       </div>
 
