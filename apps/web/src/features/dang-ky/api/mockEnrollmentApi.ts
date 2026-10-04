@@ -1,16 +1,14 @@
 import { ApiError } from '@/shared/api'
 
+import { readMockCatalog } from './mockCatalogStore'
 import { isOpen } from '../lib/period'
 import {
   BEST_RESULTS,
-  CATALOG,
-  COURSE_NAMES,
   DEMO_CLASSES,
   DEMO_ENROLLED,
   DEMO_MA_HOC_KY,
   DEMO_PERIODS,
   DEMO_PROGRAM,
-  PREREQUISITES,
   TEACHERS,
   TRAN_TIN_CHI,
 } from '../data/demo'
@@ -315,7 +313,7 @@ export async function myProgram(): Promise<StudentProgram> {
 /** Danh mục môn kèm khoa — thay bằng `GET /api/courses`. */
 export async function courseCatalog(): Promise<CourseSummary[]> {
   await delay()
-  return [...CATALOG]
+  return readMockCatalog().courses
 }
 
 /** Kết quả tốt nhất từng môn — thay bằng tổng hợp từ `GET /api/me/grades`. */
@@ -330,17 +328,7 @@ export async function myBestResults(): Promise<BestResults> {
  */
 export async function listRelations(): Promise<CourseRelation[]> {
   await delay()
-  const name = (ma: string) =>
-    CATALOG.find((c) => c.maMonHoc === ma)?.tenMonHoc ?? COURSE_NAMES[ma] ?? ma
-  return Object.entries(PREREQUISITES).flatMap(([maMonHoc, yeuCau]) =>
-    yeuCau.map((maMonYeuCau) => ({
-      loai: 'TIEN_QUYET' as const,
-      maMonHoc,
-      tenMonHoc: name(maMonHoc),
-      maMonYeuCau,
-      tenMonYeuCau: name(maMonYeuCau),
-    })),
-  )
+  return readMockCatalog().relations
 }
 
 export async function listOpenClasses(maHocKy: string): Promise<ClassOffer[]> {
@@ -398,7 +386,10 @@ export async function register(
     )
   }
 
-  const chuaDat = (PREREQUISITES[lop.maMonHoc] ?? []).filter((m) => BEST_RESULTS[m] !== 'DAT')
+  const prerequisites = readMockCatalog().relations
+    .filter((relation) => relation.maMonHoc === lop.maMonHoc && relation.loai === 'TIEN_QUYET')
+    .map((relation) => relation.maMonYeuCau)
+  const chuaDat = prerequisites.filter((m) => BEST_RESULTS[m] !== 'DAT')
   if (chuaDat.length) {
     throw conflict('PREREQUISITE_NOT_MET', `Chưa đạt môn tiên quyết: ${chuaDat.join(', ')}.`)
   }
@@ -484,7 +475,7 @@ export async function openableCourses(): Promise<{ maMonHoc: string; tenMonHoc: 
   await delay()
   const byCode = new Map<string, { maMonHoc: string; tenMonHoc: string; soTinChi: number }>()
   for (const m of DEMO_PROGRAM.monHoc) byCode.set(m.maMonHoc, m)
-  for (const c of CATALOG) byCode.set(c.maMonHoc, c)
+  for (const c of readMockCatalog().courses) byCode.set(c.maMonHoc, c)
   return [...byCode.values()].sort((a, b) => a.maMonHoc.localeCompare(b.maMonHoc))
 }
 

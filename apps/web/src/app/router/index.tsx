@@ -8,6 +8,7 @@ import { AccountPage } from '@/pages/AccountPage'
 import { AdminClassesPage } from '@/pages/AdminClassesPage'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminRegistrationPage } from '@/pages/AdminRegistrationPage'
+import { CatalogAdminPage } from '@/pages/CatalogAdminPage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { GradeEntryPage } from '@/pages/GradeEntryPage'
 import { GradesPage } from '@/pages/GradesPage'
@@ -44,6 +45,7 @@ const SCREENS: Partial<Record<string, ReactNode>> = {
   [ROUTES.qtHoSo]: <AccountAdminPage />,
   [ROUTES.qtDangKy]: <AdminRegistrationPage />,
   [ROUTES.qtLopHocPhan]: <AdminClassesPage />,
+  [ROUTES.qtDanhMuc]: <CatalogAdminPage />,
   [ROUTES.svDangKy]: <RegistrationPage />,
   [ROUTES.svDotDangKy]: <PeriodPage />,
   [ROUTES.svMonHoc]: <PrerequisitePage />,
