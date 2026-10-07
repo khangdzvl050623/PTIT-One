@@ -93,6 +93,7 @@ người dùng và đổi được bất cứ lúc nào.
 | GET · POST · PUT | `/api/accounts` · `/{tenDangNhap}/activation-code` · `/{tenDangNhap}/status` | `ADMIN_MASTER` |
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
+| DELETE | `/api/courses/{maMonHoc}` | `ADMIN_MASTER` |
 | GET | `/api/faculties` · `/api/terms` · `/api/teachers` · `/api/prerequisites` · `/api/campuses` | — |
 | GET | `/api/schedules?maHocKy=` | — *(phạm vi cơ sở như `/api/classes`)* |
 | GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
@@ -177,6 +178,19 @@ bị từ chối.
   bắt. Lỗi thì **giữ nguyên tập cũ**.
 - Không đổi được tiên quyết khi môn có lớp trong học kỳ **đang mở đợt đăng ký** —
   sinh viên đã đăng ký theo điều kiện cũ.
+- **Xoá môn** (`DELETE /api/courses/{maMonHoc}`) chỉ được khi môn **chưa từng
+  được dùng ở đâu**. Không xoá mềm, không xoá bắt buộc — môn đã đi vào dữ liệu
+  học tập thì không xoá được, và hệ thống nói rõ lý do. Ba cổng chặn, xét theo
+  thứ tự này, mỗi cổng một mã riêng:
+  1. đang là tiên quyết của môn khác → `COURSE_IS_PREREQUISITE` (xoá sẽ làm môn
+     kia mất ràng buộc — ví dụ CTDL là tiên quyết của Java)
+  2. đã từng mở lớp, **kể cả lớp đã huỷ** → `COURSE_HAS_CLASSES`. Cổng này bao
+     luôn ghi danh và lịch sử điểm: `DangKyMonHoc` có khoá ngoại tới `LopHocPhan`
+     và `Diem` tới `DangKyHocPhan`, nên không thể có ghi danh hay điểm mà không
+     có lớp
+  3. đang nằm trong một chương trình đào tạo → `COURSE_IN_PROGRAM`
+  Quan hệ tiên quyết **của chính môn đó** thì xoá kèm — những dòng ấy chỉ mô tả
+  môn đang xoá, không môn nào khác phụ thuộc vào chúng.
 - `GET /api/courses/{maMonHoc}` trả **cả hai chiều**: `tienQuyet` (phải đạt
   trước) và `monPhuThuoc` (môn đang cần môn này). Chiều sau cần cho màn quản
   trị, vì sửa môn này ảnh hưởng tới chúng.
@@ -475,6 +489,9 @@ bị từ chối.
 | `SERVICE_UNAVAILABLE` | 503 | Lỗi DB; không trả chi tiết SQL ra ngoài |
 | `COURSE_NOT_FOUND` | 404 / 400 | Xem mục 4 |
 | `COURSE_DUPLICATE` | 409 | Mã môn đã tồn tại |
+| `COURSE_IS_PREREQUISITE` | 409 | Xoá môn đang là tiên quyết của môn khác |
+| `COURSE_HAS_CLASSES` | 409 | Xoá môn đã từng mở lớp (kéo theo ghi danh và điểm) |
+| `COURSE_IN_PROGRAM` | 409 | Xoá môn đang nằm trong chương trình đào tạo |
 | `COURSE_REGISTRATION_OPEN` | 409 | Đổi tiên quyết khi môn có lớp trong kỳ đang mở đợt |
 | `FACULTY_UNKNOWN` | 400 | Mã khoa không có |
 | `TERM_NOT_FOUND` | 400 | Mã học kỳ không có (tạo lớp, thời khoá biểu) |
@@ -571,6 +588,13 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Môn tự làm tiên quyết của chính nó | `400 PREREQUISITE_SELF` | ✓ |
 | Tiên quyết không tồn tại | `400 PREREQUISITE_UNKNOWN` | ✓ |
 | Đổi tiên quyết khi kỳ đang mở đợt | `409 COURSE_REGISTRATION_OPEN` | ✓ |
+| Xoá môn chưa dùng ở đâu | `204`, biến mất khỏi danh mục | ✓ |
+| Xoá môn có tiên quyết của chính nó | `204`, các dòng đó xoá kèm | ✓ |
+| Xoá môn đang là tiên quyết của môn khác | `409 COURSE_IS_PREREQUISITE` | ✓ |
+| Xoá môn đã có lớp | `409 COURSE_HAS_CLASSES` | ✓ |
+| Xoá môn trong CTĐT | `409 COURSE_IN_PROGRAM` | ✓ |
+| Xoá môn không tồn tại | `404 COURSE_NOT_FOUND` | ✓ |
+| Admin cơ sở / GV / SV xoá môn | `403` | ✓ |
 | `choPhepLienCoSo` + `TRUC_TIEP` | `400 CROSS_CAMPUS_REQUIRES_ONLINE` | ✓ |
 | Gán GV khác cơ sở | `400 TEACHER_WRONG_CAMPUS` | ✓ |
 | `ADMIN_CO_SO` sửa lớp của cơ sở khác | `403 AUTH_FORBIDDEN` | ✓ |

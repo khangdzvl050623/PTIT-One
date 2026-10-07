@@ -40,6 +40,61 @@ public class CourseService {
         return courses.search(maKhoa, tuKhoa);
     }
 
+    /**
+     * Xoá môn khỏi danh mục — CHỈ khi môn chưa từng được dùng ở đâu.
+     *
+     * <p>Quyết định nhóm 07/10/2026: không xoá mềm, không xoá bắt buộc. Môn đã
+     * đi vào dữ liệu học tập thì <b>không xoá được</b>, và hệ thống nói rõ lý
+     * do — một SIS thật hành xử như vậy, khác một ứng dụng CRUD có nút Delete.
+     *
+     * <p>Ba cổng chặn, mỗi cổng một mã lỗi riêng để giao diện nói đúng chuyện
+     * gì đang giữ môn lại:
+     * <ol>
+     *   <li>đang là tiên quyết của môn khác — xoá sẽ làm môn kia mất ràng buộc</li>
+     *   <li>đã từng mở lớp (kể cả lớp đã huỷ) — kéo theo ghi danh và điểm</li>
+     *   <li>đang nằm trong một chương trình đào tạo — CTĐT sẽ hụt môn</li>
+     * </ol>
+     *
+     * <p>Quan hệ tiên quyết CỦA CHÍNH môn này thì xoá kèm: những dòng đó chỉ mô
+     * tả môn đang xoá, không môn nào khác phụ thuộc vào chúng.
+     *
+     * <p>Giữ {@code PREREQUISITE_LOCK} vì có ghi {@code MonHocTienQuyet} — nếu
+     * không, một request khác có thể vừa thêm tiên quyết trỏ vào môn này trong
+     * lúc ta đang xoá.
+     */
+    @Transactional
+    public void delete(String maMonHoc) {
+        if (!courses.exists(maMonHoc)) {
+            throw notFound(maMonHoc);
+        }
+        if (!courses.acquirePrerequisiteLock(LOCK_TIMEOUT_MS)) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "CATALOG_BUSY",
+                    "Danh mục đang được người khác sửa. Vui lòng thử lại.");
+        }
+
+        if (courses.isPrerequisiteOfOthers(maMonHoc)) {
+            throw new ApiException(HttpStatus.CONFLICT, "COURSE_IS_PREREQUISITE",
+                    ("Môn %s đang là môn tiên quyết của môn khác. Gỡ nó khỏi các môn đó "
+                            + "trước khi xoá.").formatted(maMonHoc));
+        }
+        if (courses.hasAnyClass(maMonHoc)) {
+            throw new ApiException(HttpStatus.CONFLICT, "COURSE_HAS_CLASSES",
+                    ("Môn %s đã được dùng trong lớp học phần hoặc dữ liệu học tập, "
+                            + "không xoá được.").formatted(maMonHoc));
+        }
+        if (courses.isInAnyProgram(maMonHoc)) {
+            throw new ApiException(HttpStatus.CONFLICT, "COURSE_IN_PROGRAM",
+                    ("Môn %s đang nằm trong chương trình đào tạo. Gỡ khỏi chương trình "
+                            + "trước khi xoá.").formatted(maMonHoc));
+        }
+
+        courses.deletePrerequisites(maMonHoc);
+        if (courses.deleteCourse(maMonHoc) != 1) {
+            // Ai đó vừa xoá trước ta, dù đang giữ khoá đồ thị — khoá không chặn DELETE môn.
+            throw notFound(maMonHoc);
+        }
+    }
+
     /** Mọi quan hệ tiên quyết; dùng cho màn đăng ký để tô môn chưa đủ điều kiện. */
     public List<CourseRelation> prerequisites() {
         return courses.allPrerequisites();

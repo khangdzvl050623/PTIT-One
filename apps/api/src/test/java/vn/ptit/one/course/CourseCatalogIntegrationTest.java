@@ -10,8 +10,10 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +41,9 @@ class CourseCatalogIntegrationTest {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void moiVaiTroDeuDocDuocDanhMuc() throws Exception {
@@ -142,6 +147,96 @@ class CourseCatalogIntegrationTest {
         }
     }
 
+    // --- Xoá môn học (quyết định nhóm 07/10/2026) ------------------------
+
+    private static final String MON_THU = "TEST-XOA-01";
+
+    /** Môn chưa dùng ở đâu thì xoá được, và biến mất khỏi danh mục. */
+    @Test
+    void monChuaDungODauThiXoaDuoc() throws Exception {
+        Browser master = signedIn("admin.master");
+        try {
+            assertThat(master.post("/api/courses", newCourse(MON_THU)).statusCode()).isEqualTo(201);
+
+            assertThat(master.delete("/api/courses/" + MON_THU).statusCode()).isEqualTo(204);
+            assertThat(master.get("/api/courses").body()).doesNotContain(MON_THU);
+            assertThat(master.get("/api/courses/" + MON_THU).statusCode()).isEqualTo(404);
+        } finally {
+            jdbc.update("DELETE FROM dbo.MonHocTienQuyet WHERE MaMonHoc = ? OR MaMonTienQuyet = ?",
+                    MON_THU, MON_THU);
+            jdbc.update("DELETE FROM dbo.MonHoc WHERE MaMonHoc = ?", MON_THU);
+        }
+    }
+
+    /** Tiên quyết CỦA CHÍNH môn đó xoá kèm — không môn nào khác phụ thuộc vào chúng. */
+    @Test
+    void xoaKemTienQuyetCuaChinhNo() throws Exception {
+        Browser master = signedIn("admin.master");
+        try {
+            master.post("/api/courses", newCourse(MON_THU));
+            master.put("/api/courses/" + MON_THU + "/prerequisites", "{\"tienQuyet\":[\"BAS1150\"]}");
+            assertThat(count("SELECT COUNT(*) FROM dbo.MonHocTienQuyet WHERE MaMonHoc = ?", MON_THU))
+                    .isEqualTo(1);
+
+            assertThat(master.delete("/api/courses/" + MON_THU).statusCode()).isEqualTo(204);
+            assertThat(count("SELECT COUNT(*) FROM dbo.MonHocTienQuyet WHERE MaMonHoc = ?", MON_THU))
+                    .isZero();
+        } finally {
+            jdbc.update("DELETE FROM dbo.MonHocTienQuyet WHERE MaMonHoc = ? OR MaMonTienQuyet = ?",
+                    MON_THU, MON_THU);
+            jdbc.update("DELETE FROM dbo.MonHoc WHERE MaMonHoc = ?", MON_THU);
+        }
+    }
+
+    /**
+     * Ba cổng chặn, mỗi cổng một mã riêng. Fixture seed:
+     * INT1154 là tiên quyết của INT1155 · BAS1203 đã có lớp · INT1339 trong CTĐT
+     * nhưng chưa mở lớp và không là tiên quyết của ai.
+     */
+    @Test
+    void khongXoaDuocMonDangDuocDung() throws Exception {
+        Browser master = signedIn("admin.master");
+
+        HttpResponse<String> tienQuyet = master.delete("/api/courses/INT1154");
+        assertThat(tienQuyet.statusCode()).as(tienQuyet.body()).isEqualTo(409);
+        assertThat(tienQuyet.body()).contains("COURSE_IS_PREREQUISITE");
+
+        HttpResponse<String> coLop = master.delete("/api/courses/BAS1203");
+        assertThat(coLop.statusCode()).as(coLop.body()).isEqualTo(409);
+        assertThat(coLop.body()).contains("COURSE_HAS_CLASSES");
+
+        HttpResponse<String> trongCtdt = master.delete("/api/courses/INT1339");
+        assertThat(trongCtdt.statusCode()).as(trongCtdt.body()).isEqualTo(409);
+        assertThat(trongCtdt.body()).contains("COURSE_IN_PROGRAM");
+
+        // Không cổng nào được phép xoá mất gì.
+        for (String ma : new String[] { "INT1154", "BAS1203", "INT1339" }) {
+            assertThat(count("SELECT COUNT(*) FROM dbo.MonHoc WHERE MaMonHoc = ?", ma)).as(ma).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void xoaMonKhongTonTaiThiBao404() throws Exception {
+        assertThat(signedIn("admin.master").delete("/api/courses/KHONG-CO").statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void chiAdminMasterDuocXoaMon() throws Exception {
+        for (String username : new String[] { "admin.hcm", "GVHCM001", "B26DCCN001" }) {
+            assertThat(signedIn(username).delete("/api/courses/INT1339").statusCode())
+                    .as(username).isEqualTo(403);
+        }
+    }
+
+    private static String newCourse(String maMonHoc) {
+        return ("{\"maMonHoc\":\"%s\",\"tenMonHoc\":\"Môn thử để xoá\",\"soTinChi\":3,"
+                + "\"maKhoa\":\"CNTT\"}").formatted(maMonHoc);
+    }
+
+    private int count(String sql, String arg) {
+        return jdbc.queryForObject(sql, Integer.class, arg);
+    }
+
     private Browser signedIn(String username) throws Exception {
         Browser browser = new Browser();
         assertThat(browser.login(username, PASSWORD).statusCode()).as("đăng nhập %s", username).isEqualTo(200);
@@ -168,6 +263,14 @@ class CourseCatalogIntegrationTest {
 
         HttpResponse<String> put(String path, String json) throws Exception {
             return send("PUT", path, json);
+        }
+
+        HttpResponse<String> post(String path, String json) throws Exception {
+            return send("POST", path, json);
+        }
+
+        HttpResponse<String> delete(String path) throws Exception {
+            return send("DELETE", path, "");
         }
 
         private HttpResponse<String> send(String method, String path, String json) throws Exception {

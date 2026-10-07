@@ -2671,6 +2671,23 @@
       }
     },
     "/api/courses/{maMonHoc}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maMonHoc",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      },
       "get" : {
         "operationId" : "detail_1",
         "parameters" : [ {
