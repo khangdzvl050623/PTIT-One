@@ -291,3 +291,17 @@ function hopLe(score: number): boolean {
   if (!Number.isFinite(score) || score < DIEM_MIN || score > DIEM_MAX) return false
   return Math.round(score * 10) === score * 10
 }
+
+/**
+ * Điểm ĐÃ CÔNG BỐ của một sinh viên ở một lớp, hoặc `null`.
+ *
+ * Bản giả của bảng điểm sinh viên dùng hàm này để thấy việc giảng viên vừa
+ * công bố. Không có nó thì hai bản giả là hai thế giới rời nhau: giảng viên
+ * nhập điểm xong mà màn sinh viên không đổi gì.
+ *
+ * Chỉ trả dòng đã công bố — giống server: điểm nháp không lộ cho sinh viên.
+ */
+export function publishedGradeOf(maLopHP: string, maSinhVien: string): GradeEntry | null {
+  const row = load().diem[maLopHP]?.find((e) => e.maSinhVien === maSinhVien)
+  return row && row.ngayCongBo !== null ? row : null
+}

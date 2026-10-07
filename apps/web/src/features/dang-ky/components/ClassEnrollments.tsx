@@ -4,8 +4,10 @@ import { ApiError } from '@/shared/api'
 import { downloadCsv } from '@/shared/lib'
 import { Dialog, Icon } from '@/shared/ui'
 
-import * as api from '../api/mockEnrollmentApi'
-import { DEMO_MA_HOC_KY } from '../data/demo'
+import { useTerms } from '@/features/lich-hoc'
+
+import * as api from '../api/enrollmentApi'
+
 import { vnDateTime } from '../lib/period'
 import type { ClassOffer, ClassRoster } from '../types'
 import styles from './Admin.module.scss'
@@ -35,7 +37,14 @@ export function ClassEnrollments() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
-  const reload = useCallback(async () => setClasses(await api.adminClasses(DEMO_MA_HOC_KY)), [])
+  /* Học kỳ lấy từ API, KHÔNG viết cứng: mã của dữ liệu mẫu khác mã trong
+     database thật nên hằng số sẽ làm bảng rỗng im lặng ở chế độ api. */
+  const { defaultTerm } = useTerms()
+
+  const reload = useCallback(async () => {
+    if (!defaultTerm) return
+    setClasses(await api.adminClasses(defaultTerm))
+  }, [defaultTerm])
 
   useEffect(() => {
     void reload()

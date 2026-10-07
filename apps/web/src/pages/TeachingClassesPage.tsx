@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { DEMO_TERMS, WeekTimetable } from '@/features/lich-hoc'
+import { useTerms, WeekTimetable } from '@/features/lich-hoc'
 import type { TimetableEntry } from '@/features/lich-hoc'
-import {
-  DEMO_MA_HOC_KY,
-  TERM_NAMES,
-  TeachingClassList,
-  teachingSchedule,
-} from '@/features/nhap-diem'
+import { TeachingClassList, teachingSchedule } from '@/features/nhap-diem'
 import type { TeachingScheduleEntry } from '@/features/nhap-diem'
 import { Panel } from '@/shared/ui'
 
 import styles from './TeachingClassesPage.module.scss'
-
-/** Học kỳ giảng viên có lớp, theo thứ tự của `DEMO_TERMS` (mới nhất trước). */
-const TEACHING_TERMS = DEMO_TERMS.filter((t) => t.maHocKy in TERM_NAMES)
 
 const NO_ENTRIES: readonly TeachingScheduleEntry[] = []
 
@@ -28,7 +20,11 @@ const NO_ENTRIES: readonly TeachingScheduleEntry[] = []
  * ghép, giống `ProgramPage` ghép bảng điểm với chương trình đào tạo.
  */
 export function TeachingClassesPage() {
-  const [maHocKy, setMaHocKy] = useState(DEMO_MA_HOC_KY)
+  /* Học kỳ lấy từ API, KHÔNG viết cứng: mã của dữ liệu mẫu khác mã trong
+     database thật, nên hằng số sẽ làm màn hình rỗng im lặng ở chế độ api. */
+  const { terms, defaultTerm, loading, error } = useTerms()
+  const [chosenTerm, setChosenTerm] = useState('')
+  const maHocKy = chosenTerm || defaultTerm
   /**
    * Lịch của **mọi** học kỳ, nạp một lần. Lưới tuần tự chọn học kỳ của nó, độc
    * lập với bảng lớp bên trên; nếu chỉ nạp kỳ đang chọn thì đổi kỳ ở lưới sẽ
@@ -37,9 +33,10 @@ export function TeachingClassesPage() {
   const [schedules, setSchedules] = useState<Record<string, readonly TeachingScheduleEntry[]>>({})
 
   useEffect(() => {
+    if (terms.length === 0) return
     let cancelled = false
     void Promise.all(
-      TEACHING_TERMS.map(async (t) => [t.maHocKy, (await teachingSchedule(t.maHocKy)).buoiHoc] as const),
+      terms.map(async (t) => [t.maHocKy, (await teachingSchedule(t.maHocKy)).buoiHoc] as const),
     ).then(
       (pairs) => {
         if (!cancelled) setSchedules(Object.fromEntries(pairs))
@@ -49,25 +46,35 @@ export function TeachingClassesPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [terms])
 
   const timetableOf = useCallback(
     (ky: string): readonly TimetableEntry[] => schedules[ky] ?? NO_ENTRIES,
     [schedules],
   )
 
+  if (loading || error) {
+    return (
+      <div className={styles.page}>
+        <Panel title="LỚP PHỤ TRÁCH" icon="chalkboard">
+          {loading ? <p>Đang tải học kỳ…</p> : <p role="alert">{error}</p>}
+        </Panel>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.page}>
       <Panel title="LỚP PHỤ TRÁCH" icon="chalkboard">
         <TeachingClassList
           maHocKy={maHocKy}
-          onChangeTerm={setMaHocKy}
+          onChangeTerm={setChosenTerm}
           entries={schedules[maHocKy] ?? NO_ENTRIES}
         />
       </Panel>
 
       <Panel title="LỊCH DẠY THEO TUẦN" icon="calendar">
-        <WeekTimetable terms={TEACHING_TERMS} timetableOf={timetableOf} />
+        <WeekTimetable terms={terms} timetableOf={timetableOf} />
       </Panel>
     </div>
   )

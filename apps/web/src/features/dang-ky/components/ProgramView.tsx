@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { downloadCsv } from '@/shared/lib'
 import { Dialog, Icon, Select } from '@/shared/ui'
 
-import * as api from '../api/mockEnrollmentApi'
+import * as api from '../api/enrollmentApi'
 import { PLAN_TERMS, TERM_NAMES, facultyOf } from '../data/demo'
 import type { CourseRelation, ProgramCourse, StudentProgram, StudyRecord } from '../types'
 import styles from './ProgramView.module.scss'

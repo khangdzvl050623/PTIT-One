@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '@/shared/api'
 import { Dialog, Icon, Select } from '@/shared/ui'
 
-import * as api from '../api/mockEnrollmentApi'
-import { DEMO_MA_HOC_KY, TERM_NAMES } from '../data/demo'
+import { useTerms } from '@/features/lich-hoc'
+
+import * as api from '../api/enrollmentApi'
+import { TERM_NAMES } from '../data/demo'
 import { PHASE_LABEL, phaseOf, vnDateTime } from '../lib/period'
 import type { EnrollmentPeriod } from '../types'
 import styles from './Admin.module.scss'
@@ -47,6 +49,8 @@ export function PeriodManager() {
   const [busy, setBusy] = useState(false)
   const now = Date.now()
 
+  const { defaultTerm } = useTerms()
+
   const reload = useCallback(async () => setPeriods(await api.listPeriods()), [])
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export function PeriodManager() {
     const start = new Date(Date.now() + 86_400_000).toISOString()
     setDraft({
       maDot: null,
-      maHocKy: DEMO_MA_HOC_KY,
+      maHocKy: defaultTerm,
       mo: toVnInput(start).slice(0, 11) + '08:00',
       dong: toVnInput(new Date(Date.parse(start) + 11 * 86_400_000).toISOString()).slice(0, 11) + '17:00',
       trangThai: 'CHUA_MO',

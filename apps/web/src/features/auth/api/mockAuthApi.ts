@@ -76,6 +76,14 @@ export async function login(username: string, password: string): Promise<Session
   return user
 }
 
+/**
+ * Phiên giả đang đăng nhập, hoặc `null`. Dùng cho các bản giả KHÁC cần biết
+ * "mình là ai" — ở API thật server biết qua cookie, bản giả thì phải tự đọc.
+ */
+export function currentMockUser(): SessionUser | null {
+  return read()
+}
+
 export async function fetchCurrentUser(): Promise<SessionUser> {
   await delay()
   const user = read()

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { downloadCsv } from '@/shared/lib'
 import { Icon, Select } from '@/shared/ui'
 
-import * as api from '../api/mockEnrollmentApi'
+import * as api from '../api/enrollmentApi'
 import type { BestResults, CourseRelation, RelationKind } from '../types'
 import styles from './PrerequisiteView.module.scss'
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { Select } from '@/shared/ui'
 
-import * as api from '../api/mockEnrollmentApi'
+import * as api from '../api/enrollmentApi'
 import { TRAN_TIN_CHI } from '../data/demo'
 import { PHASE_LABEL, phaseOf, vnDateTime } from '../lib/period'
 import type { PeriodPhase } from '../lib/period'

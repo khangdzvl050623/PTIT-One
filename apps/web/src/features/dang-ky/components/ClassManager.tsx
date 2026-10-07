@@ -4,8 +4,9 @@ import type { ReactNode } from 'react'
 import { ApiError } from '@/shared/api'
 import { Dialog, Icon, Select } from '@/shared/ui'
 
-import * as api from '../api/mockEnrollmentApi'
-import { DEMO_MA_HOC_KY, TERM_NAMES } from '../data/demo'
+import { useTerms } from '@/features/lich-hoc'
+
+import * as api from '../api/enrollmentApi'
 import type { ClassOffer, SlotInput, TeacherOption } from '../types'
 import styles from './Admin.module.scss'
 
@@ -28,7 +29,6 @@ const STATUS_LABEL: Record<string, string> = {
   DA_HUY: 'Đã huỷ',
 }
 const THU = [2, 3, 4, 5, 6, 7, 8].map((t) => ({ value: t, label: t === 8 ? 'Chủ nhật' : `Thứ ${t}` }))
-const TERMS = [DEMO_MA_HOC_KY, '2026-2027-HK2']
 
 type Modal =
   | { kind: 'create' }
@@ -53,7 +53,11 @@ function formatLich(lich: readonly SlotInput[]): string {
  * SV…) do server kiểm — form chỉ hiện đúng câu báo server trả về.
  */
 export function ClassManager() {
-  const [maHocKy, setMaHocKy] = useState(DEMO_MA_HOC_KY)
+  /* Danh sách học kỳ lấy từ API; trước đây viết cứng hai mã nên ở chế độ api
+     ô chọn trỏ vào học kỳ không tồn tại và bảng lớp rỗng mà không báo gì. */
+  const { terms, defaultTerm } = useTerms()
+  const [chosenTerm, setChosenTerm] = useState('')
+  const maHocKy = chosenTerm || defaultTerm
   const [classes, setClasses] = useState<ClassOffer[] | null>(null)
   const [teachers, setTeachers] = useState<TeacherOption[]>([])
   const [courses, setCourses] = useState<{ maMonHoc: string; tenMonHoc: string; soTinChi: number }[]>([])
@@ -102,9 +106,9 @@ export function ClassManager() {
           ariaLabel="Học kỳ"
           className={styles.termSelect}
           value={maHocKy}
-          options={TERMS.map((t) => ({ value: t, label: TERM_NAMES[t] ?? t }))}
+          options={terms.map((t) => ({ value: t.maHocKy, label: t.tenHocKy }))}
           onChange={(v) => {
-            setMaHocKy(v)
+            setChosenTerm(v)
             setClasses(null)
           }}
         />
@@ -232,6 +236,7 @@ export function ClassManager() {
       {modal?.kind === 'create' ? (
         <CreateDialog
           maHocKy={maHocKy}
+          terms={terms}
           courses={courses}
           teachers={teachers}
           onClose={() => setModal(null)}
@@ -354,6 +359,7 @@ function CrossCampusField(props: { mode: string; value: boolean; onChange: (v: b
 
 function CreateDialog(props: {
   maHocKy: string
+  terms: readonly { maHocKy: string; tenHocKy: string }[]
   courses: { maMonHoc: string; tenMonHoc: string; soTinChi: number }[]
   teachers: TeacherOption[]
   onClose: () => void
@@ -404,7 +410,7 @@ function CreateDialog(props: {
           <Select
             ariaLabel="Học kỳ"
             value={maHocKy}
-            options={TERMS.map((t) => ({ value: t, label: TERM_NAMES[t] ?? t }))}
+            options={props.terms.map((t) => ({ value: t.maHocKy, label: t.tenHocKy }))}
             onChange={setMaHocKy}
           />
         </label>

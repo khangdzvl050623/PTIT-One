@@ -152,16 +152,33 @@ const DEM = ['Văn', 'Thị', 'Minh', 'Hoàng', 'Ngọc', 'Quốc', 'Thanh', 'Gi
 const TEN = ['An', 'Bình', 'Châu', 'Dũng', 'Giang', 'Hà', 'Hải', 'Khánh', 'Linh', 'Long',
   'Mai', 'Nam', 'Phúc', 'Quân', 'Sơn', 'Trang', 'Tú', 'Vy', 'Yến', 'Huy']
 
+/**
+ * Sinh viên THẬT của bản giả — trùng mã tài khoản đăng nhập được
+ * (`mockAuthApi.MOCK_ACCOUNTS`) và trùng seed `10-auth-seed.sql`.
+ *
+ * ⚠️ Phải có trong MỌI danh sách lớp. Mã sinh tự động bên dưới bắt đầu từ 100
+ * nên không bao giờ ra `B26DCCN001`; nếu không ghim sẵn thì giảng viên nhập
+ * điểm cho một sinh viên không ai đăng nhập được, và màn bảng điểm của sinh
+ * viên demo mãi không đổi — trông như lỗi, nhưng chỉ là dữ liệu không gặp nhau.
+ */
+const SINH_VIEN_THAT: readonly { maSinhVien: string; hoTen: string }[] = [
+  { maSinhVien: 'B26DCCN001', hoTen: 'Nguyễn Văn An' },
+  { maSinhVien: 'B25DCCN001', hoTen: 'Hoàng Gia Huy' },
+]
+
 /** Cùng cách sinh mã/tên với danh sách lớp ở màn quản trị, để hai màn khớp nhau. */
 export function roster(maLopHP: string, soLuong: number) {
   const seed = [...maLopHP].reduce((s, ch) => s + ch.charCodeAt(0), 0)
-  return Array.from({ length: soLuong }, (_, i) => {
+  // Giữ đúng sĩ số: ghim sinh viên thật trước, sinh thêm cho đủ.
+  const ghim = SINH_VIEN_THAT.slice(0, soLuong)
+  const sinhThem = Array.from({ length: Math.max(soLuong - ghim.length, 0) }, (_, i) => {
     const k = seed + i * 7
     return {
       maSinhVien: `B26DC${['CN', 'AT', 'DT', 'VT'][k % 4]}${String(100 + ((seed * 3 + i * 13) % 800)).padStart(3, '0')}`,
       hoTen: `${HO[k % HO.length]} ${DEM[(k >> 1) % DEM.length]} ${TEN[(k * 3) % TEN.length]}`,
     }
-  }).sort((a, b) => a.maSinhVien.localeCompare(b.maSinhVien))
+  })
+  return [...ghim, ...sinhThem].sort((a, b) => a.maSinhVien.localeCompare(b.maSinhVien))
 }
 
 /** Điểm giả lập tất định trong khoảng 4.0–9.5, bước 0.5. */
