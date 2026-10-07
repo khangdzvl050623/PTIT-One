@@ -17,7 +17,7 @@ export function Footer({
   version = SITE.version,
 }: FooterProps) {
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} data-print="hide">
       <div className={styles.inner}>
         <Logo size="sm" variant="tile" />
         <div className={styles.meta}>

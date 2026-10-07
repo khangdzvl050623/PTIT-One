@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import vn.ptit.one.course.model.CourseRelation;
 import vn.ptit.one.course.model.CourseSummary;
 import vn.ptit.one.course.model.Faculty;
 import vn.ptit.one.course.model.ProgramCourse;
@@ -254,6 +255,64 @@ public class CourseRepository {
         Integer count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM dbo.LopHocPhan WHERE MaMonHoc = ? AND MaHocKy IN (" + placeholders + ")",
                 Integer.class, args.toArray());
+        return count != null && count > 0;
+    }
+
+    /**
+     * MỌI quan hệ tiên quyết trong danh mục, kèm tên hai môn.
+     *
+     * <p>Màn đăng ký cần cả đồ thị để tô môn chưa đủ điều kiện. Không có
+     * endpoint này thì giao diện phải gọi {@code GET /api/courses/{ma}} cho
+     * từng môn — N request chỉ để mở một màn.
+     */
+    public List<CourseRelation> allPrerequisites() {
+        return jdbc.query("""
+                SELECT tq.MaMonHoc, m.TenMonHoc,
+                       tq.MaMonTienQuyet, mtq.TenMonHoc AS TenMonTienQuyet
+                  FROM dbo.MonHocTienQuyet tq
+                  JOIN dbo.MonHoc m   ON m.MaMonHoc = tq.MaMonHoc
+                  JOIN dbo.MonHoc mtq ON mtq.MaMonHoc = tq.MaMonTienQuyet
+                 ORDER BY tq.MaMonHoc, tq.MaMonTienQuyet
+                """, (rs, rowNum) -> new CourseRelation(
+                        CourseRelation.TIEN_QUYET,
+                        rs.getString("MaMonHoc"), rs.getString("TenMonHoc"),
+                        rs.getString("MaMonTienQuyet"), rs.getString("TenMonTienQuyet")));
+    }
+
+    /**
+     * Môn này đang là tiên quyết của môn khác.
+     *
+     * <p>Xoá nó sẽ làm mất điều kiện tiên quyết của môn kia mà không ai biết —
+     * ví dụ CTDL là tiên quyết của Java, xoá CTDL thì Java mất ràng buộc.
+     */
+    public boolean isPrerequisiteOfOthers(String maMonHoc) {
+        return exists("SELECT COUNT(*) FROM dbo.MonHocTienQuyet WHERE MaMonTienQuyet = ?", maMonHoc);
+    }
+
+    /**
+     * Môn này đã từng mở lớp — kể cả lớp đã huỷ.
+     *
+     * <p>Bao luôn ghi danh và lịch sử điểm: {@code DangKyMonHoc} có khoá ngoại
+     * tới {@code LopHocPhan}, và {@code Diem} tới {@code DangKyHocPhan}, nên
+     * không thể có ghi danh hay điểm mà không có lớp. Kiểm thêm hai bảng đó là
+     * phép kiểm không bao giờ chạy tới.
+     */
+    public boolean hasAnyClass(String maMonHoc) {
+        return exists("SELECT COUNT(*) FROM dbo.LopHocPhan WHERE MaMonHoc = ?", maMonHoc);
+    }
+
+    /** Môn này đang nằm trong một chương trình đào tạo. */
+    public boolean isInAnyProgram(String maMonHoc) {
+        return exists("SELECT COUNT(*) FROM dbo.CTDT_MonHoc WHERE MaMonHoc = ?", maMonHoc);
+    }
+
+    /** @return 0 nếu môn không tồn tại */
+    public int deleteCourse(String maMonHoc) {
+        return jdbc.update("DELETE FROM dbo.MonHoc WHERE MaMonHoc = ?", maMonHoc);
+    }
+
+    private boolean exists(String sql, String arg) {
+        Integer count = jdbc.queryForObject(sql, Integer.class, arg);
         return count != null && count > 0;
     }
 

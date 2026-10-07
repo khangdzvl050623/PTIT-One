@@ -1,0 +1,327 @@
+@use '@/styles/tokens' as tokens;
+
+.empty {
+  margin: 0;
+  padding: tokens.$space-xl;
+  font-size: tokens.$font-size-sm;
+  font-style: italic;
+  text-align: center;
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+  border-radius: tokens.$radius-sm;
+}
+
+/* --- Thanh ngang: lấp đầy theo môn ------------------------------------ */
+
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hrow {
+  display: grid;
+  grid-template-columns: minmax(120px, 34%) minmax(0, 1fr) 76px;
+  gap: tokens.$space-md;
+  align-items: center;
+  padding: 2px tokens.$space-xs;
+  border-radius: tokens.$radius-sm;
+  animation: fade-in 0.35s ease both;
+
+  &:hover {
+    background: var(--notice-hover-bg);
+  }
+}
+
+.hlabel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.25;
+  color: var(--notice-text);
+
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--notice-meta);
+  }
+}
+
+.htrack {
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  background: var(--notice-border);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Đầu dữ liệu bo 4px, gốc vuông bám trục. */
+.hfill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to right, var(--panel-header-from), var(--panel-header-to));
+  border-radius: 0 4px 4px 0;
+  transform-origin: left;
+  animation: grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.hvalue {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-xs;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  color: var(--notice-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.full {
+  padding: 0 tokens.$space-xs;
+  font-size: tokens.$font-size-2xs;
+  font-style: normal;
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+  border-radius: 3px;
+}
+
+/* --- Phân bố điểm ------------------------------------------------------- */
+
+.dist {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}
+
+.passStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: tokens.$space-md;
+  margin: 0;
+
+  div {
+    padding: tokens.$space-sm tokens.$space-md;
+    background: var(--field-icon-bg);
+    border-radius: tokens.$radius-sm;
+  }
+
+  div:first-child {
+    background: var(--tile-brand-bg);
+  }
+
+  dt {
+    font-size: tokens.$font-size-2xs;
+    color: var(--notice-meta);
+  }
+
+  dd {
+    margin: 0;
+    font-size: tokens.$font-size-lg;
+    font-weight: 700;
+    color: var(--notice-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.vbars {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: tokens.$space-md;
+  height: 190px;
+}
+
+.vcol {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: tokens.$space-xs;
+}
+
+.vvalue {
+  font-size: tokens.$font-size-xs;
+  font-weight: 700;
+  color: var(--notice-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.vtrack {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 44px;
+  border-bottom: 1px solid var(--notice-meta);
+}
+
+.vfill {
+  display: block;
+  width: 100%;
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  border-radius: 4px 4px 0 0;
+  transform-origin: bottom;
+  animation: grow-y 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Khoảng trượt: cùng màu nhưng nhạt — nhãn trục đã nói rõ "<4.0". */
+.vfail {
+  opacity: 0.45;
+}
+
+.vlabel {
+  font-size: tokens.$font-size-2xs;
+  color: var(--notice-meta);
+  white-space: nowrap;
+}
+
+/* --- Tiến độ bảng điểm -------------------------------------------------- */
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-md;
+}
+
+.stack {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--notice-border);
+
+  span {
+    height: 100%;
+  }
+}
+
+.lock {
+  background: var(--notice-meta);
+}
+
+.pub {
+  background: var(--progress-done);
+}
+
+.draft {
+  background: var(--tile-warm-text);
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-xs;
+  margin: 0;
+  padding: 0;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-text);
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto 44px;
+    gap: tokens.$space-sm;
+    align-items: center;
+  }
+
+  b {
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    text-align: right;
+    color: var(--notice-meta);
+  }
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* --- So sánh cơ sở ------------------------------------------------------ */
+
+.campus {
+  width: 100%;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-text);
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: tokens.$space-sm tokens.$space-md;
+    text-align: right;
+    border-bottom: 1px solid var(--notice-border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  thead th {
+    font-size: tokens.$font-size-xs;
+    font-weight: 600;
+    color: var(--notice-meta);
+  }
+
+  thead th:first-child,
+  tbody th {
+    text-align: left;
+  }
+
+  tbody th {
+    font-weight: 600;
+  }
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: tokens.$space-sm;
+}
+
+.itrack {
+  display: block;
+  width: 90px;
+  height: 6px;
+  overflow: hidden;
+  background: var(--notice-border);
+  border-radius: 3px;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--accent-red);
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hrow,
+  .hfill,
+  .vfill {
+    animation: none;
+  }
+}

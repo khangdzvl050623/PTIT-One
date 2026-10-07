@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import vn.ptit.one.course.model.CourseRelation;
 import vn.ptit.one.course.model.Faculty;
 import vn.ptit.one.course.model.ProgramDetail;
 import vn.ptit.one.course.model.StudyProgram;
@@ -35,6 +36,17 @@ public class CatalogController {
     @GetMapping("/faculties")
     public List<Faculty> faculties() {
         return courses.faculties();
+    }
+
+    /**
+     * Mọi quan hệ tiên quyết trong danh mục.
+     *
+     * <p>Đặt ở {@code /api/prerequisites}, KHÔNG phải {@code /api/courses/...}:
+     * dưới đó nó sẽ nhập nhằng với {@code /api/courses/{maMonHoc}}.
+     */
+    @GetMapping("/prerequisites")
+    public List<CourseRelation> prerequisites() {
+        return courses.prerequisites();
     }
 
     @GetMapping("/terms")

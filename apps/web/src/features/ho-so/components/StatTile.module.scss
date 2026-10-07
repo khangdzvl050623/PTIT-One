@@ -1,0 +1,80 @@
+@use '@/styles/tokens' as tokens;
+
+.tile {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  padding: tokens.$space-lg tokens.$space-xl;
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: var(--panel-shadow);
+}
+
+.plain {
+  background: var(--panel-bg);
+}
+
+.brand {
+  background: var(--tile-brand-bg);
+  border-color: var(--tile-brand-border);
+}
+
+.warm {
+  background: var(--tile-warm-bg);
+  border-color: var(--tile-warm-border);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-xs;
+  min-width: 0;
+}
+
+.label {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--accent-red);
+}
+
+.warm .label,
+.warm .link {
+  color: var(--tile-warm-text);
+}
+
+.value {
+  font-size: tokens.$font-size-xl;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--notice-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.link {
+  font-size: tokens.$font-size-xs;
+  color: var(--accent-red);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--accent-red);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+}
+
+.warm .icon {
+  color: var(--tile-warm-text);
+}

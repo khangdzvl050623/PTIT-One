@@ -134,6 +134,20 @@
         },
         "type" : "object"
       },
+      "Campus" : {
+        "properties" : {
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "tenCoSo" : {
+            "type" : "string"
+          },
+          "thanhPho" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CancelClassRequest" : {
         "properties" : {
           "lyDo" : {
@@ -256,6 +270,34 @@
         },
         "type" : "object"
       },
+      "ClassScheduleEntry" : {
+        "properties" : {
+          "buoiHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ScheduleSlot"
+            },
+            "type" : "array"
+          },
+          "maLopHP" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassSchedules" : {
+        "properties" : {
+          "lopHocPhan" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassScheduleEntry"
+            },
+            "type" : "array"
+          },
+          "maHocKy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ClassSection" : {
         "properties" : {
           "choPhepLienCoSo" : {
@@ -327,6 +369,26 @@
         },
         "type" : "object"
       },
+      "CourseRelation" : {
+        "properties" : {
+          "loai" : {
+            "type" : "string"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "maMonYeuCau" : {
+            "type" : "string"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "tenMonYeuCau" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CourseReport" : {
         "properties" : {
           "capNhatLuc" : {
@@ -335,12 +397,60 @@
           },
           "monHoc" : {
             "items" : {
-              "$ref" : "#/components/schemas/Row"
+              "$ref" : "#/components/schemas/CourseStat"
             },
             "type" : "array"
           },
           "phamVi" : {
             "$ref" : "#/components/schemas/ReportScope"
+          }
+        },
+        "type" : "object"
+      },
+      "CourseStat" : {
+        "properties" : {
+          "chuaCoKetQua" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "luotDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "phanBoDiem" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GradeBucket"
+            },
+            "type" : "array"
+          },
+          "soDat" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soLop" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soTruot" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "tiLeLapDay" : {
+            "type" : "number"
+          },
+          "tongDaDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tongSucChua" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -594,6 +704,18 @@
           }
         },
         "required" : [ "email", "tenDangNhap" ],
+        "type" : "object"
+      },
+      "GradeBucket" : {
+        "properties" : {
+          "khoang" : {
+            "type" : "string"
+          },
+          "soLuong" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "GradeEntry" : {
@@ -863,6 +985,17 @@
             "type" : "integer"
           }
         },
+        "type" : "object"
+      },
+      "RemoveEnrollmentRequest" : {
+        "properties" : {
+          "lyDo" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "lyDo" ],
         "type" : "object"
       },
       "ReportScope" : {
@@ -1181,6 +1314,77 @@
         },
         "type" : "object"
       },
+      "StudentDetail" : {
+        "properties" : {
+          "anhDaiDien" : {
+            "type" : "string"
+          },
+          "danToc" : {
+            "type" : "string"
+          },
+          "dienThoai" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "emailCaNhan" : {
+            "type" : "string"
+          },
+          "gioiTinh" : {
+            "type" : "string"
+          },
+          "hoKhau" : {
+            "type" : "string"
+          },
+          "hoTen" : {
+            "type" : "string"
+          },
+          "maCTDT" : {
+            "type" : "string"
+          },
+          "maCoSoNha" : {
+            "type" : "string"
+          },
+          "maSinhVien" : {
+            "type" : "string"
+          },
+          "ngaySinh" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "noiSinh" : {
+            "type" : "string"
+          },
+          "soCCCD" : {
+            "type" : "string"
+          },
+          "soTinChiTichLuy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenCTDT" : {
+            "type" : "string"
+          },
+          "tenCoSo" : {
+            "type" : "string"
+          },
+          "tenKhoa" : {
+            "type" : "string"
+          },
+          "tonGiao" : {
+            "type" : "string"
+          },
+          "tongTinChiCTDT" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "trangThai" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "StudentEnrollments" : {
         "properties" : {
           "dangKy" : {
@@ -1208,6 +1412,9 @@
           "daCongBo" : {
             "type" : "boolean"
           },
+          "diemChu" : {
+            "type" : "string"
+          },
           "diemChuyenCan" : {
             "type" : "number"
           },
@@ -1215,6 +1422,9 @@
             "type" : "number"
           },
           "diemGiuaKy" : {
+            "type" : "number"
+          },
+          "diemHe4" : {
             "type" : "number"
           },
           "diemTongKet" : {
@@ -1402,6 +1612,46 @@
         },
         "type" : "object"
       },
+      "TranscriptTerm" : {
+        "properties" : {
+          "maHocKy" : {
+            "type" : "string"
+          },
+          "monHoc" : {
+            "items" : {
+              "$ref" : "#/components/schemas/StudentGrade"
+            },
+            "type" : "array"
+          },
+          "tbHocKy10" : {
+            "type" : "number"
+          },
+          "tbHocKy4" : {
+            "type" : "number"
+          },
+          "tbTichLuy10" : {
+            "type" : "number"
+          },
+          "tbTichLuy4" : {
+            "type" : "number"
+          },
+          "tenHocKy" : {
+            "type" : "string"
+          },
+          "tinChiDatHocKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tinChiTichLuy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "xepLoaiHocKy" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "UpdateClassRequest" : {
         "properties" : {
           "choPhepLienCoSo" : {
@@ -1444,6 +1694,55 @@
           }
         },
         "required" : [ "maKhoa", "tenMonHoc" ],
+        "type" : "object"
+      },
+      "UpdateMyProfileRequest" : {
+        "properties" : {
+          "anhDaiDien" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "pattern" : "\\s*|https://.+",
+            "type" : "string"
+          },
+          "danToc" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "dienThoai" : {
+            "pattern" : "\\s*|[0-9 +().-]{8,20}",
+            "type" : "string"
+          },
+          "emailCaNhan" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "pattern" : "\\s*|[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
+            "type" : "string"
+          },
+          "gioiTinh" : {
+            "pattern" : "\\s*|NAM|NU",
+            "type" : "string"
+          },
+          "hoKhau" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "noiSinh" : {
+            "maxLength" : 150,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "soCCCD" : {
+            "pattern" : "\\s*|[0-9]{9}|[0-9]{12}",
+            "type" : "string"
+          },
+          "tonGiao" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "VerifyEmailRequest" : {
@@ -1896,6 +2195,27 @@
         "tags" : [ "credential-controller" ]
       }
     },
+    "/api/campuses" : {
+      "get" : {
+        "operationId" : "campuses",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Campus"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "campus-controller" ]
+      }
+    },
     "/api/classes" : {
       "get" : {
         "operationId" : "search_3",
@@ -2258,6 +2578,49 @@
         "tags" : [ "roster-controller" ]
       }
     },
+    "/api/classes/{maLopHP}/students/{maSinhVien}/remove" : {
+      "post" : {
+        "operationId" : "removeStudent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maLopHP",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "maSinhVien",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RemoveEnrollmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSection"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "roster-controller" ]
+      }
+    },
     "/api/classes/{maLopHP}/teacher" : {
       "put" : {
         "operationId" : "assignTeacher",
@@ -2357,6 +2720,23 @@
       }
     },
     "/api/courses/{maMonHoc}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "maMonHoc",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "course-controller" ]
+      },
       "get" : {
         "operationId" : "detail_1",
         "parameters" : [ {
@@ -2827,6 +3207,50 @@
         "tags" : [ "inbox-controller" ]
       }
     },
+    "/api/me/profile" : {
+      "get" : {
+        "operationId" : "myProfile",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateMyProfile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMyProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
     "/api/me/teaching-classes" : {
       "get" : {
         "operationId" : "teachingClasses",
@@ -2922,6 +3346,27 @@
           }
         },
         "tags" : [ "student-enrollment-controller" ]
+      }
+    },
+    "/api/me/transcript" : {
+      "get" : {
+        "operationId" : "transcript",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/TranscriptTerm"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-grade-controller" ]
       }
     },
     "/api/notifications" : {
@@ -3106,6 +3551,27 @@
         "tags" : [ "notification-controller" ]
       }
     },
+    "/api/prerequisites" : {
+      "get" : {
+        "operationId" : "prerequisites",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CourseRelation"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalog-controller" ]
+      }
+    },
     "/api/programs" : {
       "get" : {
         "operationId" : "programs",
@@ -3224,6 +3690,32 @@
           }
         },
         "tags" : [ "report-controller" ]
+      }
+    },
+    "/api/schedules" : {
+      "get" : {
+        "operationId" : "byTerm",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "maHocKy",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClassSchedules"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "term-schedule-controller" ]
       }
     },
     "/api/students" : {

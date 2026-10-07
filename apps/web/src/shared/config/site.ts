@@ -27,8 +27,8 @@ export const SITE: SiteConfig = {
   appName: 'PTIT One',
   orgName: 'Học viện Công nghệ Bưu chính Viễn thông',
   campusName: 'Cơ sở tại TP. Hồ Chí Minh',
-  copyrightYear: '2020',
+  copyrightYear: '2026',
   siteName: 'HỆ THỐNG QUẢN LÝ ĐÀO TẠO ĐẠI HỌC CHÍNH QUY (UIS)',
   homeHref: '/',
-  version: 'Version: BCVT-2025.08X.07',
+  version: 'Version: 3KHP-2026.03.06',
 }

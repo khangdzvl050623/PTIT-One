@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 
 import { navItemsFor } from '@/app/router/navigation'
@@ -20,13 +21,27 @@ export function Header({
   homeLabel = LABELS.home,
 }: HeaderProps) {
   const { status, user, signOut } = useAuth()
+  const ref = useRef<HTMLElement>(null)
+
+  /* Đưa chiều cao thật của header vào `--header-h` để cột dính bên dưới biết
+     chừa bao nhiêu — header xuống hai dòng khi màn hẹp hoặc menu dài. */
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const root = document.documentElement
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty('--header-h', `${el.offsetHeight}px`)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   /* Menu lấy từ cùng danh sách sinh ra tuyến, nên không thể hiện một mục mà
      router không có. Chưa đăng nhập thì rỗng. */
   const items = navItemsFor(user?.role)
 
   return (
-    <header className={styles.topBar}>
+    <header ref={ref} className={styles.topBar} data-print="hide">
       <div className={styles.inner}>
         <Link to={homeHref} className={styles.brand}>
           <Logo size="sm" variant="tile" />
@@ -37,6 +52,12 @@ export function Header({
           <NavLink to={homeHref} end className={navLinkClass}>
             {homeLabel}
           </NavLink>
+
+          {status === 'authenticated' ? (
+            <NavLink to={ROUTES.userInfo} className={navLinkClass}>
+              {LABELS.userInfo}
+            </NavLink>
+          ) : null}
 
           {items.map((item) => (
             <NavLink key={item.path} to={item.path} className={navLinkClass}>

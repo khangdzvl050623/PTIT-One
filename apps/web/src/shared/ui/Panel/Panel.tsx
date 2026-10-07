@@ -21,7 +21,7 @@ export function Panel({ title, icon, className, children }: PanelProps) {
   return (
     <section className={classes}>
       <h2 className={styles.header}>
-        {icon ? <Icon name={icon} size="12px" /> : null}
+        {icon ? <Icon name={icon} size="15px" /> : null}
         <span>{title}</span>
       </h2>
       <div className={styles.body}>{children}</div>

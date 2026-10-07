@@ -56,7 +56,7 @@ public class ReportService {
     public CourseReport byCourse(AuthenticatedUser user, String maHocKy, String maCoSo) {
         ReportScope scope = scope(user, maHocKy, maCoSo, null);
         return new CourseReport(scope, reports.byCourse(scope, policy.nguongDat()).stream()
-                .map(r -> new CourseReport.Row(r.maMonHoc(), r.tenMonHoc(), r.soLop(), r.luotDangKy(),
+                .map(r -> new CourseReport.CourseStat(r.maMonHoc(), r.tenMonHoc(), r.soLop(), r.luotDangKy(),
                         r.tongSucChua(), r.tongDaDangKy(), ratio(r.tongDaDangKy(), r.tongSucChua()),
                         r.soDat(), r.soTruot(), r.luotDangKy() - r.soDat() - r.soTruot(), r.phanBoDiem()))
                 .toList(), clock.instant());

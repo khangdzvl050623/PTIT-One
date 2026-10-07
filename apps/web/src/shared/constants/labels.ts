@@ -17,6 +17,7 @@ export const LABELS = {
   logout: 'Đăng xuất',
   logoutEverywhere: 'Đăng xuất mọi thiết bị',
   account: 'Tài khoản',
+  userInfo: 'Thông tin',
   forbiddenTitle: 'Không đủ quyền',
   forbiddenText: 'Tài khoản của bạn không được phép mở trang này.',
   accessStats: 'THỐNG KÊ TRUY CẬP',

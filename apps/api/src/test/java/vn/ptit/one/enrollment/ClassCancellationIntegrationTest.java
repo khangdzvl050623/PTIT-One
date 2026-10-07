@@ -171,7 +171,121 @@ class ClassCancellationIntegrationTest {
                 .contains("CLASS_NOT_OPEN");
     }
 
+    // --- Gỡ một sinh viên khỏi lớp (quyết định nhóm 03/10/2026) ----------
+
+    /**
+     * Gỡ đúng MỘT người: lớp vẫn mở, sĩ số giảm 1, tín chỉ trả lại, người còn
+     * lại không bị đụng, và sinh viên bị gỡ nhận thông báo kèm lý do.
+     */
+    @Test
+    void goMotSinhVienThiLopVanMoVaNguoiKhacKhongDoi() throws Exception {
+        Browser an = signedIn("B26DCCN001");
+        Browser huy = signedIn("B25DCCN001");
+        int tinChiAn = tinChi("B26DCCN001");
+        an.post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+        huy.post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+
+        HttpResponse<String> response = signedIn("admin.hcm")
+                .post(remove("B26DCCN001"), "{\"lyDo\":\"SV dang ky sai lop, co don ngay 03/10\"}");
+
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        // Lớp KHÔNG bị huỷ — đó là điểm khác huỷ cả lớp.
+        assertThat(response.body()).contains("\"trangThai\":\"MO\"", "\"soLuongDaDangKy\":1");
+        assertThat(tinChi("B26DCCN001")).isEqualTo(tinChiAn);
+        assertThat(an.get("/api/me/enrollments?maHocKy=2026-1").body()).doesNotContain(LOP);
+        // Người còn lại vẫn trong lớp.
+        assertThat(huy.get("/api/me/enrollments?maHocKy=2026-1").body()).contains(LOP);
+        assertThat(an.get("/api/me/notifications?chuaDoc=true").body())
+                .contains("\"suKien\":\"GO_GHI_DANH\"", "dang ky sai lop", "admin.hcm");
+    }
+
+    /** Gỡ được cả sinh viên đang DANG_HOC — đúng mục đích chính của endpoint. */
+    @Test
+    void goDuocSinhVienDangHoc() throws Exception {
+        signedIn("B26DCCN001").post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+        assertThat(jdbc.queryForObject(
+                "SELECT TrangThai FROM dbo.SinhVien WHERE MaSinhVien = 'B26DCCN001'", String.class))
+                .isEqualTo("DANG_HOC");
+
+        assertThat(signedIn("admin.hcm").post(remove("B26DCCN001"), "{\"lyDo\":\"Chuyen lop\"}").statusCode())
+                .isEqualTo(200);
+    }
+
+    /** Đợt đăng ký đóng vẫn gỡ được — chính là lý do endpoint này tồn tại. */
+    @Test
+    void dotDongVanGoDuoc() throws Exception {
+        Browser an = signedIn("B26DCCN001");
+        an.post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+        jdbc.update("UPDATE dbo.DotDangKy SET TrangThai = 'DA_DONG' WHERE MaDot = 'HCM-2026-1-01'");
+        try {
+            // Sinh viên tự huỷ thì bị chặn...
+            assertThat(an.delete("/api/me/enrollments/" + LOP).body()).contains("ENROLLMENT_PERIOD_CLOSED");
+
+            // ...nhưng admin vẫn gỡ được.
+            assertThat(signedIn("admin.hcm").post(remove("B26DCCN001"), "{\"lyDo\":\"Sai lop\"}").statusCode())
+                    .isEqualTo(200);
+        } finally {
+            jdbc.update("UPDATE dbo.DotDangKy SET TrangThai = 'DANG_MO' WHERE MaDot = 'HCM-2026-1-01'");
+        }
+    }
+
+    /** Đã có điểm, kể cả điểm nháp, thì không gỡ — và không có gì thay đổi. */
+    @Test
+    void daCoDiemThiKhongGo() throws Exception {
+        signedIn("B26DCCN001").post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+        jdbc.update("UPDATE dbo.Diem SET DiemChuyenCan = 9 WHERE MaLopHP = ?", LOP);
+
+        HttpResponse<String> response = signedIn("admin.hcm").post(remove("B26DCCN001"), "{\"lyDo\":\"Thu\"}");
+
+        assertThat(response.statusCode()).isEqualTo(409);
+        assertThat(response.body()).contains("ENROLLMENT_HAS_GRADE");
+        assertThat(count("SELECT COUNT(*) FROM dbo.LopHocPhan WHERE MaLopHP = ? AND SoLuongDaDangKy = 1"))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void lopDaKhoaDiemThiKhongGo() throws Exception {
+        signedIn("B26DCCN001").post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+        jdbc.update("UPDATE dbo.LopHocPhan SET TrangThai = 'DA_KHOA' WHERE MaLopHP = ?", LOP);
+
+        assertThat(signedIn("admin.hcm").post(remove("B26DCCN001"), "{\"lyDo\":\"Thu\"}").body())
+                .contains("GRADE_LOCKED");
+    }
+
+    /** Lý do BẮT BUỘC: thao tác trên dữ liệu người khác phải có vết. */
+    @Test
+    void thieuLyDoThiBiChan() throws Exception {
+        signedIn("B26DCCN001").post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+        Browser admin = signedIn("admin.hcm");
+
+        for (String body : new String[] { "{}", "{\"lyDo\":\"\"}", "{\"lyDo\":\"   \"}" }) {
+            HttpResponse<String> response = admin.post(remove("B26DCCN001"), body);
+            assertThat(response.statusCode()).as(body).isEqualTo(400);
+            assertThat(response.body()).as(body).contains("VALIDATION_ERROR", "lyDo");
+        }
+    }
+
+    @Test
+    void khongCoGhiDanhThiBao404() throws Exception {
+        assertThat(signedIn("admin.hcm").post(remove("B26DCCN001"), "{\"lyDo\":\"Thu\"}").body())
+                .contains("ENROLLMENT_NOT_FOUND");
+    }
+
+    @Test
+    void chiAdminCoSoCuaLopDuocGo() throws Exception {
+        signedIn("B26DCCN001").post("/api/me/enrollments", "{\"maLopHP\":\"" + LOP + "\"}");
+
+        for (String username : new String[] { "admin.hn", "admin.master", "GVHCM001", "B26DCCN001" }) {
+            assertThat(signedIn(username).post(remove("B26DCCN001"), "{\"lyDo\":\"Thu\"}").statusCode())
+                    .as(username).isEqualTo(403);
+        }
+    }
+
     // --- Tiện ích --------------------------------------------------------
+
+    private static String remove(String maSinhVien) {
+        return "/api/classes/" + LOP + "/students/" + maSinhVien + "/remove";
+    }
 
     private int count(String sql) {
         return jdbc.queryForObject(sql, Integer.class, LOP);
@@ -213,6 +327,10 @@ class ClassCancellationIntegrationTest {
 
         HttpResponse<String> put(String path, String json) throws Exception {
             return send("PUT", path, json);
+        }
+
+        HttpResponse<String> delete(String path) throws Exception {
+            return send("DELETE", path, "");
         }
 
         private HttpResponse<String> send(String method, String path, String json) throws Exception {

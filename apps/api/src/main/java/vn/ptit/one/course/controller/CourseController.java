@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,6 +70,21 @@ public class CourseController {
     @PreAuthorize("hasRole('ADMIN_MASTER')")
     public CourseDetail update(@PathVariable String maMonHoc, @Valid @RequestBody UpdateCourseRequest body) {
         return courses.update(maMonHoc, body.tenMonHoc(), body.soTinChi(), body.maKhoa());
+    }
+
+    /**
+     * Xoá môn khỏi danh mục. Chỉ được khi môn chưa từng dùng ở đâu — xem
+     * {@code CourseService.delete}.
+     *
+     * <p>`204` khi xoá xong. Bị chặn thì `409` kèm mã nói rõ cái gì giữ môn
+     * lại: {@code COURSE_IS_PREREQUISITE} · {@code COURSE_HAS_CLASSES} ·
+     * {@code COURSE_IN_PROGRAM}.
+     */
+    @DeleteMapping("/{maMonHoc}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN_MASTER')")
+    public void delete(@PathVariable String maMonHoc) {
+        courses.delete(maMonHoc);
     }
 
     /** Thay toàn bộ tập tiên quyết. Danh sách rỗng = gỡ hết. */

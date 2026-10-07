@@ -1,0 +1,124 @@
+@use '@/styles/tokens' as tokens;
+
+.dialog {
+  width: min(720px, calc(100vw - #{tokens.$space-2xl}));
+  max-height: calc(100vh - #{tokens.$space-3xl} * 2);
+  padding: 0;
+  color: var(--notice-text);
+  background: transparent;
+  border: none;
+
+  &::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+    animation: fade 0.15s ease-out;
+  }
+
+  &[open] .box {
+    animation: pop 0.18s ease-out;
+  }
+}
+
+/* Khung nội dung: click ra ngoài khung (trúng chính <dialog>) là đóng. */
+.box {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+  overflow: hidden;
+  background: var(--panel-bg);
+  border-radius: tokens.$radius-lg;
+  box-shadow: var(--shadow);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$space-lg;
+  padding: tokens.$space-xl tokens.$space-2xl;
+  border-bottom: 1px solid var(--notice-border);
+  border-top: 4px solid var(--accent-red);
+}
+
+.headerBody {
+  min-width: 0;
+}
+
+.x {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--notice-meta);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent-red);
+    background: var(--tile-brand-bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+  }
+}
+
+.body {
+  padding: 0 tokens.$space-2xl;
+  overflow-y: auto;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: tokens.$space-md;
+  padding: tokens.$space-lg tokens.$space-2xl;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-sm;
+  padding: tokens.$space-sm tokens.$space-xl;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  color: var(--accent-red);
+  background: var(--panel-bg);
+  border: 1px solid var(--accent-red);
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ptit-on-brand);
+    background: var(--accent-red);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog::backdrop,
+  .dialog[open] .box {
+    animation: none;
+  }
+}

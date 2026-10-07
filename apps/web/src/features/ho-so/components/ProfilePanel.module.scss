@@ -1,0 +1,16 @@
+@use '@/styles/tokens' as tokens;
+
+.withPhoto {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: tokens.$space-xl;
+  align-items: start;
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    grid-template-columns: minmax(0, 1fr);
+
+    > :last-child {
+      order: -1;
+    }
+  }
+}

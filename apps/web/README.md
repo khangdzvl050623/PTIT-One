@@ -18,7 +18,16 @@ TypeScript và build Vite). Xem [CI Phần 1](../../docs/PTIT-One-CI.md).
 
 API được dựng ở `apps/api`, mặc định cổng 8080. Vite cổng 5173 đã proxy
 `/api` tới `http://127.0.0.1:8080`; truy cập `/api/health` qua Vite để kiểm
-kết nối. Backend hiện là skeleton, form đăng nhập chưa nối auth.
+kết nối.
+
+**Mặc định chạy dữ liệu giả** để dựng UI không cần backend: đăng nhập mật khẩu
+bất kỳ với `B26DCCN001` (SV) · `GVHCM001` (GV) · `admin.hcm` · `admin.master`;
+hồ sơ, bảng điểm và thời khoá biểu cũng là dữ liệu mẫu.
+
+Gọi API thật: tạo `apps/web/.env.local` chứa `VITE_API_MODE=api` rồi chạy lại
+`npm run dev`. **Một cờ duy nhất cho cả app** — cố ý không tách theo feature,
+vì nửa thật nửa giả thì màn hình trông như chạy được mà số liệu không thuộc về
+ai. Chỗ đọc cờ: `src/shared/api/mode.ts`.
 Xem [hướng dẫn backend](../api/README.md). UI tiếp tục làm song song
 theo kế hoạch Phần 1; không cần chờ cổng phân tán của lịch cũ.
 
@@ -75,8 +84,15 @@ không viết thẳng số vào component.
 đặt một lần ở `:root` trong `global.scss`. Khi nào cần dark mode thì thêm nhánh
 ghi đè token, không sửa từng component.
 
-Dữ liệu mẫu của màn hình đặt trong `features/<tên>/data/` (chưa nối API) —
-component không nhúng sẵn mảng dữ liệu hay chuỗi hiển thị dài.
+Mỗi feature có dữ liệu đi qua **ba file** trong `features/<tên>/api/`:
+`http<X>Api.ts` gọi API thật, `mock<X>Api.ts` trả dữ liệu mẫu từ `data/`, và
+`<x>Api.ts` chọn một trong hai theo `VITE_API_MODE`. Hai bản phải **cùng chữ
+ký** để màn hình không phân biệt được. Component không nhúng sẵn mảng dữ liệu
+hay chuỗi hiển thị dài.
+
+Trang tải dữ liệu bằng `useAsyncData` (`shared/lib`) để có trạng thái
+tải / lỗi nhất quán. Hàm truyền vào phải bọc `useCallback`, nếu không hook tải
+lại vô hạn.
 
 ## Quy ước
 

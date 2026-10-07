@@ -2,8 +2,10 @@ package vn.ptit.one.timetable.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.context.annotation.Profile;
@@ -18,6 +20,7 @@ import vn.ptit.one.course.service.ClassSectionService;
 import vn.ptit.one.course.service.CourseService;
 import vn.ptit.one.shared.exception.ApiException;
 import vn.ptit.one.timetable.model.ClassSchedule;
+import vn.ptit.one.timetable.model.ClassSchedules;
 import vn.ptit.one.timetable.model.ScheduleSlot;
 import vn.ptit.one.timetable.model.Timetable;
 import vn.ptit.one.timetable.model.TimetableEntry;
@@ -82,6 +85,32 @@ public class ScheduleService {
     public Optional<String> firstClash(String maLopHP, Collection<String> others) {
         List<ScheduleSlot> target = schedules.findByClass(maLopHP);
         return Optional.ofNullable(firstClash(target, schedules.slotsOf(others))).map(ClashRow::maLopHP);
+    }
+
+    /**
+     * Lịch của mọi lớp trong học kỳ mà người gọi được xem.
+     *
+     * <p>Phạm vi cơ sở KHÔNG kiểm lại ở đây: lấy danh sách lớp qua
+     * {@code ClassSectionService.search}, nên dùng đúng quy tắc quyền của
+     * {@code GET /api/classes}. Thêm một phép kiểm thứ hai ở đây là tạo chỗ để
+     * hai bên lệch nhau.
+     */
+    public ClassSchedules termSchedules(AuthenticatedUser user, String maHocKy) {
+        courses.requireTerm(maHocKy);
+        List<String> maLopHP = classes.search(user, maHocKy, null, null).stream()
+                .filter(l -> !ClassSectionService.DA_HUY.equals(l.trangThai()))
+                .map(ClassSection::maLopHP)
+                .toList();
+
+        Map<String, List<ScheduleSlot>> theoLop = new LinkedHashMap<>();
+        maLopHP.forEach(ma -> theoLop.put(ma, new ArrayList<>()));
+        for (ClashRow row : schedules.slotsOf(maLopHP)) {
+            theoLop.get(row.maLopHP()).add(row.slot());
+        }
+
+        return new ClassSchedules(maHocKy, theoLop.entrySet().stream()
+                .map(e -> new ClassSchedules.ClassScheduleEntry(e.getKey(), e.getValue()))
+                .toList());
     }
 
     /** Lịch dạy của giảng viên đang đăng nhập, gom mọi lớp đang phụ trách. */

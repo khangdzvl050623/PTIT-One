@@ -1,6 +1,10 @@
 @use '@/styles/tokens' as tokens;
 
+/* Dính đỉnh màn hình khi cuộn; nằm trên mọi nội dung trang (danh sách xổ = 20). */
 .topBar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   width: 100%;
   color: var(--ptit-on-brand);
   background: linear-gradient(to bottom, var(--ptit-red) 0%, var(--ptit-red-dark) 100%);

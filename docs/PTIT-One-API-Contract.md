@@ -93,7 +93,9 @@ người dùng và đổi được bất cứ lúc nào.
 | GET · POST · PUT | `/api/accounts` · `/{tenDangNhap}/activation-code` · `/{tenDangNhap}/status` | `ADMIN_MASTER` |
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
-| GET | `/api/faculties` · `/api/terms` · `/api/teachers` | — |
+| DELETE | `/api/courses/{maMonHoc}` | `ADMIN_MASTER` |
+| GET | `/api/faculties` · `/api/terms` · `/api/teachers` · `/api/prerequisites` · `/api/campuses` | — |
+| GET | `/api/schedules?maHocKy=` | — *(phạm vi cơ sở như `/api/classes`)* |
 | GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
 | POST · PUT | `/api/classes` · `/{maLopHP}` · `/{maLopHP}/teacher` | `ADMIN_CO_SO` |
@@ -106,8 +108,10 @@ người dùng và đổi được bất cứ lúc nào.
 | PUT | `/api/classes/{maLopHP}/schedule` | `ADMIN_CO_SO` |
 | GET | `/api/enrollment-periods` | — |
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
+| POST | `/api/classes/{maLopHP}/students/{maSinhVien}/remove` | `ADMIN_CO_SO` *(cơ sở của lớp)* |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
-| GET | `/api/me/grades` · `/api/me/timetable` · `/api/me/enrollments` | `SINH_VIEN` |
+| GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
+| PUT | `/api/me/profile` | `SINH_VIEN` **đã xác minh email** |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 | GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |
@@ -175,6 +179,19 @@ bị từ chối.
   bắt. Lỗi thì **giữ nguyên tập cũ**.
 - Không đổi được tiên quyết khi môn có lớp trong học kỳ **đang mở đợt đăng ký** —
   sinh viên đã đăng ký theo điều kiện cũ.
+- **Xoá môn** (`DELETE /api/courses/{maMonHoc}`) chỉ được khi môn **chưa từng
+  được dùng ở đâu**. Không xoá mềm, không xoá bắt buộc — môn đã đi vào dữ liệu
+  học tập thì không xoá được, và hệ thống nói rõ lý do. Ba cổng chặn, xét theo
+  thứ tự này, mỗi cổng một mã riêng:
+  1. đang là tiên quyết của môn khác → `COURSE_IS_PREREQUISITE` (xoá sẽ làm môn
+     kia mất ràng buộc — ví dụ CTDL là tiên quyết của Java)
+  2. đã từng mở lớp, **kể cả lớp đã huỷ** → `COURSE_HAS_CLASSES`. Cổng này bao
+     luôn ghi danh và lịch sử điểm: `DangKyMonHoc` có khoá ngoại tới `LopHocPhan`
+     và `Diem` tới `DangKyHocPhan`, nên không thể có ghi danh hay điểm mà không
+     có lớp
+  3. đang nằm trong một chương trình đào tạo → `COURSE_IN_PROGRAM`
+  Quan hệ tiên quyết **của chính môn đó** thì xoá kèm — những dòng ấy chỉ mô tả
+  môn đang xoá, không môn nào khác phụ thuộc vào chúng.
 - `GET /api/courses/{maMonHoc}` trả **cả hai chiều**: `tienQuyet` (phải đạt
   trước) và `monPhuThuoc` (môn đang cần môn này). Chiều sau cần cho màn quản
   trị, vì sửa môn này ảnh hưởng tới chúng.
@@ -203,6 +220,26 @@ bị từ chối.
 - Huỷ lại lớp đã huỷ trả `200`, `soDangKyDaHuy: 0`, không báo lần hai.
 - Có SV đăng ký chen đúng lúc huỷ → `409 CLASS_CANCEL_RETRY`, thử lại.
 - Không mở lại được lớp đã huỷ.
+
+### Gỡ một sinh viên khỏi lớp
+
+- `POST /api/classes/{maLopHP}/students/{maSinhVien}/remove`, thân
+  `{"lyDo"}` **bắt buộc** (≤ 500 ký tự). Chỉ `ADMIN_CO_SO` của cơ sở sở hữu lớp.
+- Khác **huỷ lớp**: gỡ đúng một người, lớp vẫn `MO` và dôi ra một chỗ.
+- **KHÔNG kiểm đợt đăng ký còn mở** — đó chính là lý do endpoint này tồn tại.
+  Sinh viên chỉ tự huỷ được khi đợt mở; đăng ký sai lớp mà phát hiện sau khi
+  đợt đóng thì trước đây không còn đường nào ngoài sửa SQL tay.
+- **Gỡ được cả sinh viên đang `DANG_HOC`** (quyết định nhóm 03/10/2026): đăng ký
+  sai lớp thường xảy ra với người vẫn đang học. Giới hạn đặt ở **tình trạng lớp
+  và điểm**, không ở tình trạng sinh viên.
+- Chặn khi: lớp `DA_KHOA` (`GRADE_LOCKED`), lớp `DA_HUY` (`CLASS_CANCELLED`),
+  hoặc sinh viên **đã có điểm — kể cả điểm nháp** (`ENROLLMENT_HAS_GRADE`).
+- Dùng `POST` chứ không `DELETE` vì cần thân request cho lý do, và `DELETE` có
+  thân thì một số proxy bỏ mất.
+- Sinh viên nhận thông báo `GO_GHI_DANH` mức `QUAN_TRONG`, **kèm tên admin và
+  lý do** — đây là thao tác người khác làm trên dữ liệu của họ.
+- Năm bước ghi giống hệt huỷ lớp và sinh viên tự huỷ; sửa một chỗ phải sửa cả
+  ba, nếu không bộ đếm `SoLuongDaDangKy` sẽ lệch khỏi số ghi danh thật.
 
 ### Đợt đăng ký
 
@@ -294,6 +331,29 @@ bị từ chối.
   tín chỉ kiểm **trong câu `UPDATE`** rồi đọc `@@ROWCOUNT`; thứ tự ghi luôn
   `SinhVienHocKy → LopHocPhan → DangKyHocPhan → DangKyMonHoc → Diem` ở cả đăng
   ký lẫn huỷ.
+
+### Hồ sơ sinh viên tự sửa
+
+- `GET /api/me/profile` trả hồ sơ gộp: phần hành chính (họ tên, ngày sinh, cơ sở,
+  CTĐT, khoa, trạng thái, tín chỉ tích luỹ), email tài khoản, và phần lý lịch.
+- `PUT /api/me/profile` chỉ cho sửa **phần lý lịch**: `gioiTinh`, `dienThoai`,
+  `soCCCD`, `emailCaNhan`, `noiSinh`, `danToc`, `tonGiao`, `hoKhau`, `anhDaiDien`.
+  Họ tên, ngày sinh, cơ sở, CTĐT, trạng thái **không** nằm trong request — Phòng
+  Đào tạo quản, sinh viên không tự đổi được.
+- **Phải đã xác minh email**, nếu không `409 EMAIL_NOT_VERIFIED`. Hồ sơ là dữ
+  liệu định danh; cho sửa khi chưa có kênh liên lạc đã kiểm chứng thì không truy
+  được ai đã đổi, và tài khoản bị chiếm cũng sửa được. UI nên chặn sẵn form và
+  dẫn sang `Tài khoản > Email` khi `emailDaXacMinh = false`.
+- **Thay toàn bộ, không vá từng ô**: ô bỏ trống là **xoá** giá trị cũ, lưu `NULL`.
+  Form phải gửi lại cả khối lý lịch, kể cả những ô người dùng không sửa.
+  "Bỏ trống" nhận cả bốn dạng: thiếu khoá, `null`, `""`, và chuỗi toàn khoảng
+  trắng — kể cả ở những ô có định dạng, nên UI **không cần** tự đổi `""` thành
+  `null` trước khi gửi.
+- `gioiTinh` ∈ `NAM` · `NU`. `soCCCD` 9 hoặc 12 chữ số và **unique toàn trường**
+  (index filtered, bỏ qua `NULL`). `anhDaiDien` phải là URL `https://` — ảnh
+  `http://` nhúng vào trang `https` là nội dung hỗn hợp, trình duyệt chặn.
+- API **không nhận file**: `anhDaiDien` là URL do client tự tải lên dịch vụ ảnh.
+  Phần 1 không có endpoint upload.
 
 ### Thống kê
 
@@ -453,6 +513,9 @@ bị từ chối.
 | `SERVICE_UNAVAILABLE` | 503 | Lỗi DB; không trả chi tiết SQL ra ngoài |
 | `COURSE_NOT_FOUND` | 404 / 400 | Xem mục 4 |
 | `COURSE_DUPLICATE` | 409 | Mã môn đã tồn tại |
+| `COURSE_IS_PREREQUISITE` | 409 | Xoá môn đang là tiên quyết của môn khác |
+| `COURSE_HAS_CLASSES` | 409 | Xoá môn đã từng mở lớp (kéo theo ghi danh và điểm) |
+| `COURSE_IN_PROGRAM` | 409 | Xoá môn đang nằm trong chương trình đào tạo |
 | `COURSE_REGISTRATION_OPEN` | 409 | Đổi tiên quyết khi môn có lớp trong kỳ đang mở đợt |
 | `FACULTY_UNKNOWN` | 400 | Mã khoa không có |
 | `TERM_NOT_FOUND` | 400 | Mã học kỳ không có (tạo lớp, thời khoá biểu) |
@@ -498,6 +561,7 @@ bị từ chối.
 | `MAIL_DISABLED` | 503 | Chưa cấu hình gửi thư |
 | `EMAIL_NOT_SET` | 409 | Gửi lại mã xác minh khi chưa có email |
 | `EMAIL_ALREADY_VERIFIED` | 409 | Gửi lại mã xác minh khi email đã xác minh |
+| `EMAIL_NOT_VERIFIED` | 409 | Sửa hồ sơ khi email chưa xác minh |
 | `AUTH_TOO_MANY_ATTEMPTS` | 429 | Vượt giới hạn tần suất; đợi rồi thử lại |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
@@ -549,6 +613,13 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Môn tự làm tiên quyết của chính nó | `400 PREREQUISITE_SELF` | ✓ |
 | Tiên quyết không tồn tại | `400 PREREQUISITE_UNKNOWN` | ✓ |
 | Đổi tiên quyết khi kỳ đang mở đợt | `409 COURSE_REGISTRATION_OPEN` | ✓ |
+| Xoá môn chưa dùng ở đâu | `204`, biến mất khỏi danh mục | ✓ |
+| Xoá môn có tiên quyết của chính nó | `204`, các dòng đó xoá kèm | ✓ |
+| Xoá môn đang là tiên quyết của môn khác | `409 COURSE_IS_PREREQUISITE` | ✓ |
+| Xoá môn đã có lớp | `409 COURSE_HAS_CLASSES` | ✓ |
+| Xoá môn trong CTĐT | `409 COURSE_IN_PROGRAM` | ✓ |
+| Xoá môn không tồn tại | `404 COURSE_NOT_FOUND` | ✓ |
+| Admin cơ sở / GV / SV xoá môn | `403` | ✓ |
 | `choPhepLienCoSo` + `TRUC_TIEP` | `400 CROSS_CAMPUS_REQUIRES_ONLINE` | ✓ |
 | Gán GV khác cơ sở | `400 TEACHER_WRONG_CAMPUS` | ✓ |
 | `ADMIN_CO_SO` sửa lớp của cơ sở khác | `403 AUTH_FORBIDDEN` | ✓ |
@@ -613,6 +684,22 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Lớp cơ sở khác / lớp chưa mở | `409` | ✓ |
 | Môn đã trượt / đã đạt đăng ký lại | `HOC_LAI` / `CAI_THIEN` | ✓ |
 | Huỷ khi đã có điểm | `409 ENROLLMENT_HAS_GRADE`, sĩ số và tín chỉ giữ nguyên | ✓ |
+| Admin gỡ một SV | lớp vẫn `MO`, sĩ số giảm 1, người còn lại không đụng | ✓ |
+| Admin gỡ SV đang `DANG_HOC` | `200` — đúng mục đích chính | ✓ |
+| Đợt đã đóng: SV tự huỷ vs admin gỡ | SV `409 ENROLLMENT_PERIOD_CLOSED`; admin `200` | ✓ |
+| Gỡ khi đã có điểm nháp | `409 ENROLLMENT_HAS_GRADE`, không đổi gì | ✓ |
+| Gỡ khi lớp `DA_KHOA` | `409 GRADE_LOCKED` | ✓ |
+| Gỡ mà thiếu `lyDo` (rỗng hoặc toàn khoảng trắng) | `400 VALIDATION_ERROR` | ✓ |
+| Gỡ người không có ghi danh | `404 ENROLLMENT_NOT_FOUND` | ✓ |
+| Admin cơ sở khác / Master / GV / SV gỡ | `403` | ✓ |
+| Hồ sơ: SV xem hồ sơ mình | `200`, có tên cơ sở, CTĐT, khoa | ✓ |
+| Sửa hồ sơ khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED`, không ghi gì | ✓ |
+| Sửa hồ sơ sau khi xác minh email | `200`, các ô lưu đúng | ✓ |
+| Sửa hồ sơ, bỏ bớt một ô khỏi request | ô đó về `null` — thay toàn bộ, không vá | ✓ |
+| Gửi ô trống kiểu `""` cho cả 9 ô | `200`, xoá sạch — không `400` ở ô có định dạng | ✓ |
+| Ô toàn khoảng trắng | lưu `NULL`, không lưu `''` | ✓ |
+| `gioiTinh` lạ · CCCD 3 số · email sai · ảnh `http://` | `400 VALIDATION_ERROR`, nêu đúng tên ô | ✓ |
+| GV / admin cơ sở / Master xem hoặc sửa `/api/me/profile` | `403` | ✓ |
 | Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |
 | Admin cơ sở lọc thống kê cơ sở khác | `403` | ✓ |

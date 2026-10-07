@@ -1,46 +1,84 @@
 @use '@/styles/tokens' as tokens;
 
 .identity {
-  display: flex;
-  flex-direction: column;
-  gap: tokens.$space-xs;
+  margin: 0 0 tokens.$space-md;
 }
 
-.name {
+.row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: tokens.$space-md;
+  padding: tokens.$space-2xs 0;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.4;
+}
+
+.term {
+  color: var(--accent-red);
+}
+
+.value {
   margin: 0;
+  font-weight: 600;
+  color: var(--notice-text);
+  overflow-wrap: anywhere;
+}
+
+/* Nút cam đỏ rộng hết khung như cổng gốc — tách hẳn khỏi các liên kết. */
+.signOut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: tokens.$space-sm;
+  width: 100%;
+  padding: tokens.$space-sm tokens.$space-md;
+  font: inherit;
   font-size: tokens.$font-size-sm;
   font-weight: 600;
-  color: var(--text-h);
-}
+  color: var(--ptit-on-brand);
+  background: linear-gradient(to bottom, var(--new-badge), var(--ptit-footer-from));
+  border: 1px solid var(--ptit-footer-from);
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+  transition: filter tokens.$transition-fast;
 
-.role {
-  margin: 0 0 tokens.$space-sm;
-  font-size: tokens.$font-size-xs;
-  color: var(--notice-meta);
-}
+  &:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
 
-.link {
-  font-size: tokens.$font-size-sm;
-  color: var(--accent-red);
-  text-decoration: none;
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
 
-  &:hover {
-    text-decoration: underline;
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
   }
 }
 
-.signOut {
-  align-self: flex-start;
-  padding: 0;
-  font: inherit;
+.changePassword {
+  display: block;
+  margin-top: tokens.$space-sm;
   font-size: tokens.$font-size-sm;
-  color: var(--notice-meta);
-  background: none;
-  border: none;
-  cursor: pointer;
+  font-style: italic;
+  text-align: right;
+  color: var(--notice-text);
+  text-decoration: none;
 
   &:hover {
     color: var(--accent-red);
     text-decoration: underline;
   }
+}
+
+.mockHint {
+  margin: tokens.$space-sm 0 0;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+.loading {
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
 }

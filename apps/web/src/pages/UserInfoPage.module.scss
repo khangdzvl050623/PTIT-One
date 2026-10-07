@@ -1,0 +1,64 @@
+@use '@/styles/tokens' as tokens;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}
+
+/* Ba cột như cổng gốc: hồ sơ rộng · số liệu · tài khoản và lối tắt. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: tokens.$space-lg;
+  align-items: start;
+
+  @media (max-width: tokens.$breakpoint-tablet) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+
+    .profileColumn {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: tokens.$breakpoint-compact) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.profileColumn,
+.summaryColumn,
+.asideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+  min-width: 0;
+}
+
+.tilePair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: tokens.$space-lg;
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stats {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: tokens.$space-md;
+}
+
+/* Cột phải dính dưới header khi cuộn; cao hơn màn hình thì tự cuộn bên trong.
+   Chỉ khi có hai cột — một cột (máy tính bảng, điện thoại) thì cuộn bình thường. */
+@media (min-width: #{tokens.$breakpoint-tablet + 1}) {
+  .asideColumn {
+    position: sticky;
+    top: calc(var(--header-h) + #{tokens.$space-lg});
+    max-height: calc(100vh - var(--header-h) - #{tokens.$space-lg} * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

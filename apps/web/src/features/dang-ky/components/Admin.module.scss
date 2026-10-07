@@ -1,0 +1,575 @@
+@use '@/styles/tokens' as tokens;
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-md;
+}
+
+.muted {
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+}
+
+.hint {
+  flex: 1 1 360px;
+  margin: 0;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.5;
+  color: var(--notice-meta);
+
+  b {
+    color: var(--progress-done);
+  }
+}
+
+.summary {
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+.search {
+  display: flex;
+  flex: 1 1 280px;
+  align-items: center;
+  gap: tokens.$space-sm;
+  padding: 0 tokens.$space-md;
+  color: var(--accent-red);
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+  border-radius: tokens.$radius-sm;
+
+  &:focus-within {
+    border-color: var(--accent-red);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: tokens.$space-sm 0;
+    font: inherit;
+    font-size: tokens.$font-size-sm;
+    color: var(--notice-text);
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+}
+
+/* --- Nút ------------------------------------------------------------------ */
+
+%btn {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$space-xs;
+  padding: tokens.$space-xs tokens.$space-md;
+  font: inherit;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+.primary {
+  @extend %btn;
+  padding: tokens.$space-sm tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  color: var(--ptit-on-brand);
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  border: 1px solid var(--ptit-red-border);
+}
+
+.ghost {
+  @extend %btn;
+  color: var(--accent-red);
+  background: var(--panel-bg);
+  border: 1px solid var(--tile-brand-border);
+
+  &:hover:not(:disabled) {
+    background: var(--tile-brand-bg);
+  }
+}
+
+.danger {
+  @extend %btn;
+  color: var(--notice-meta);
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+
+  &:hover:not(:disabled) {
+    color: var(--ptit-on-brand);
+    background: var(--accent-red);
+    border-color: var(--accent-red);
+  }
+}
+
+.dangerSolid {
+  @extend %btn;
+  padding: tokens.$space-sm tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+  border: 1px solid var(--ptit-red-border);
+}
+
+/* --- Thông báo ----------------------------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  margin: 0;
+  padding: tokens.$space-sm tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  border-left: 4px solid;
+  border-radius: tokens.$radius-sm;
+
+  button {
+    padding: 0;
+    font-size: tokens.$font-size-lg;
+    line-height: 1;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+}
+
+.success {
+  color: var(--progress-done);
+  background: color-mix(in srgb, var(--progress-done) 10%, var(--panel-bg));
+  border-color: var(--progress-done);
+}
+
+.error {
+  color: var(--accent-red);
+  background: var(--tile-brand-bg);
+  border-color: var(--accent-red);
+}
+
+/* --- Bảng ---------------------------------------------------------------- */
+
+.scroll {
+  overflow-x: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+}
+
+.table {
+  width: 100%;
+  min-width: 860px;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.4;
+  color: var(--notice-text);
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: tokens.$space-sm tokens.$space-md;
+    border-bottom: 1px solid var(--notice-border);
+  }
+
+  thead th {
+    font-size: tokens.$font-size-xs;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    color: var(--ptit-on-brand);
+    background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  }
+
+  tbody tr:hover {
+    background: var(--notice-hover-bg);
+  }
+}
+
+.left {
+  text-align: left !important;
+}
+
+.center {
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  font-weight: 600;
+}
+
+.sub {
+  display: block;
+  font-size: tokens.$font-size-2xs;
+  color: var(--notice-meta);
+}
+
+.actions {
+  white-space: nowrap;
+  text-align: center;
+
+  button + button {
+    margin-left: tokens.$space-sm;
+  }
+}
+
+.empty {
+  padding: tokens.$space-xl !important;
+  font-style: italic;
+  text-align: center;
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+}
+
+.rowOpen {
+  background: color-mix(in srgb, var(--progress-done) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--progress-done);
+}
+
+.rowCancelled td {
+  color: var(--notice-meta);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--notice-meta) 50%, transparent);
+}
+
+.rowCancelled td:last-child,
+.rowCancelled td:nth-last-child(2) {
+  text-decoration: none;
+}
+
+.seats {
+  display: inline-flex;
+  align-items: center;
+  gap: tokens.$space-sm;
+}
+
+.meter {
+  display: block;
+  width: 70px;
+  height: 6px;
+  overflow: hidden;
+  background: var(--notice-border);
+  border-radius: 3px;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--accent-red);
+  }
+}
+
+/* --- Huy hiệu ------------------------------------------------------------ */
+
+.badge {
+  display: inline-block;
+  padding: 1px tokens.$space-sm;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+
+.DANG_MO,
+.lop_MO {
+  color: var(--ptit-on-brand);
+  background: var(--progress-done);
+}
+
+.SAP_MO,
+.CHUA_MO,
+.lop_DU_KIEN {
+  color: var(--tile-warm-text);
+  background: var(--tile-warm-bg);
+  border: 1px solid var(--tile-warm-border);
+}
+
+.HET_GIO {
+  color: var(--accent-red);
+  background: var(--tile-brand-bg);
+  border: 1px solid var(--tile-brand-border);
+}
+
+.DA_DONG,
+.lop_DA_KHOA {
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+}
+
+.lop_DA_HUY {
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+}
+
+/* --- Popup --------------------------------------------------------------- */
+
+.dialogTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: tokens.$font-size-md;
+  font-weight: 700;
+  color: var(--notice-text);
+
+  small {
+    font-size: tokens.$font-size-xs;
+    font-weight: 400;
+    color: var(--notice-meta);
+  }
+}
+
+.match,
+.mismatch {
+  margin-top: tokens.$space-xs;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+}
+
+.match {
+  color: var(--progress-done);
+}
+
+.mismatch {
+  color: var(--accent-red);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: tokens.$space-xs;
+    font-size: tokens.$font-size-sm;
+    color: var(--notice-text);
+
+    > span {
+      font-weight: 600;
+    }
+  }
+
+  input,
+  textarea {
+    padding: tokens.$space-sm tokens.$space-md;
+    font: inherit;
+    font-size: tokens.$font-size-sm;
+    color: var(--notice-text);
+    background: var(--panel-bg);
+    border: 1px solid var(--field-border);
+    border-radius: tokens.$radius-sm;
+
+    &:focus {
+      border-color: var(--accent-red);
+      outline: none;
+    }
+
+    &:disabled {
+      color: var(--notice-meta);
+      background: var(--field-icon-bg);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.warn {
+  margin: 0;
+  padding: tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.5;
+  color: var(--notice-text);
+  background: var(--tile-brand-bg);
+  border-left: 4px solid var(--accent-red);
+  border-radius: tokens.$radius-sm;
+}
+
+.rosterTable {
+  width: 100%;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-text);
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: tokens.$space-xs tokens.$space-md;
+    text-align: left;
+    border-bottom: 1px solid var(--notice-border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Ghim cả `thead` LẪN `th`: Blink/Gecko chỉ dính khi ghim ở `thead` (ghim
+     `th` ở đó không có tác dụng), còn WebKit lại dính ở `th`. Đặt cả hai thì
+     trình duyệt nào cũng có header đứng yên — nơi nào đã dính sẵn thì luật
+     kia thành vô hại vì cùng `top: 0`. */
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: tokens.$font-size-xs;
+    color: var(--notice-meta);
+    background: var(--panel-bg);
+    /* `border-collapse: collapse` không bảo đảm vẽ `border-bottom` của ô dính
+       khi cuộn, nên bỏ viền ở đây và thay bằng inset shadow — luôn vẽ, và chỉ
+       MỘT đường phân cách, không chồng thành hai nét. */
+    border-bottom: none;
+    box-shadow: inset 0 -1px 0 var(--notice-border);
+  }
+}
+
+/* --- Quản trị lớp học phần --------------------------------------------- */
+
+.termSelect {
+  flex: 0 1 260px;
+}
+
+.statusSelect {
+  flex: 0 1 200px;
+}
+
+.lich {
+  max-width: 220px;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+.missing {
+  font-size: tokens.$font-size-xs;
+  font-style: italic;
+  color: var(--tile-warm-text);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: tokens.$space-lg;
+
+  @media (max-width: tokens.$breakpoint-mobile) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.checkRow {
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: tokens.$space-sm !important;
+
+  input {
+    margin-top: 3px;
+    accent-color: var(--accent-red);
+  }
+
+  input:disabled + span {
+    opacity: 0.6;
+  }
+}
+
+.hintBox {
+  margin: 0;
+  padding: tokens.$space-sm tokens.$space-md;
+  font-size: tokens.$font-size-xs;
+  line-height: 1.5;
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+  border-radius: tokens.$radius-sm;
+}
+
+.slotTable {
+  width: 100%;
+  font-size: tokens.$font-size-sm;
+  border-collapse: collapse;
+
+  th {
+    padding: tokens.$space-xs;
+    font-size: tokens.$font-size-xs;
+    font-weight: 600;
+    text-align: left;
+    color: var(--notice-meta);
+  }
+
+  td {
+    padding: tokens.$space-xs;
+    vertical-align: middle;
+  }
+
+  td:first-child {
+    min-width: 110px;
+  }
+
+  input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  td:nth-child(n + 2):nth-child(-n + 3) input,
+  td:nth-child(n + 5):nth-child(-n + 6) input {
+    width: 64px;
+  }
+}
+
+.removeBtn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: tokens.$font-size-lg;
+  line-height: 1;
+  color: var(--notice-meta);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--accent-red);
+    background: var(--tile-brand-bg);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Nút trong form (VD "+ Thêm buổi") giữ đúng bề rộng nội dung, không kéo hết dòng. */
+.form > button {
+  align-self: flex-start;
+}

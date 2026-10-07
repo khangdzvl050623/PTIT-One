@@ -1,0 +1,37 @@
+@use '@/styles/tokens' as tokens;
+
+/* Nội dung chiếm phần lớn bề ngang, cột phải giữ tài khoản và lối tắt như cổng gốc. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 270px);
+  gap: tokens.$space-lg;
+  align-items: start;
+
+  @media (max-width: tokens.$breakpoint-tablet) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media print {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.main,
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+  min-width: 0;
+}
+
+/* Cột phải dính dưới header khi cuộn; cao hơn màn hình thì tự cuộn bên trong.
+   Chỉ khi có hai cột — một cột (máy tính bảng, điện thoại) thì cuộn bình thường. */
+@media (min-width: #{tokens.$breakpoint-tablet + 1}) {
+  .aside {
+    position: sticky;
+    top: calc(var(--header-h) + #{tokens.$space-lg});
+    max-height: calc(100vh - var(--header-h) - #{tokens.$space-lg} * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

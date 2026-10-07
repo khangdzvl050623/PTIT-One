@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 
+import { safeTarget } from '@/app/router/navigation'
 import { LoginPanel, useAuth } from '@/features/auth'
 import { ROUTES } from '@/shared/constants'
 
@@ -11,20 +12,22 @@ interface RedirectState {
 }
 
 export function LoginPage() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
   const location = useLocation()
 
-  const target = (location.state as RedirectState | null)?.from ?? ROUTES.home
+  const from = (location.state as RedirectState | null)?.from
 
-  // Đã đăng nhập thì không mở lại màn đăng nhập; quay về nơi định tới.
-  if (status === 'authenticated') {
-    return <Navigate to={target} replace />
+  /* Đã đăng nhập thì không mở lại màn đăng nhập. Nơi đến phải hợp vai trò:
+     quay lại một tuyến của vai trò khác sẽ rơi vào /khong-du-quyen. */
+  if (status === 'authenticated' && user) {
+    return <Navigate to={safeTarget(from, user.role)} replace />
   }
 
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <LoginPanel redirectTo={target} />
+        {/* Chưa biết vai trò nên chưa kiểm được; LoginPanel kiểm sau khi đăng nhập. */}
+        <LoginPanel redirectTo={from ?? ROUTES.userInfo} />
       </div>
     </div>
   )

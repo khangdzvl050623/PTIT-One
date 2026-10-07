@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { ApiError } from '@/shared/api'
 import { LABELS, ROUTES } from '@/shared/constants'
-import { Panel } from '@/shared/ui'
+import { Icon, Panel } from '@/shared/ui'
 
+import { safeTarget } from '@/app/router/navigation'
+import { API_MODE } from '@/shared/api'
+import { MOCK_ACCOUNTS } from '../api/mockAuthApi'
 import { useAuth } from '../model/AuthContext'
 import { ROLE_LABELS } from '../model/types'
 import { LoginForm } from './LoginForm'
@@ -32,8 +35,11 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
     setPending(true)
     setError(null)
     try {
-      await signIn(username, password)
-      if (redirectTo) navigate(redirectTo, { replace: true })
+      const signedIn = await signIn(username, password)
+      /* Kiểm đích đến SAU khi biết vai trò: người dùng có thể bị chặn ở một
+         tuyến của vai trò khác, quay lại thẳng sẽ rơi vào /khong-du-quyen và
+         trông như đăng nhập hỏng dù phiên hợp lệ. */
+      if (redirectTo) navigate(safeTarget(redirectTo, signedIn.role), { replace: true })
     } catch (cause) {
       /* Backend cố tình trả cùng một thông báo cho sai mật khẩu, tài khoản
          chưa kích hoạt và tài khoản bị ngừng — để form này không trở thành
@@ -49,32 +55,42 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
   if (status === 'loading') {
     return (
       <Panel title={LABELS.login} icon="user">
-        <p className={styles.role}>Đang kiểm tra phiên đăng nhập…</p>
+        <p className={styles.loading}>Đang kiểm tra phiên đăng nhập…</p>
       </Panel>
     )
   }
 
   if (user) {
     return (
-      <Panel title={LABELS.account} icon="user">
-        <div className={styles.identity}>
-          <p className={styles.name}>{user.username}</p>
-          <p className={styles.role}>{ROLE_LABELS[user.role]}</p>
-          <Link className={styles.link} to={ROUTES.account}>
-            {LABELS.account}
-          </Link>
-          <button
-            className={styles.signOut}
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              setPending(true)
-              void signOut().finally(() => setPending(false))
-            }}
-          >
-            {LABELS.logout}
-          </button>
-        </div>
+      /* Đã vào thì khung đổi tên thành TÀI KHOẢN — giữ chữ "Đăng nhập" lúc
+         này dễ khiến người dùng tưởng mình chưa vào được. */
+      <Panel title={LABELS.account.toLocaleUpperCase('vi')} icon="user">
+        <dl className={styles.identity}>
+          <div className={styles.row}>
+            <dt className={styles.term}>{LABELS.account}</dt>
+            <dd className={styles.value}>{user.username}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt className={styles.term}>Họ tên</dt>
+            {/* `/api/auth/me` chưa trả họ tên — thiếu thì hiện vai trò, không để trống. */}
+            <dd className={styles.value}>{user.hoTen ?? ROLE_LABELS[user.role]}</dd>
+          </div>
+        </dl>
+        <button
+          className={styles.signOut}
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            setPending(true)
+            void signOut().finally(() => setPending(false))
+          }}
+        >
+          <Icon name="signOut" size="15px" />
+          <span>{LABELS.logout}</span>
+        </button>
+        <Link className={styles.changePassword} to={ROUTES.doiMatKhau}>
+          Đổi mật khẩu
+        </Link>
       </Panel>
     )
   }
@@ -86,6 +102,14 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
         pending={pending}
         errorMessage={error}
       />
+      {API_MODE === 'mock' ? (
+        <p className={styles.mockHint}>
+          Chế độ demo, chưa nối API. Mật khẩu bất kỳ, tài khoản:{' '}
+          {Object.entries(MOCK_ACCOUNTS)
+            .map(([username, account]) => `${username} (${ROLE_LABELS[account.role]})`)
+            .join(' · ')}
+        </p>
+      ) : null}
     </Panel>
   )
 }
