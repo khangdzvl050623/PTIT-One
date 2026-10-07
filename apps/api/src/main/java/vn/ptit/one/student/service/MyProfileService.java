@@ -3,10 +3,13 @@ package vn.ptit.one.student.service;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.Role;
+import vn.ptit.one.auth.service.AccountService;
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.student.dto.UpdateMyProfileRequest;
 import vn.ptit.one.student.model.StudentDetail;
 import vn.ptit.one.student.repository.StudentRepository;
 
@@ -22,18 +25,70 @@ import vn.ptit.one.student.repository.StudentRepository;
 public class MyProfileService {
 
     private final StudentRepository students;
+    private final AccountService accounts;
 
-    public MyProfileService(StudentRepository students) {
+    public MyProfileService(StudentRepository students, AccountService accounts) {
         this.students = students;
+        this.accounts = accounts;
     }
 
     public StudentDetail myProfile(AuthenticatedUser user) {
+        return students.findDetail(requireStudent(user))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "STUDENT_NOT_FOUND",
+                        "Không có hồ sơ sinh viên %s.".formatted(user.entityId())));
+    }
+
+    /**
+     * Sinh viên tự sửa phần lý lịch của mình.
+     *
+     * <p><b>Bắt buộc đã xác minh email</b> (quyết định nhóm 07/10/2026). Hồ sơ
+     * là dữ liệu định danh; cho sửa khi chưa có một kênh liên lạc đã kiểm chứng
+     * thì không truy được ai đã đổi, và tài khoản bị chiếm cũng sửa được. Xác
+     * minh email là mốc tối thiểu để gắn thao tác với một người thật.
+     *
+     * <p>Thay TOÀN BỘ phần lý lịch: ô bỏ trống là xoá giá trị cũ. Không vá từng
+     * ô vì giao diện gửi cả biểu mẫu, và vá từng ô sẽ không bao giờ xoá được.
+     *
+     * <p>Những trường hành chính (họ tên, ngày sinh, cơ sở, chương trình, trạng
+     * thái) KHÔNG nằm trong yêu cầu — Phòng Đào tạo quản.
+     */
+    @Transactional
+    public StudentDetail updateMyProfile(AuthenticatedUser user, UpdateMyProfileRequest body) {
+        String maSinhVien = requireStudent(user);
+
+        if (!accounts.emailVerified(user.username())) {
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_NOT_VERIFIED",
+                    "Cần xác minh email trước khi sửa hồ sơ. Vào Tài khoản > Email để xác minh.");
+        }
+
+        if (students.updateProfile(maSinhVien, trim(body.gioiTinh()), trim(body.dienThoai()),
+                trim(body.soCCCD()), trim(body.emailCaNhan()), trim(body.noiSinh()),
+                trim(body.danToc()), trim(body.tonGiao()), trim(body.hoKhau()),
+                trim(body.anhDaiDien())) != 1) {
+            throw notFound(maSinhVien);
+        }
+        return students.findDetail(maSinhVien).orElseThrow(() -> notFound(maSinhVien));
+    }
+
+    /** Chuỗi rỗng hoặc toàn khoảng trắng = bỏ trống, lưu NULL chứ không lưu ''. */
+    private static String trim(String value) {
+        if (value == null) {
+            return null;
+        }
+        String cut = value.trim();
+        return cut.isEmpty() ? null : cut;
+    }
+
+    private static String requireStudent(AuthenticatedUser user) {
         if (user.role() != Role.SINH_VIEN || user.entityId() == null) {
             throw new ApiException(HttpStatus.FORBIDDEN, "AUTH_FORBIDDEN",
                     "Chỉ sinh viên mới có hồ sơ sinh viên.");
         }
-        return students.findDetail(user.entityId())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "STUDENT_NOT_FOUND",
-                        "Không có hồ sơ sinh viên %s.".formatted(user.entityId())));
+        return user.entityId();
+    }
+
+    private static ApiException notFound(String maSinhVien) {
+        return new ApiException(HttpStatus.NOT_FOUND, "STUDENT_NOT_FOUND",
+                "Không có hồ sơ sinh viên %s.".formatted(maSinhVien));
     }
 }

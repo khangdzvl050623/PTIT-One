@@ -1696,6 +1696,55 @@
         "required" : [ "maKhoa", "tenMonHoc" ],
         "type" : "object"
       },
+      "UpdateMyProfileRequest" : {
+        "properties" : {
+          "anhDaiDien" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "pattern" : "\\s*|https://.+",
+            "type" : "string"
+          },
+          "danToc" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "dienThoai" : {
+            "pattern" : "\\s*|[0-9 +().-]{8,20}",
+            "type" : "string"
+          },
+          "emailCaNhan" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "pattern" : "\\s*|[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
+            "type" : "string"
+          },
+          "gioiTinh" : {
+            "pattern" : "\\s*|NAM|NU",
+            "type" : "string"
+          },
+          "hoKhau" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "noiSinh" : {
+            "maxLength" : 150,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "soCCCD" : {
+            "pattern" : "\\s*|[0-9]{9}|[0-9]{12}",
+            "type" : "string"
+          },
+          "tonGiao" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "VerifyEmailRequest" : {
         "properties" : {
           "maXacThuc" : {
@@ -3161,6 +3210,32 @@
     "/api/me/profile" : {
       "get" : {
         "operationId" : "myProfile",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateMyProfile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMyProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "content" : {

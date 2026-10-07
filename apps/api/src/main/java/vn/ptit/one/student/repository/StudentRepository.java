@@ -63,6 +63,24 @@ public class StudentRepository {
      * <p>{@code LEFT JOIN TaiKhoan}: sinh viên có hồ sơ nhưng chưa có tài khoản
      * thì vẫn phải xem được hồ sơ, chỉ là không có email.
      */
+    /**
+     * Thay TOÀN BỘ phần lý lịch. Tham số {@code null} ghi {@code NULL} —
+     * để trống một ô là xoá giá trị cũ, không phải "giữ nguyên".
+     *
+     * @return 0 nếu không có sinh viên đó
+     */
+    public int updateProfile(String maSinhVien, String gioiTinh, String dienThoai, String soCCCD,
+            String emailCaNhan, String noiSinh, String danToc, String tonGiao, String hoKhau,
+            String anhDaiDien) {
+        return jdbc.update("""
+                UPDATE dbo.SinhVien
+                   SET GioiTinh = ?, DienThoai = ?, SoCCCD = ?, EmailCaNhan = ?,
+                       NoiSinh = ?, DanToc = ?, TonGiao = ?, HoKhau = ?, AnhDaiDien = ?
+                 WHERE MaSinhVien = ?
+                """, gioiTinh, dienThoai, soCCCD, emailCaNhan, noiSinh, danToc, tonGiao, hoKhau,
+                anhDaiDien, maSinhVien);
+    }
+
     public Optional<StudentDetail> findDetail(String maSinhVien) {
         return jdbc.query("""
                 SELECT s.MaSinhVien, s.HoTen, s.NgaySinh, t.Email,

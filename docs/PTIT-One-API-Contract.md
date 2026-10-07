@@ -111,6 +111,7 @@ người dùng và đổi được bất cứ lúc nào.
 | POST | `/api/classes/{maLopHP}/students/{maSinhVien}/remove` | `ADMIN_CO_SO` *(cơ sở của lớp)* |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
 | GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
+| PUT | `/api/me/profile` | `SINH_VIEN` **đã xác minh email** |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 | GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |
@@ -331,6 +332,29 @@ bị từ chối.
   `SinhVienHocKy → LopHocPhan → DangKyHocPhan → DangKyMonHoc → Diem` ở cả đăng
   ký lẫn huỷ.
 
+### Hồ sơ sinh viên tự sửa
+
+- `GET /api/me/profile` trả hồ sơ gộp: phần hành chính (họ tên, ngày sinh, cơ sở,
+  CTĐT, khoa, trạng thái, tín chỉ tích luỹ), email tài khoản, và phần lý lịch.
+- `PUT /api/me/profile` chỉ cho sửa **phần lý lịch**: `gioiTinh`, `dienThoai`,
+  `soCCCD`, `emailCaNhan`, `noiSinh`, `danToc`, `tonGiao`, `hoKhau`, `anhDaiDien`.
+  Họ tên, ngày sinh, cơ sở, CTĐT, trạng thái **không** nằm trong request — Phòng
+  Đào tạo quản, sinh viên không tự đổi được.
+- **Phải đã xác minh email**, nếu không `409 EMAIL_NOT_VERIFIED`. Hồ sơ là dữ
+  liệu định danh; cho sửa khi chưa có kênh liên lạc đã kiểm chứng thì không truy
+  được ai đã đổi, và tài khoản bị chiếm cũng sửa được. UI nên chặn sẵn form và
+  dẫn sang `Tài khoản > Email` khi `emailDaXacMinh = false`.
+- **Thay toàn bộ, không vá từng ô**: ô bỏ trống là **xoá** giá trị cũ, lưu `NULL`.
+  Form phải gửi lại cả khối lý lịch, kể cả những ô người dùng không sửa.
+  "Bỏ trống" nhận cả bốn dạng: thiếu khoá, `null`, `""`, và chuỗi toàn khoảng
+  trắng — kể cả ở những ô có định dạng, nên UI **không cần** tự đổi `""` thành
+  `null` trước khi gửi.
+- `gioiTinh` ∈ `NAM` · `NU`. `soCCCD` 9 hoặc 12 chữ số và **unique toàn trường**
+  (index filtered, bỏ qua `NULL`). `anhDaiDien` phải là URL `https://` — ảnh
+  `http://` nhúng vào trang `https` là nội dung hỗn hợp, trình duyệt chặn.
+- API **không nhận file**: `anhDaiDien` là URL do client tự tải lên dịch vụ ảnh.
+  Phần 1 không có endpoint upload.
+
 ### Thống kê
 
 - `maHocKy` bắt buộc. `/summary` lọc thêm được `maMonHoc`.
@@ -537,6 +561,7 @@ bị từ chối.
 | `MAIL_DISABLED` | 503 | Chưa cấu hình gửi thư |
 | `EMAIL_NOT_SET` | 409 | Gửi lại mã xác minh khi chưa có email |
 | `EMAIL_ALREADY_VERIFIED` | 409 | Gửi lại mã xác minh khi email đã xác minh |
+| `EMAIL_NOT_VERIFIED` | 409 | Sửa hồ sơ khi email chưa xác minh |
 | `AUTH_TOO_MANY_ATTEMPTS` | 429 | Vượt giới hạn tần suất; đợi rồi thử lại |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
@@ -667,6 +692,14 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Gỡ mà thiếu `lyDo` (rỗng hoặc toàn khoảng trắng) | `400 VALIDATION_ERROR` | ✓ |
 | Gỡ người không có ghi danh | `404 ENROLLMENT_NOT_FOUND` | ✓ |
 | Admin cơ sở khác / Master / GV / SV gỡ | `403` | ✓ |
+| Hồ sơ: SV xem hồ sơ mình | `200`, có tên cơ sở, CTĐT, khoa | ✓ |
+| Sửa hồ sơ khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED`, không ghi gì | ✓ |
+| Sửa hồ sơ sau khi xác minh email | `200`, các ô lưu đúng | ✓ |
+| Sửa hồ sơ, bỏ bớt một ô khỏi request | ô đó về `null` — thay toàn bộ, không vá | ✓ |
+| Gửi ô trống kiểu `""` cho cả 9 ô | `200`, xoá sạch — không `400` ở ô có định dạng | ✓ |
+| Ô toàn khoảng trắng | lưu `NULL`, không lưu `''` | ✓ |
+| `gioiTinh` lạ · CCCD 3 số · email sai · ảnh `http://` | `400 VALIDATION_ERROR`, nêu đúng tên ô | ✓ |
+| GV / admin cơ sở / Master xem hoặc sửa `/api/me/profile` | `403` | ✓ |
 | Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |
 | Admin cơ sở lọc thống kê cơ sở khác | `403` | ✓ |

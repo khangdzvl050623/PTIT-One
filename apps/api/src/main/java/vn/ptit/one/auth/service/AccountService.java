@@ -73,6 +73,16 @@ public class AccountService {
      * @return mã cơ sở CHUẨN (ví dụ {@code HCM} khi client gửi {@code hcm}) —
      *         người gọi phải ghi giá trị này, không ghi giá trị client gửi
      */
+    /**
+     * Tài khoản đã xác minh email chưa — API công khai cho module khác.
+     *
+     * Module {@code student} cần biết để chặn tự sửa hồ sơ khi chưa xác minh;
+     * nó KHÔNG đọc thẳng repository của {@code auth}.
+     */
+    public boolean emailVerified(String username) {
+        return accounts.findContact(username).map(AccountContact::emailVerified).orElse(false);
+    }
+
     public String requireAvailable(String username, String campus) {
         String maCoSo = accounts.findCampus(campus)
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "CAMPUS_NOT_FOUND",
