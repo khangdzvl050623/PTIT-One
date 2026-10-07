@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import vn.ptit.one.auth.model.Campus;
 import vn.ptit.one.auth.model.AccountContact;
 import vn.ptit.one.auth.model.AccountRecord;
 import vn.ptit.one.auth.model.AccountSummary;
@@ -119,6 +120,20 @@ public class AccountRepository {
      * thường nên {@code hcm} vẫn khớp {@code HCM} — phải ghi giá trị CHUẨN, vì
      * code Java so sánh phân biệt hoa thường.
      */
+    /**
+     * Cơ sở ĐANG HOẠT ĐỘNG, để giao diện đổ ô chọn.
+     *
+     * <p>Bỏ cơ sở đã tắt: chọn một cơ sở không hoạt động rồi thống kê hay cấp
+     * hồ sơ vào đó là tạo dữ liệu không ai dùng.
+     */
+    public List<Campus> listCampuses() {
+        return jdbc.query("""
+                SELECT MaCoSo, TenCoSo, ThanhPho FROM dbo.CoSo
+                 WHERE DangHoatDong = 1 ORDER BY MaCoSo
+                """, (rs, rowNum) -> new Campus(rs.getString("MaCoSo"), rs.getString("TenCoSo"),
+                        rs.getString("ThanhPho")));
+    }
+
     public Optional<String> findCampus(String maCoSo) {
         return jdbc.queryForList("SELECT MaCoSo FROM dbo.CoSo WHERE MaCoSo = ?", String.class, maCoSo.trim())
                 .stream().findFirst();

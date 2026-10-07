@@ -134,6 +134,20 @@
         },
         "type" : "object"
       },
+      "Campus" : {
+        "properties" : {
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "tenCoSo" : {
+            "type" : "string"
+          },
+          "thanhPho" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CancelClassRequest" : {
         "properties" : {
           "lyDo" : {
@@ -383,12 +397,60 @@
           },
           "monHoc" : {
             "items" : {
-              "$ref" : "#/components/schemas/Row"
+              "$ref" : "#/components/schemas/CourseStat"
             },
             "type" : "array"
           },
           "phamVi" : {
             "$ref" : "#/components/schemas/ReportScope"
+          }
+        },
+        "type" : "object"
+      },
+      "CourseStat" : {
+        "properties" : {
+          "chuaCoKetQua" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "luotDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maMonHoc" : {
+            "type" : "string"
+          },
+          "phanBoDiem" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GradeBucket"
+            },
+            "type" : "array"
+          },
+          "soDat" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soLop" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "soTruot" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tenMonHoc" : {
+            "type" : "string"
+          },
+          "tiLeLapDay" : {
+            "type" : "number"
+          },
+          "tongDaDangKy" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tongSucChua" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -642,6 +704,18 @@
           }
         },
         "required" : [ "email", "tenDangNhap" ],
+        "type" : "object"
+      },
+      "GradeBucket" : {
+        "properties" : {
+          "khoang" : {
+            "type" : "string"
+          },
+          "soLuong" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "GradeEntry" : {
@@ -2070,6 +2144,27 @@
           }
         },
         "tags" : [ "credential-controller" ]
+      }
+    },
+    "/api/campuses" : {
+      "get" : {
+        "operationId" : "campuses",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Campus"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "campus-controller" ]
       }
     },
     "/api/classes" : {

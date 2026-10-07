@@ -93,7 +93,7 @@ người dùng và đổi được bất cứ lúc nào.
 | GET · POST · PUT | `/api/accounts` · `/{tenDangNhap}/activation-code` · `/{tenDangNhap}/status` | `ADMIN_MASTER` |
 | GET | `/api/courses` · `/api/courses/{maMonHoc}` | — |
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
-| GET | `/api/faculties` · `/api/terms` · `/api/teachers` · `/api/prerequisites` | — |
+| GET | `/api/faculties` · `/api/terms` · `/api/teachers` · `/api/prerequisites` · `/api/campuses` | — |
 | GET | `/api/schedules?maHocKy=` | — *(phạm vi cơ sở như `/api/classes`)* |
 | GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
