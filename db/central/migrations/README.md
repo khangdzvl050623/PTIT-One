@@ -43,6 +43,11 @@ cho mỗi file SQL mới và kiểm chứng riêng trên SQL Server.
   (= chưa kích hoạt) và bảng `MaKichHoat` (hash mã kích hoạt một lần).
 - `V6__email_va_ma_xac_thuc.sql` — A1: email + trạng thái xác minh ở `TaiKhoan`
   và `TaiKhoanMaster`, `MaKichHoat.EmailNhan`, bảng `MaXacThuc` (mã 6 số, HMAC).
+- `V7__ma_co_so_chu_hoa.sql` — sửa 9 cột mã cơ sở về chữ hoa và thêm 10 CHECK
+  ép buộc. Vá lỗi thật ngày 03/10/2026: hồ sơ lưu `'hcm'` làm sinh viên không
+  đăng ký được học phần, vì Java so sánh phân biệt hoa thường còn collation
+  `Vietnamese_CI_AS` thì không. ⚠️ CHECK phải dùng `COLLATE Latin1_General_BIN2`
+  — dưới collation CI thì `MaCoSo = UPPER(MaCoSo)` luôn đúng nên vô dụng.
 
 Tài khoản chạy migration cần `db_ddladmin` (hoặc cao hơn). Login chỉ có
 `CONNECT` sẽ báo `CREATE TABLE permission denied`.
