@@ -14,6 +14,9 @@
   border: 3px solid var(--ptit-red);
   border-radius: tokens.$radius-sm;
   box-sizing: border-box;
+  /* Có tác dụng khi class này đặt trên <img> ảnh đại diện: cắt theo khung 3×4
+     thay vì bóp méo tỉ lệ ảnh gốc. */
+  object-fit: cover;
 }
 
 .logo {

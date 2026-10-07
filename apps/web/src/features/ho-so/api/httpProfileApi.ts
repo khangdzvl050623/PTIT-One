@@ -1,6 +1,12 @@
 import { apiFetch } from '@/shared/api'
 
-import type { CourseResult, StudentProfile, StudentSummary, TermResults } from '../types'
+import type {
+  CourseResult,
+  StudentProfile,
+  StudentSummary,
+  TermResults,
+  UpdateMyProfileInput,
+} from '../types'
 
 /**
  * Hồ sơ và số liệu nhanh của trang Thông tin.
@@ -12,6 +18,16 @@ import type { CourseResult, StudentProfile, StudentSummary, TermResults } from '
 
 export function fetchProfile(): Promise<StudentProfile> {
   return apiFetch<StudentProfile>('/api/me/profile')
+}
+
+/**
+ * Lưu phần lý lịch. Trả về hồ sơ ĐẦY ĐỦ sau khi lưu, nên màn hình dùng luôn
+ * kết quả này thay vì gọi lại {@link fetchProfile}.
+ *
+ * Cần email đã xác minh, nếu không server trả `409 EMAIL_NOT_VERIFIED`.
+ */
+export function updateMyProfile(input: UpdateMyProfileInput): Promise<StudentProfile> {
+  return apiFetch<StudentProfile>('/api/me/profile', { method: 'PUT', json: input })
 }
 
 interface UnreadCount {

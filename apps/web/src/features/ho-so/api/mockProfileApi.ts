@@ -1,7 +1,15 @@
+import { currentMockUser } from '@/features/auth/api/mockAuthApi'
 import { fetchGrades } from '@/features/bang-diem/api/mockGradesApi'
+import { ApiError } from '@/shared/api'
 
 import { DEMO_PROFILE, DEMO_SUMMARY } from '../data/profile'
-import type { CourseResult, StudentProfile, StudentSummary, TermResults } from '../types'
+import type {
+  CourseResult,
+  StudentProfile,
+  StudentSummary,
+  TermResults,
+  UpdateMyProfileInput,
+} from '../types'
 
 /**
  * Bản giả để dựng UI khi chưa chạy backend. Cùng chữ ký với `httpProfileApi`
@@ -11,9 +19,44 @@ import type { CourseResult, StudentProfile, StudentSummary, TermResults } from '
 /** Đủ lâu để thấy trạng thái "Đang tải…" khi thiết kế. */
 const LATENCY_MS = 300
 
+const STORAGE_KEY = 'ptitone:mock:ho-so-sinh-vien'
+
 export async function fetchProfile(): Promise<StudentProfile> {
   await delay()
-  return DEMO_PROFILE
+  return read()
+}
+
+/**
+ * Lưu phần lý lịch, giữ ĐÚNG hai hành vi của server để giao diện dựng trên bản
+ * giả không gặp bất ngờ khi bật API thật:
+ *
+ * 1. Chưa xác minh email thì `409 EMAIL_NOT_VERIFIED`.
+ * 2. Thay toàn bộ chín ô — ô trống xoá giá trị cũ, không giữ nguyên.
+ */
+export async function updateMyProfile(input: UpdateMyProfileInput): Promise<StudentProfile> {
+  await delay()
+
+  if (!currentMockUser()?.emailDaXacMinh) {
+    throw new ApiError(409, {
+      code: 'EMAIL_NOT_VERIFIED',
+      message: 'Cần xác minh email trước khi sửa hồ sơ. Vào Tài khoản > Email để xác minh.',
+    })
+  }
+
+  const saved: StudentProfile = {
+    ...read(),
+    gioiTinh: input.gioiTinh,
+    dienThoai: trim(input.dienThoai),
+    soCCCD: trim(input.soCCCD),
+    emailCaNhan: trim(input.emailCaNhan),
+    noiSinh: trim(input.noiSinh),
+    danToc: trim(input.danToc),
+    tonGiao: trim(input.tonGiao),
+    hoKhau: trim(input.hoKhau),
+    anhDaiDien: trim(input.anhDaiDien),
+  }
+  write(saved)
+  return saved
 }
 
 export async function fetchSummary(): Promise<StudentSummary> {
@@ -46,6 +89,33 @@ export async function fetchResults(): Promise<readonly TermResults[]> {
   return [...theoKy.values()].sort((a, b) => a.maHocKy.localeCompare(b.maHocKy))
 }
 
+/** Chuỗi rỗng hoặc toàn khoảng trắng = bỏ trống, như `MyProfileService.trim`. */
+function trim(value: string | null): string | null {
+  const cut = value?.trim()
+  return cut ? cut : null
+}
+
 function delay(): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, LATENCY_MS))
+}
+
+/* localStorage có thể ném lỗi ở chế độ riêng tư — khi đó chỉ mất bản sửa khi F5. */
+function read(): StudentProfile {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return DEMO_PROFILE
+    /* Hợp nhất với DEMO_PROFILE: bản lưu cũ có thể thiếu trường mới thêm, và
+       những ô hành chính không sửa được thì luôn lấy theo dữ liệu mẫu. */
+    return { ...DEMO_PROFILE, ...(JSON.parse(raw) as Partial<StudentProfile>) }
+  } catch {
+    return DEMO_PROFILE
+  }
+}
+
+function write(profile: StudentProfile): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile))
+  } catch {
+    /* Hết chỗ hoặc bị chặn: bản giả vẫn trả đúng giá trị vừa lưu trong phiên này. */
+  }
 }

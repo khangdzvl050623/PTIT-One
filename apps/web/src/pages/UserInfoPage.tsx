@@ -54,10 +54,10 @@ export function UserInfoPage() {
   if (user.role === 'ADMIN_CO_SO' || user.role === 'ADMIN_MASTER') return <AdminInfo user={user} />
   /* Tách thành component riêng để các hook bên dưới KHÔNG chạy ở nhánh giảng
      viên và quản trị — gọi hook sau một câu return là vi phạm quy tắc hook. */
-  return <StudentHome />
+  return <StudentHome user={user} />
 }
 
-function StudentHome() {
+function StudentHome({ user }: { user: SessionUser }) {
   const profile = useAsyncData(fetchProfile)
   const summary = useAsyncData(fetchSummary)
   const results = useAsyncData(fetchResults)
@@ -71,7 +71,15 @@ function StudentHome() {
         <div className={styles.profileColumn}>
           {profile.loading ? <p>Đang tải hồ sơ…</p> : null}
           {profile.error ? <p role="alert">{profile.error}</p> : null}
-          {profile.data ? <StudentInfoPanel profile={profile.data} /> : null}
+          {profile.data ? (
+            <StudentInfoPanel
+              profile={profile.data}
+              emailDaXacMinh={user.emailDaXacMinh}
+              /* Hồ sơ vừa lưu đã là bản đầy đủ server trả về, nhưng gọi reload
+                 để biểu đồ và các ô số liệu cùng đọc lại một lượt. */
+              onProfileSaved={() => profile.reload()}
+            />
+          ) : null}
         </div>
 
         <div className={styles.summaryColumn}>

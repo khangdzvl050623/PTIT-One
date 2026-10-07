@@ -1,8 +1,11 @@
-import { Panel } from '@/shared/ui'
+import { useState } from 'react'
+
+import { Icon, Panel } from '@/shared/ui'
 
 import type { StudentProfile } from '../types'
 import { IdPhoto } from './IdPhoto'
 import { InfoTable } from './InfoTable'
+import { ProfileEditDialog } from './ProfileEditDialog'
 import styles from './StudentInfoPanel.module.scss'
 
 const TRANG_THAI_LABELS: Record<string, string> = {
@@ -16,10 +19,24 @@ const GIOI_TINH_LABELS = { NAM: 'Nam', NU: 'Nữ' } as const
 
 export interface StudentInfoPanelProps {
   profile: StudentProfile
+  /**
+   * Đã xác minh email chưa (`SessionUser.emailDaXacMinh`). Chưa thì chặn sẵn
+   * nút sửa — server cũng từ chối bằng `409 EMAIL_NOT_VERIFIED`, nhưng để người
+   * dùng gõ hết biểu mẫu rồi mới báo là tệ.
+   */
+  emailDaXacMinh?: boolean
+  /** Gọi sau khi lưu hồ sơ; bỏ trống thì panel chỉ đọc, không có nút sửa. */
+  onProfileSaved?: (profile: StudentProfile) => void
 }
 
 /** Hai khung bên trái: thông tin cá nhân (kèm ảnh) và thông tin khoá học. */
-export function StudentInfoPanel({ profile }: StudentInfoPanelProps) {
+export function StudentInfoPanel({
+  profile,
+  emailDaXacMinh = false,
+  onProfileSaved,
+}: StudentInfoPanelProps) {
+  const [editing, setEditing] = useState(false)
+
   return (
     <>
       <Panel title="Thông tin sinh viên" icon="user">
@@ -46,9 +63,38 @@ export function StudentInfoPanel({ profile }: StudentInfoPanelProps) {
               { label: 'Cơ sở', value: profile.tenCoSo },
             ]}
           />
-          <IdPhoto />
+          <IdPhoto src={profile.anhDaiDien} hoTen={profile.hoTen} />
         </div>
+
+        {onProfileSaved ? (
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.edit}
+              onClick={() => setEditing(true)}
+              disabled={!emailDaXacMinh}
+            >
+              <Icon name="user" size="13px" />
+              Cập nhật thông tin
+            </button>
+            {emailDaXacMinh ? null : (
+              <p className={styles.gate}>
+                Cần xác minh email trước khi tự sửa hồ sơ.
+              </p>
+            )}
+          </div>
+        ) : null}
       </Panel>
+
+      {/* Mount khi mở để biểu mẫu luôn khởi tạo từ hồ sơ mới nhất. */}
+      {editing && onProfileSaved ? (
+        <ProfileEditDialog
+          open
+          onClose={() => setEditing(false)}
+          profile={profile}
+          onSaved={onProfileSaved}
+        />
+      ) : null}
 
       <Panel title="Thông tin khoá học" icon="graduate">
         <InfoTable

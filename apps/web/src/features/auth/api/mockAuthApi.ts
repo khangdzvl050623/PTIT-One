@@ -18,32 +18,47 @@ interface MockAccount {
   role: Role
   entityId: string | null
   homeCampus: string | null
+  email: string | null
+  emailDaXacMinh: boolean
 }
 
+/**
+ * `emailDaXacMinh` để `true` cho sinh viên: biểu mẫu sửa hồ sơ cần cờ này, và
+ * bản giả phải cho dựng được giao diện ở trạng thái dùng được. Muốn thử nhánh
+ * bị chặn thì đổi thành `false` ngay tại đây.
+ */
 export const MOCK_ACCOUNTS: Readonly<Record<string, MockAccount>> = {
   B26DCCN001: {
     hoTen: 'Nguyễn Văn An',
     role: 'SINH_VIEN',
     entityId: 'B26DCCN001',
     homeCampus: 'HCM',
+    email: 'b26dccn001@stu.ptithcm.edu.vn',
+    emailDaXacMinh: true,
   },
   GVHCM001: {
     hoTen: 'Đặng Quốc Việt',
     role: 'GIANG_VIEN',
     entityId: 'GVHCM001',
     homeCampus: 'HCM',
+    email: 'dangquocviet@ptithcm.edu.vn',
+    emailDaXacMinh: true,
   },
   'admin.hcm': {
     hoTen: 'Quản trị Phòng Đào tạo (demo)',
     role: 'ADMIN_CO_SO',
     entityId: null,
     homeCampus: 'HCM',
+    email: 'daotao.hcm@ptithcm.edu.vn',
+    emailDaXacMinh: true,
   },
   'admin.master': {
     hoTen: 'Quản trị danh mục (demo)',
     role: 'ADMIN_MASTER',
     entityId: null,
     homeCampus: null,
+    email: null,
+    emailDaXacMinh: false,
   },
 }
 
@@ -119,7 +134,14 @@ function delay(): Promise<void> {
 function read(): SessionUser | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as SessionUser) : null
+    if (!raw) return null
+    const saved = JSON.parse(raw) as SessionUser
+    /* Phiên lưu từ TRƯỚC khi thêm trường mới sẽ thiếu trường đó. Lấy nền từ
+       MOCK_ACCOUNTS rồi phủ bản lưu lên: khoá nào bản lưu có thì bản lưu
+       thắng, khoá nào thiếu thì lấy theo tài khoản mẫu. Không có bước này,
+       người đang mở tab phải đăng nhập lại mới thấy tính năng mới. */
+    const account = MOCK_ACCOUNTS[saved.username]
+    return account ? { ...account, ...saved } : saved
   } catch {
     return null
   }

@@ -6,9 +6,13 @@ export { GradeChart } from './components/GradeChart'
 export type { GradeChartProps } from './components/GradeChart'
 
 export { IdPhoto } from './components/IdPhoto'
+export type { IdPhotoProps } from './components/IdPhoto'
 
 export { InfoTable } from './components/InfoTable'
 export type { InfoRow, InfoTableProps } from './components/InfoTable'
+
+export { ProfileEditDialog } from './components/ProfileEditDialog'
+export type { ProfileEditDialogProps } from './components/ProfileEditDialog'
 
 export { ProfilePanel } from './components/ProfilePanel'
 export type { ProfilePanelProps } from './components/ProfilePanel'
@@ -54,5 +58,6 @@ export type {
   TeachingClass,
   TermReport,
   TermResults,
+  UpdateMyProfileInput,
 } from './types'
-export { fetchProfile, fetchResults, fetchSummary } from './api/profileApi'
+export { fetchProfile, fetchResults, fetchSummary, updateMyProfile } from './api/profileApi'

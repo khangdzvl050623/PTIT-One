@@ -15,6 +15,46 @@
   }
 }
 
+/* Hàng hành động dưới bảng thông tin: nút sửa, và câu giải thích khi bị chặn. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-sm tokens.$space-md;
+  align-items: center;
+  margin-top: tokens.$space-lg;
+}
+
+.edit {
+  display: inline-flex;
+  gap: tokens.$space-xs;
+  align-items: center;
+  padding: tokens.$space-sm tokens.$space-lg;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  color: var(--accent-red);
+  background: var(--panel-bg);
+  border: 1px solid var(--tile-brand-border);
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+.gate {
+  margin: 0;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
 .progress {
   height: 6px;
   margin-top: tokens.$space-md;

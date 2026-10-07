@@ -37,6 +37,28 @@ export interface StudentProfile {
   soTinChiTichLuy: number
 }
 
+/**
+ * Thân của `PUT /api/me/profile` — đúng chín ô sinh viên tự sửa được.
+ *
+ * Chỉ có phần lý lịch: họ tên, ngày sinh, cơ sở, chương trình và trạng thái do
+ * Phòng Đào tạo quản, server không nhận chúng ở đây.
+ *
+ * **Thay toàn bộ, không vá từng ô**: ô nào để `''` hoặc `null` thì giá trị cũ
+ * bị XOÁ. Vì vậy biểu mẫu phải gửi lại cả chín ô, kể cả ô người dùng không sửa.
+ */
+export interface UpdateMyProfileInput {
+  gioiTinh: 'NAM' | 'NU' | null
+  dienThoai: string | null
+  soCCCD: string | null
+  emailCaNhan: string | null
+  noiSinh: string | null
+  danToc: string | null
+  tonGiao: string | null
+  hoKhau: string | null
+  /** URL `https://` trên dịch vụ ảnh; API không nhận file. */
+  anhDaiDien: string | null
+}
+
 /** Ba ô số liệu nhanh ở cột giữa. */
 export interface StudentSummary {
   /** Số thông báo chưa đọc của toàn hộp thư (`Inbox.soChuaDoc`). */

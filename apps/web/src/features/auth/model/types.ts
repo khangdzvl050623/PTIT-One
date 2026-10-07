@@ -27,6 +27,14 @@ export interface SessionUser {
    * vai trò thay thế.
    */
   hoTen?: string | null
+  /** Email trường cấp, đã lưu ở tài khoản; `null` khi chưa đặt. */
+  email: string | null
+  /**
+   * Đã xác minh email hay chưa. Là **điều kiện** của `PUT /api/me/profile`
+   * (`409 EMAIL_NOT_VERIFIED`), nên UI đọc cờ này để chặn sẵn biểu mẫu sửa hồ
+   * sơ thay vì để người dùng gõ xong rồi mới bị từ chối.
+   */
+  emailDaXacMinh: boolean
   /** Hạn tuyệt đối của phiên, ISO-8601. */
   expiresAt: string
   /** Hạn access hiện tại; làm mới trước mốc này. */
