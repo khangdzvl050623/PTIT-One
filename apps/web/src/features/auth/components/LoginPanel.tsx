@@ -5,6 +5,7 @@ import { ApiError } from '@/shared/api'
 import { LABELS, ROUTES } from '@/shared/constants'
 import { Icon, Panel } from '@/shared/ui'
 
+import { safeTarget } from '@/app/router/navigation'
 import { API_MODE } from '@/shared/api'
 import { MOCK_ACCOUNTS } from '../api/mockAuthApi'
 import { useAuth } from '../model/AuthContext'
@@ -34,8 +35,11 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
     setPending(true)
     setError(null)
     try {
-      await signIn(username, password)
-      if (redirectTo) navigate(redirectTo, { replace: true })
+      const signedIn = await signIn(username, password)
+      /* Kiểm đích đến SAU khi biết vai trò: người dùng có thể bị chặn ở một
+         tuyến của vai trò khác, quay lại thẳng sẽ rơi vào /khong-du-quyen và
+         trông như đăng nhập hỏng dù phiên hợp lệ. */
+      if (redirectTo) navigate(safeTarget(redirectTo, signedIn.role), { replace: true })
     } catch (cause) {
       /* Backend cố tình trả cùng một thông báo cho sai mật khẩu, tài khoản
          chưa kích hoạt và tài khoản bị ngừng — để form này không trở thành

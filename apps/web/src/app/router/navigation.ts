@@ -147,3 +147,27 @@ export function navItemsFor(role: Role | null | undefined): NavItem[] {
   if (!role) return []
   return NAV_ITEMS.filter((item) => item.inMenu !== false && item.roles.includes(role))
 }
+
+/**
+ * Vai trò này mở được đường dẫn đó không.
+ *
+ * Đường dẫn KHÔNG nằm trong `NAV_ITEMS` (trang chủ, `/thong-tin`, `/tai-khoan`)
+ * thì ai đăng nhập cũng vào được — router chỉ bọc `RequireAuth` không kèm vai trò.
+ */
+export function canAccess(path: string, role: Role): boolean {
+  const item = NAV_ITEMS.find((nav) => nav.path === path)
+  return item ? item.roles.includes(role) : true
+}
+
+/**
+ * Nơi đến an toàn sau khi đăng nhập.
+ *
+ * Người dùng bị chặn ở một tuyến của vai trò KHÁC thì `RequireAuth` đã nhớ
+ * đường dẫn đó; đăng nhập xong mà quay lại thẳng sẽ rơi vào `/khong-du-quyen`
+ * — trông như đăng nhập hỏng, dù phiên hoàn toàn hợp lệ. Trường hợp đó đưa về
+ * trang Thông tin, nơi mọi vai trò đều mở được.
+ */
+export function safeTarget(path: string | undefined, role: Role): string {
+  if (!path || !path.startsWith('/')) return ROUTES.userInfo
+  return canAccess(path, role) ? path : ROUTES.userInfo
+}
