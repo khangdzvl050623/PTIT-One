@@ -27,35 +27,32 @@ export const DEMO_TEACHER: TeacherProfile = {
   email: 'vietdq@ptithcm.edu.vn',
 }
 
+/**
+ * Lớp GVHCM001 phụ trách — PHẢI khớp `DEMO_CLASSES` của feature `dang-ky`,
+ * nơi màn "Lớp phụ trách" và màn nhập điểm lấy dữ liệu.
+ *
+ * Trước đây hai nơi liệt kê hai bộ lớp khác nhau, nên trang Thông tin nói một
+ * đằng mà bảng lớp nói một nẻo. Đổi lớp ở `DEMO_CLASSES` thì sửa cả ở đây.
+ */
 export const DEMO_TEACHING: readonly TeachingClass[] = [
   {
-    maLopHP: 'INT1306-2026-1-HCM02',
-    maMonHoc: 'INT1306',
-    tenMonHoc: 'Cấu trúc dữ liệu và giải thuật',
+    maLopHP: 'INT1339-2026-1-HCM01',
+    maMonHoc: 'INT1339',
+    tenMonHoc: 'Ngôn ngữ lập trình C++',
     soTinChi: 3,
-    soLuongDaDangKy: 52,
+    soLuongDaDangKy: 57,
     soLuongToiDa: 60,
-    lich: 'T2 (6–9) · 2A16',
+    lich: 'T2 (1–4) · 2B34',
     trangThaiDiem: 'NHAP',
   },
   {
-    maLopHP: 'INT1313-2026-1-HCM01',
-    maMonHoc: 'INT1313',
-    tenMonHoc: 'Cơ sở dữ liệu',
+    maLopHP: 'INT1340-2026-1-HCM01',
+    maMonHoc: 'INT1340',
+    tenMonHoc: 'Nhập môn công nghệ phần mềm',
     soTinChi: 3,
-    soLuongDaDangKy: 30,
-    soLuongToiDa: 60,
-    lich: 'T6 (1–3) · 1A105',
-    trangThaiDiem: 'NHAP',
-  },
-  {
-    maLopHP: 'INT14148-2026-1-HCM01',
-    maMonHoc: 'INT14148',
-    tenMonHoc: 'Cơ sở dữ liệu phân tán',
-    soTinChi: 3,
-    soLuongDaDangKy: 33,
-    soLuongToiDa: 60,
-    lich: 'T5 (1–4) · 1A201',
+    soLuongDaDangKy: 71,
+    soLuongToiDa: 80,
+    lich: 'T5 (6–9) · Trực tuyến',
     trangThaiDiem: 'NHAP',
   },
 ]
@@ -63,7 +60,7 @@ export const DEMO_TEACHING: readonly TeachingClass[] = [
 export const DEMO_TEACHER_SUMMARY = {
   thongBaoChuaDoc: 2,
   /** Mỗi lớp một buổi/tuần — tính từ `GET /api/me/teaching-schedule?tuan=`. */
-  buoiDayTrongTuan: 3,
+  buoiDayTrongTuan: DEMO_TEACHING.length,
 }
 
 export const DEMO_CAMPUS_ADMIN: StaffProfile = {

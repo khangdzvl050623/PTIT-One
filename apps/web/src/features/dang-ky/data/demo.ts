@@ -152,8 +152,8 @@ export const DEMO_CLASSES: readonly ClassOffer[] = [
     slot(6, 6, 4, '2E15-Ngoại ngữ'),
   ]),
   offer('BAS1203', 'Giải tích 2', 3, '01', 'Bùi Thái Thanh Danh', [52, 60], [slot(3, 6, 4, '2E27-2E27')]),
-  offer('INT1339', 'Ngôn ngữ lập trình C++', 3, '01', 'Nguyễn Hồng Quân', [57, 60], [slot(2, 1, 4, '2B34-2B34')]),
-  offer('INT1340', 'Nhập môn công nghệ phần mềm', 3, '01', 'Lê Hoàng Mai', [71, 80], [slot(5, 6, 4, 'Trực tuyến')], 'TRUC_TUYEN'),
+  offer('INT1339', 'Ngôn ngữ lập trình C++', 3, '01', 'Đặng Quốc Việt', [57, 60], [slot(2, 1, 4, '2B34-2B34')]),
+  offer('INT1340', 'Nhập môn công nghệ phần mềm', 3, '01', 'Đặng Quốc Việt', [71, 80], [slot(5, 6, 4, 'Trực tuyến')], 'TRUC_TUYEN'),
   offer('INT1358', 'Toán rời rạc 1', 3, '02', 'Đỗ Như Lực', [44, 60], [slot(2, 6, 4, '2B25-2B25')]),
   offer('SKD1102', 'Kỹ năng làm việc nhóm', 1, '03', 'Phạm Thu Hà', [29, 40], [slot(7, 1, 3, '2A08-2A08')], 'KET_HOP'),
 

@@ -1,3 +1,4 @@
+import { currentMockUser } from '@/features/auth/api/mockAuthApi'
 import { ApiError } from '@/shared/api'
 import { DIEM_MAX, DIEM_MIN, ketQuaCua, tongKet } from '@/shared/lib'
 
@@ -139,12 +140,22 @@ function sheetOf(state: State, lop: TeachingClass): GradeSheet {
 }
 
 /** `GET /api/me/teaching-classes` — chỉ lớp GV **đang** được phân công. */
+/**
+ * Lớp của giảng viên ĐANG ĐĂNG NHẬP.
+ *
+ * Trước đây trả toàn bộ `DEMO_CLASSES`, nên giảng viên thấy cả lớp người khác
+ * dạy và tên trên màn Thông tin không khớp tên trong bảng lớp — trông như dữ
+ * liệu sai. API thật lấy giảng viên từ JWT, bản giả đọc phiên để làm đúng vậy.
+ */
 export async function teachingClasses(maHocKy?: string): Promise<TeachingClass[]> {
   await delay()
   const state = load()
-  return DEMO_CLASSES.filter((c) => !maHocKy || c.maHocKy === maHocKy).map(
-    (c) => classOf(state, c.maLopHP) ?? c,
-  )
+  const user = currentMockUser()
+  const maGiangVien = user?.role === 'GIANG_VIEN' ? user.entityId : null
+  return DEMO_CLASSES.filter(
+    (c) =>
+      (!maHocKy || c.maHocKy === maHocKy) && (!maGiangVien || c.maGiangVien === maGiangVien),
+  ).map((c) => classOf(state, c.maLopHP) ?? c)
 }
 
 /**
