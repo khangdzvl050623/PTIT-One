@@ -4,8 +4,10 @@ import { ApiError } from '@/shared/api'
 import { Icon, Panel, Select } from '@/shared/ui'
 import type { IconName } from '@/shared/ui'
 
-import * as api from '../api/mockReportApi'
-import { CAMPUSES, REPORT_TERMS } from '../data/demo'
+import { useAsyncData } from '@/shared/lib'
+
+import * as api from '../api/reportApi'
+
 import type { CourseRow, ReportSummary } from '../types'
 import { CampusCompare, FillChart, GradeDistribution, GradeProgress } from './Charts'
 import { CourseTable } from './CourseTable'
@@ -31,15 +33,33 @@ export interface DashboardProps {
   exportName: string
 }
 
+/** Hai danh mục chỉ cần tải một lần; `useAsyncData` đòi hàm ổn định. */
+async function loadLookups() {
+  const [terms, campuses] = await Promise.all([api.listTerms(), api.listCampuses()])
+  return { terms, campuses }
+}
+
 /** Dashboard quản trị — `GET /api/reports/summary` + `/courses` theo học kỳ và cơ sở. */
 export function Dashboard({ campusLock, exportName }: DashboardProps) {
-  const [maHocKy, setMaHocKy] = useState(REPORT_TERMS[0]?.maHocKy ?? '')
+  /* Học kỳ và cơ sở lấy từ API (`/api/terms`, `/api/campuses`), không viết cứng:
+     danh sách hằng số sẽ lệch ngay khi nhà trường mở học kỳ mới. */
+  const lookups = useAsyncData(loadLookups)
+  const terms = lookups.data?.terms ?? []
+  const campuses = lookups.data?.campuses ?? []
+
+  const [maHocKy, setMaHocKy] = useState('')
   const [maCoSo, setMaCoSo] = useState<string>(campusLock ?? ALL)
   const [data, setData] = useState<Loaded | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Chọn kỳ mới nhất ngay khi có danh sách; người dùng đổi sau thì giữ lựa chọn của họ.
   useEffect(() => {
+    if (!maHocKy && terms.length > 0) setMaHocKy(terms[0]!.maHocKy)
+  }, [maHocKy, terms])
+
+  useEffect(() => {
+    if (!maHocKy) return
     let cancelled = false
     const scope = maCoSo === ALL ? null : maCoSo
     setLoading(true)
@@ -49,7 +69,7 @@ export function Dashboard({ campusLock, exportName }: DashboardProps) {
       api.getCourseReport(maHocKy, scope, campusLock),
       scope === null
         ? Promise.all(
-            CAMPUSES.map(async (c) => ({
+            campuses.map(async (c) => ({
               tenCoSo: c.tenCoSo,
               summary: await api.getSummary(maHocKy, c.maCoSo, campusLock),
             })),
@@ -73,8 +93,8 @@ export function Dashboard({ campusLock, exportName }: DashboardProps) {
   }, [maHocKy, maCoSo, campusLock])
 
   const tenPhamVi =
-    maCoSo === ALL ? 'Toàn hệ thống' : (CAMPUSES.find((c) => c.maCoSo === maCoSo)?.tenCoSo ?? maCoSo)
-  const tenHocKy = REPORT_TERMS.find((t) => t.maHocKy === maHocKy)?.tenHocKy ?? maHocKy
+    maCoSo === ALL ? 'Toàn hệ thống' : (campuses.find((c) => c.maCoSo === maCoSo)?.tenCoSo ?? maCoSo)
+  const tenHocKy = terms.find((t) => t.maHocKy === maHocKy)?.tenHocKy ?? maHocKy
 
   return (
     <div className={styles.dashboard}>
@@ -83,7 +103,7 @@ export function Dashboard({ campusLock, exportName }: DashboardProps) {
           ariaLabel="Học kỳ"
           className={styles.filter}
           value={maHocKy}
-          options={REPORT_TERMS.map((t) => ({ value: t.maHocKy, label: t.tenHocKy }))}
+          options={terms.map((t) => ({ value: t.maHocKy, label: t.tenHocKy }))}
           onChange={setMaHocKy}
         />
         {campusLock === null ? (
@@ -93,7 +113,7 @@ export function Dashboard({ campusLock, exportName }: DashboardProps) {
             value={maCoSo}
             options={[
               { value: ALL, label: 'Toàn hệ thống' },
-              ...CAMPUSES.map((c) => ({ value: c.maCoSo, label: c.tenCoSo })),
+              ...campuses.map((c) => ({ value: c.maCoSo, label: c.tenCoSo })),
             ]}
             onChange={setMaCoSo}
           />

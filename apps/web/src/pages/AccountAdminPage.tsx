@@ -7,7 +7,7 @@ import styles from './AccountAdminPage.module.scss'
 
 /**
  * Hồ sơ và tài khoản (F02) — chỉ `ADMIN_MASTER`. Đang chạy bản giả
- * `features/danh-muc/api/mockDirectoryApi`: cùng thứ tự kiểm và cùng mã lỗi
+ * `features/danh-muc/api/directoryApi`: cùng thứ tự kiểm và cùng mã lỗi
  * với `POST /api/students`, `POST /api/teachers`, `GET /api/accounts`,
  * `POST /api/accounts/{tenDangNhap}/activation-code` và
  * `PUT /api/accounts/{tenDangNhap}/status`.

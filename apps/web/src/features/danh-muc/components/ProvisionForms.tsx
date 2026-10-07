@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { ApiError } from '@/shared/api'
 import { Icon, Select } from '@/shared/ui'
 
-import * as api from '../api/mockDirectoryApi'
+import * as api from '../api/directoryApi'
 import type { Campus, Faculty, ProvisionResult, StudyProgram } from '../types'
 import styles from './AccountDirectory.module.scss'
 

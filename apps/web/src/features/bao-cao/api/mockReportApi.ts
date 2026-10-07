@@ -1,8 +1,8 @@
 import { ApiError } from '@/shared/api'
 
-import { CAMPUSES, DEMO_UPDATED_AT, REPORT_DATA } from '../data/demo'
+import { CAMPUSES, DEMO_UPDATED_AT, REPORT_DATA, REPORT_TERMS } from '../data/demo'
 import type { ScopeExtras } from '../data/demo'
-import type { CourseReport, CourseRow, ReportSummary } from '../types'
+import type { Campus, CourseReport, CourseRow, ReportSummary, ReportTerm } from '../types'
 
 /**
  * Thống kê GIẢ — cùng hình dạng `GET /api/reports/summary` và `/courses`.
@@ -111,4 +111,14 @@ export async function getSummary(
     },
     capNhatLuc: DEMO_UPDATED_AT,
   }
+}
+
+export async function listTerms(): Promise<readonly ReportTerm[]> {
+  await delay()
+  return REPORT_TERMS
+}
+
+export async function listCampuses(): Promise<readonly Campus[]> {
+  await delay()
+  return CAMPUSES
 }

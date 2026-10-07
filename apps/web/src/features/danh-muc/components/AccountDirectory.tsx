@@ -5,7 +5,7 @@ import { ApiError } from '@/shared/api'
 import { downloadCsv } from '@/shared/lib'
 import { Dialog, Icon, Select, Skeleton, SkeletonRows } from '@/shared/ui'
 
-import * as api from '../api/mockDirectoryApi'
+import * as api from '../api/directoryApi'
 import { CAMPUSES } from '../data/demo'
 import type {
   AccountSummary,

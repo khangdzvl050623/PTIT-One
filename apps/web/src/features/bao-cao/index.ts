@@ -3,3 +3,5 @@ export { Dashboard } from './components/Dashboard'
 export type { DashboardProps } from './components/Dashboard'
 
 export type { CourseReport, CourseRow, ReportSummary } from './types'
+export { getCourseReport, getSummary } from './api/reportApi'
+export { GRADE_BUCKETS } from './types'

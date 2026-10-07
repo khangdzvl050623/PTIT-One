@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ApiError } from '@/shared/api'
 
-import * as api from '../api/mockTeachingApi'
+import * as api from '../api/teachingApi'
 import type { DraftScores, GradeEntry, GradeSheet, SaveGradeRow, TeachingClass } from '../types'
 
 export interface Notice {

@@ -6,7 +6,7 @@ import { downloadCsv } from '@/shared/lib'
 import { ROUTES } from '@/shared/constants'
 import { Dialog, Icon, Select, Skeleton, SkeletonRows } from '@/shared/ui'
 
-import * as api from '../api/mockTeachingApi'
+import * as api from '../api/teachingApi'
 import { TERM_NAMES } from '../data/demo'
 import { formatLich, vnDateTime } from '../lib/format'
 import type { ClassRoster, TeachingClass, TeachingScheduleEntry } from '../types'
