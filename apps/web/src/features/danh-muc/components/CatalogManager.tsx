@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CourseRelation, CourseSummary } from '@/features/dang-ky/types'
 import { Dialog, Icon, Select } from '@/shared/ui'
 
-import { loadMockCatalog, resetMockCatalog, saveMockCatalog } from '../api/mockCatalogApi'
+import * as api from '../api/catalogApi'
 import styles from './CatalogManager.module.scss'
 
 type Tab = 'courses' | 'prerequisites'
@@ -20,18 +20,6 @@ const EMPTY_FORM: CourseForm = {
 
 function fold(value: string): string {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/đ/gi, 'd').toLowerCase()
-}
-
-function namedRelations(
-  relations: readonly CourseRelation[],
-  courses: readonly CourseSummary[],
-): CourseRelation[] {
-  const byCode = new Map(courses.map((course) => [course.maMonHoc, course.tenMonHoc]))
-  return relations.map((relation) => ({
-    ...relation,
-    tenMonHoc: byCode.get(relation.maMonHoc) ?? relation.tenMonHoc,
-    tenMonYeuCau: byCode.get(relation.maMonYeuCau) ?? relation.tenMonYeuCau,
-  }))
 }
 
 function createsCycle(
@@ -74,7 +62,7 @@ export function CatalogManager() {
 
   useEffect(() => {
     let cancelled = false
-    loadMockCatalog().then(
+    api.loadCatalog().then(
       (data) => {
         if (cancelled) return
         setCatalog(data.courses)
@@ -116,17 +104,21 @@ export function CatalogManager() {
     setDialog('course')
   }
 
-  async function commit(
-    nextCourses: CourseSummary[],
-    nextRelations: CourseRelation[],
-    message: string,
-  ): Promise<boolean> {
+  /**
+   * Chạy một thao tác ghi rồi TẢI LẠI danh mục từ server.
+   *
+   * Không tự suy đoán trạng thái mới ở client: API thật làm việc theo từng
+   * thực thể và còn có ràng buộc mà client không thấy (môn đã có lớp, đang
+   * trong CTĐT). Tải lại thì màn hình luôn khớp server.
+   */
+  async function commit(run: () => Promise<unknown>, message: string): Promise<boolean> {
     setSaving(true)
     setNotice(null)
     try {
-      saveMockCatalog({ courses: nextCourses, relations: nextRelations })
-      setCatalog(nextCourses)
-      setRelations(nextRelations)
+      await run()
+      const data = await api.loadCatalog()
+      setCatalog(data.courses)
+      setRelations(data.relations)
       setNotice({ text: message, tone: 'success' })
       return true
     } catch (cause) {
@@ -163,13 +155,17 @@ export function CatalogManager() {
       setFormError(`Mã môn ${next.maMonHoc} đã tồn tại.`)
       return
     }
-    const nextCourses = editingCode
-      ? courses.map((course) => (course.maMonHoc === editingCode ? next : course))
-      : [...courses, next].sort((a, b) => a.maMonHoc.localeCompare(b.maMonHoc))
-    const nextRelations = namedRelations(relations, nextCourses)
     const saved = await commit(
-      nextCourses,
-      nextRelations,
+      () =>
+        api.saveCourse(
+          {
+            maMonHoc: next.maMonHoc,
+            tenMonHoc: next.tenMonHoc,
+            soTinChi: next.soTinChi,
+            maKhoa: next.maKhoa,
+          },
+          editingCode === null,
+        ),
       editingCode ? `Đã cập nhật môn ${next.maMonHoc}.` : `Đã thêm môn ${next.maMonHoc}.`,
     )
     if (!saved) return
@@ -186,17 +182,10 @@ export function CatalogManager() {
       setPrerequisiteError('Điều kiện này tạo thành vòng lặp tiên quyết.')
       return
     }
-    const relation: CourseRelation = {
-      loai: 'TIEN_QUYET',
-      maMonHoc: currentCourse.maMonHoc,
-      tenMonHoc: currentCourse.tenMonHoc,
-      maMonYeuCau: prerequisite.maMonHoc,
-      tenMonYeuCau: prerequisite.tenMonHoc,
-    }
-    const nextRelations = [...relations, relation]
+    /* API thay TOÀN BỘ tập tiên quyết của một môn, không thêm từng cạnh — nên
+       gửi tập hiện có cộng môn mới. */
     const saved = await commit(
-      courses,
-      nextRelations,
+      () => api.setPrerequisites(currentCourse.maMonHoc, [...prerequisitesOf(currentCourse.maMonHoc), prerequisite.maMonHoc]),
       `Đã thêm ${prerequisite.maMonHoc} làm môn tiên quyết cho ${currentCourse.maMonHoc}.`,
     )
     if (!saved) return
@@ -206,27 +195,29 @@ export function CatalogManager() {
   }
 
   async function removePrerequisite(code: string) {
-    const nextRelations = relations.filter(
-      (relation) => !(relation.maMonHoc === selectedCode && relation.maMonYeuCau === code),
+    await commit(
+      () =>
+        api.setPrerequisites(
+          selectedCode,
+          prerequisitesOf(selectedCode).filter((ma) => ma !== code),
+        ),
+      `Đã gỡ ${code} khỏi tiên quyết của ${selectedCode}.`,
     )
-    await commit(courses, nextRelations, `Đã gỡ ${code} khỏi tiên quyết của ${selectedCode}.`)
+  }
+
+  /** Tập tiên quyết hiện tại của một môn, dạng mã. */
+  function prerequisitesOf(maMonHoc: string): string[] {
+    return relations.filter((r) => r.maMonHoc === maMonHoc).map((r) => r.maMonYeuCau)
   }
 
   async function confirmDeleteCourse() {
-    if (!deletingCourse || courses.length < 2) return
-    const nextCourses = courses.filter((course) => course.maMonHoc !== deletingCourse.maMonHoc)
-    const nextRelations = relations.filter(
-      (relation) =>
-        relation.maMonHoc !== deletingCourse.maMonHoc &&
-        relation.maMonYeuCau !== deletingCourse.maMonHoc,
-    )
-    const saved = await commit(
-      nextCourses,
-      nextRelations,
-      `Đã xoá môn ${deletingCourse.maMonHoc} và các điều kiện tiên quyết liên quan.`,
-    )
+    if (!deletingCourse) return
+    const ma = deletingCourse.maMonHoc
+    /* Server quyết được xoá hay không (môn là tiên quyết của môn khác, đã có
+       lớp, hay đang trong CTĐT) — client không đoán trước, chỉ hiện lý do. */
+    const saved = await commit(() => api.deleteCourse(ma), `Đã xoá môn ${ma} khỏi danh mục.`)
     if (!saved) return
-    if (selectedCode === deletingCourse.maMonHoc) setSelectedCode(nextCourses[0]?.maMonHoc ?? '')
+    if (selectedCode === ma) setSelectedCode(courses.find((c) => c.maMonHoc !== ma)?.maMonHoc ?? '')
     setDeletingCourse(null)
     setDialog(null)
   }
@@ -235,8 +226,8 @@ export function CatalogManager() {
     setSaving(true)
     setNotice(null)
     try {
-      resetMockCatalog()
-      const data = await loadMockCatalog()
+      api.resetCatalog()
+      const data = await api.loadCatalog()
       setCatalog(data.courses)
       setRelations(data.relations)
       setSelectedCode(data.courses[0]?.maMonHoc ?? '')
@@ -464,13 +455,19 @@ export function CatalogManager() {
           <>
             <button type="button" className={styles.ghost} onClick={() => setDialog(null)}>Huỷ</button>
             <button type="button" className={styles.remove} onClick={() => void confirmDeleteCourse()} disabled={saving}>
-              {saving ? 'Đang xoá…' : 'Xoá môn'}
+              {saving ? 'Đang xoá…' : 'Xoá môn học'}
             </button>
           </>
         }
       >
         <p className={styles.dialogText}>
-          Xoá <b>{deletingCourse?.maMonHoc} · {deletingCourse?.tenMonHoc}</b> khỏi danh mục và gỡ mọi quan hệ tiên quyết liên quan?
+          Môn học <b>{deletingCourse?.maMonHoc} - {deletingCourse?.tenMonHoc}</b> sẽ bị xoá khỏi
+          danh mục môn học.
+        </p>
+        {/* Nói trước điều kiện thay vì để người dùng bấm rồi mới gặp 409. */}
+        <p className={styles.dialogText}>
+          Nếu môn học đã được sử dụng trong lớp học phần hoặc dữ liệu học tập, hệ thống sẽ không
+          cho phép xoá.
         </p>
       </Dialog>
 
