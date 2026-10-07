@@ -1,0 +1,16 @@
+@use '@/styles/tokens' as tokens;
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+  margin: 0;
+  padding-left: tokens.$space-xl;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.5;
+  color: var(--notice-text);
+
+  li::marker {
+    color: var(--accent-red);
+  }
+}

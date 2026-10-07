@@ -1,4 +1,4 @@
-import { NGUONG_DAT, tongKet } from '../lib/grading'
+import { NGUONG_DAT, tongKet } from '@/shared/lib'
 import type { StudentGrade } from '../types'
 
 /**

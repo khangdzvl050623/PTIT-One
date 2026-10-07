@@ -1,0 +1,35 @@
+@use '@/styles/tokens' as tokens;
+
+/* Danh bạ bên trái, khung cấp hồ sơ bên phải — cùng cách chia với màn sinh
+   viên (`StudentShell`), chỉ rộng hơn vì bên phải là form chứ không phải
+   lối tắt. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  gap: tokens.$space-lg;
+  align-items: start;
+
+  @media (max-width: tokens.$breakpoint-tablet) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.main,
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+  min-width: 0;
+}
+
+/* Giữ khung cấp hồ sơ trong tầm nhìn khi cuộn danh bạ. Trên màn thấp hơn
+   chiều cao form, khung tự cuộn để các nút cuối vẫn truy cập được. */
+@media (min-width: #{tokens.$breakpoint-tablet + 1}) {
+  .aside {
+    position: sticky;
+    top: calc(var(--header-h) + #{tokens.$space-lg});
+    max-height: calc(100vh - var(--header-h) - #{tokens.$space-lg} * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

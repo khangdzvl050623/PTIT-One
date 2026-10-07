@@ -51,17 +51,6 @@
   padding-right: tokens.$space-md;
 }
 
-.accountOnly {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: tokens.$space-lg;
-  align-items: start;
-
-  @media (max-width: tokens.$breakpoint-compact) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 /* Cột phải dính dưới header khi cuộn; cao hơn màn hình thì tự cuộn bên trong.
    Chỉ khi có hai cột — một cột (máy tính bảng, điện thoại) thì cuộn bình thường. */
 @media (min-width: #{tokens.$breakpoint-tablet + 1}) {

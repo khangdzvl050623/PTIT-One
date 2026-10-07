@@ -3,6 +3,6 @@ export { GradeTable } from './components/GradeTable'
 export type { GradeTableProps } from './components/GradeTable'
 
 export { DEMO_GRADES } from './data/grades'
-export { diemChu, diemHe4, summarize, xepLoai } from './lib/grading'
+export { summarize } from './lib/grading'
 export type { StudentGrade, TermSummary } from './types'
 export { fetchGrades, fetchTranscript } from './api/gradesApi'

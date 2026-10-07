@@ -1,25 +1,13 @@
-import type { HinhThucHoc, Period, Term, TimetableEntry } from '../types'
+import { khungGio } from '@/shared/lib'
+
+import type { HinhThucHoc, Term, TimetableEntry } from '../types'
 
 /**
  * Dữ liệu tạm để dựng giao diện — thay bằng `GET /api/terms` và
  * `GET /api/me/timetable?maHocKy=&tuan=` khi nối API.
+ *
+ * Khung giờ 12 tiết nằm ở `shared/lib/periods` — lịch dạy giảng viên dùng chung.
  */
-
-/** Khung giờ 12 tiết — trùng seed `KhungGioTiet` (07:00 → 19:50). */
-export const PERIODS: readonly Period[] = [
-  { soTiet: 1, gioBatDau: '07:00:00', gioKetThuc: '07:50:00' },
-  { soTiet: 2, gioBatDau: '08:00:00', gioKetThuc: '08:50:00' },
-  { soTiet: 3, gioBatDau: '09:00:00', gioKetThuc: '09:50:00' },
-  { soTiet: 4, gioBatDau: '10:00:00', gioKetThuc: '10:50:00' },
-  { soTiet: 5, gioBatDau: '11:00:00', gioKetThuc: '11:50:00' },
-  { soTiet: 6, gioBatDau: '13:00:00', gioKetThuc: '13:50:00' },
-  { soTiet: 7, gioBatDau: '14:00:00', gioKetThuc: '14:50:00' },
-  { soTiet: 8, gioBatDau: '15:00:00', gioKetThuc: '15:50:00' },
-  { soTiet: 9, gioBatDau: '16:00:00', gioKetThuc: '16:50:00' },
-  { soTiet: 10, gioBatDau: '17:00:00', gioKetThuc: '17:50:00' },
-  { soTiet: 11, gioBatDau: '18:00:00', gioKetThuc: '18:50:00' },
-  { soTiet: 12, gioBatDau: '19:00:00', gioKetThuc: '19:50:00' },
-]
 
 /**
  * Mới nhất trước (ô chọn lấy phần tử đầu). Kỳ đang học chứa ngày hôm nay để
@@ -74,9 +62,7 @@ interface Session {
 
 /* Giờ suy từ khung tiết như server làm — không gõ tay để khỏi lệch. */
 function entry(s: Session): TimetableEntry {
-  const first = PERIODS[s.tietBatDau - 1]
-  const last = PERIODS[s.tietBatDau + s.soTiet - 2]
-  return { ...s, gioBatDau: first?.gioBatDau ?? '', gioKetThuc: last?.gioKetThuc ?? '' }
+  return { ...s, ...khungGio(s.tietBatDau, s.soTiet) }
 }
 
 export const DEMO_TIMETABLES: Readonly<Record<string, readonly TimetableEntry[]>> = {

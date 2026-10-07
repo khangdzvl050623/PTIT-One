@@ -133,6 +133,67 @@ export interface StudyRecord {
   ketQua: 'DAT' | 'KHONG_DAT' | null
 }
 
+/** Khớp `RosterEntry` của `GET /api/classes/{maLopHP}/students`. */
+export interface RosterEntry {
+  maSinhVien: string
+  hoTen: string
+  maCoSoNha: string
+  ngayDangKy: string
+  trangThai: string
+}
+
+/**
+ * Khớp `ClassRoster`: `lop.soLuongDaDangKy` là BỘ ĐẾM, `sinhVien.length` là số
+ * dòng ghi danh — hai số phải bằng nhau, trả cả hai để đối soát.
+ */
+export interface ClassRoster {
+  lop: ClassOffer
+  sinhVien: readonly RosterEntry[]
+}
+
+/** Khớp `CancelledClass` của `POST /api/classes/{maLopHP}/cancel`. */
+export interface CancelledClass {
+  lop: ClassOffer
+  /** `0` khi lớp đã huỷ từ trước. */
+  soDangKyDaHuy: number
+}
+
+/** Thân `POST|PUT /api/enrollment-periods` — không có cơ sở (lấy từ JWT). */
+export interface SavePeriodInput {
+  maHocKy: string
+  thoiGianMo: string
+  thoiGianDong: string
+  trangThai: string
+}
+
+/** Khớp `Teacher` của `GET /api/teachers`. */
+export interface TeacherOption {
+  maGiangVien: string
+  hoTen: string
+  maCoSo: string
+}
+
+/** Thân `POST /api/classes` — KHÔNG có `maLopHP`, `maCoSo` (server sinh / lấy từ JWT). */
+export interface CreateClassInput {
+  maMonHoc: string
+  maHocKy: string
+  soLuongToiDa: number
+  hinhThucHoc: string
+  choPhepLienCoSo: boolean
+  maGiangVien: string | null
+}
+
+/** Thân `PUT /api/classes/{maLopHP}` — môn, kỳ, cơ sở không đổi được. */
+export interface UpdateClassInput {
+  soLuongToiDa: number
+  trangThai: string
+  hinhThucHoc: string
+  choPhepLienCoSo: boolean
+}
+
+/** Một buổi trong `PUT /api/classes/{maLopHP}/schedule` (thay TOÀN BỘ lịch). */
+export type SlotInput = ScheduleSlot
+
 /** Học kỳ mà màn đăng ký đang làm việc, kèm thông tin để hiển thị. */
 export interface CurrentTerm {
   maHocKy: string

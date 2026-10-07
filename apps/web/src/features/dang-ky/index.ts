@@ -1,6 +1,10 @@
 // Barrel export cho feature "dang-ky" — đăng ký và huỷ học phần (F08).
+export { ClassEnrollments } from './components/ClassEnrollments'
+export { ClassManager } from './components/ClassManager'
 export { EnrollmentBoard } from './components/EnrollmentBoard'
 export type { EnrollmentBoardProps } from './components/EnrollmentBoard'
+
+export { PeriodManager } from './components/PeriodManager'
 
 export { PeriodSchedule } from './components/PeriodSchedule'
 export type { PeriodScheduleProps } from './components/PeriodSchedule'

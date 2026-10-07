@@ -58,16 +58,21 @@
   transform: rotate(180deg);
 }
 
+/* Danh sách ở lớp trên cùng (popover) để không bị khung cha có `overflow: auto`
+   cắt — ví dụ thân hộp thoại. Vị trí và chiều cao do Select đo rồi đặt inline;
+   `inset: auto` gỡ `inset: 0` mặc định của trình duyệt cho `[popover]`. */
 .list {
-  position: absolute;
-  top: calc(100% + #{tokens.$space-xs});
-  right: 0;
-  left: 0;
+  position: fixed;
+  inset: auto;
   z-index: 20;
-  max-height: 280px;
+  /* Không có reset `box-sizing` toàn cục: thiếu dòng này thì padding và viền
+     cộng thêm vào chiều cao Select đã đo, danh sách tràn khỏi khung nhìn. */
+  box-sizing: border-box;
   margin: 0;
   padding: tokens.$space-xs 0;
   overflow-y: auto;
+  /* Cuộn hết danh sách thì dừng, không đẩy sang cuộn hộp thoại phía sau. */
+  overscroll-behavior: contain;
   list-style: none;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);

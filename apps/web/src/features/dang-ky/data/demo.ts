@@ -34,7 +34,7 @@ export const DEMO_NGAY_BAT_DAU = '2026-08-31'
 export const TRAN_TIN_CHI = 24
 
 export const DEMO_PERIOD: EnrollmentPeriod = {
-  maDot: 'DOT-2026-1-HCM',
+  maDot: 'HCM-2026-2027-HK1-01',
   maHocKy: DEMO_MA_HOC_KY,
   maCoSo: 'HCM',
   thoiGianMo: '2026-09-28T01:00:00Z', // 08:00 giờ Việt Nam
@@ -59,7 +59,7 @@ export const TERM_NAMES: Readonly<Record<string, string>> = {
  */
 export const DEMO_PERIODS: readonly EnrollmentPeriod[] = [
   {
-    maDot: 'DOT-2026-2-HCM',
+    maDot: 'HCM-2026-2027-HK2-01',
     maHocKy: '2026-2027-HK2',
     maCoSo: 'HCM',
     thoiGianMo: '2027-01-04T01:00:00Z',
@@ -68,7 +68,7 @@ export const DEMO_PERIODS: readonly EnrollmentPeriod[] = [
   },
   DEMO_PERIOD,
   {
-    maDot: 'DOT-2025-3-HCM',
+    maDot: 'HCM-2025-2026-HK3-01',
     maHocKy: '2025-2026-HK3',
     maCoSo: 'HCM',
     thoiGianMo: '2026-05-25T01:00:00Z',
@@ -76,7 +76,7 @@ export const DEMO_PERIODS: readonly EnrollmentPeriod[] = [
     trangThai: 'DA_DONG',
   },
   {
-    maDot: 'DOT-2025-2-HCM',
+    maDot: 'HCM-2025-2026-HK2-01',
     maHocKy: '2025-2026-HK2',
     maCoSo: 'HCM',
     thoiGianMo: '2026-01-05T01:00:00Z',
@@ -84,7 +84,7 @@ export const DEMO_PERIODS: readonly EnrollmentPeriod[] = [
     trangThai: 'DA_DONG',
   },
   {
-    maDot: 'DOT-2025-1-HCM',
+    maDot: 'HCM-2025-2026-HK1-01',
     maHocKy: '2025-2026-HK1',
     maCoSo: 'HCM',
     thoiGianMo: '2025-08-11T01:00:00Z',
@@ -92,6 +92,25 @@ export const DEMO_PERIODS: readonly EnrollmentPeriod[] = [
     trangThai: 'DA_DONG',
   },
 ]
+
+/** Giảng viên cơ sở HCM — `GET /api/teachers`. GVHCM001 khớp tài khoản demo. */
+export const TEACHERS: readonly { maGiangVien: string; hoTen: string; maCoSo: string }[] = [
+  ['GVHCM001', 'Đặng Quốc Việt'],
+  ['GVHCM002', 'Nguyễn Hồng Quân'],
+  ['GVHCM003', 'Đỗ Thị Hồng Sương'],
+  ['GVHCM004', 'Bùi Thái Thanh Danh'],
+  ['GVHCM005', 'Lê Hoàng Mai'],
+  ['GVHCM006', 'Đỗ Như Lực'],
+  ['GVHCM007', 'Phạm Thu Hà'],
+  ['GVHCM008', 'Trần Văn Hải'],
+  ['GVHCM009', 'Nguyễn Thị Hoa'],
+  ['GVHCM010', 'Vũ Minh Tuấn'],
+  ['GVHCM011', 'Hoàng Văn Nam'],
+  ['GVHCM012', 'Lý Thanh Bình'],
+  ['GVHCM013', 'Phan Đức Long'],
+  ['GVHCM014', 'Ngô Thanh Tâm'],
+  ['GVHCM015', 'Trịnh Bảo Ngọc'],
+].map(([maGiangVien, hoTen]) => ({ maGiangVien: maGiangVien!, hoTen: hoTen!, maCoSo: 'HCM' }))
 
 function slot(thu: number, tietBatDau: number, soTiet: number, phongHoc: string): ScheduleSlot {
   return { thu, tietBatDau, soTiet, phongHoc, tuanBatDau: 1, tuanKetThuc: 15 }
@@ -114,7 +133,7 @@ function offer(
     soTinChi,
     maHocKy: DEMO_MA_HOC_KY,
     maCoSoHost: 'HCM',
-    maGiangVien: null,
+    maGiangVien: TEACHERS.find((t) => t.hoTen === tenGiangVien)?.maGiangVien ?? null,
     tenGiangVien,
     soLuongDaDangKy: siSo[0],
     soLuongToiDa: siSo[1],

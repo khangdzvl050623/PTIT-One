@@ -59,10 +59,23 @@ export const NAV_ITEMS: readonly NavItem[] = [
     feature: 'F06',
   },
   {
+    path: ROUTES.qtTongQuan,
+    label: 'Tổng quan',
+    roles: ['ADMIN_CO_SO', 'ADMIN_MASTER'],
+    feature: 'Thống kê',
+  },
+  {
     path: ROUTES.qtHoSo,
     label: 'Hồ sơ và tài khoản',
-    roles: ['ADMIN_CO_SO'],
+    // Cấp hồ sơ SV/GV và tài khoản chỉ ở Master (chốt 02/10/2026, StudentController).
+    roles: ['ADMIN_MASTER'],
     feature: 'F02',
+  },
+  {
+    path: ROUTES.qtDangKy,
+    label: 'Đăng ký học phần',
+    roles: ['ADMIN_CO_SO'],
+    feature: 'F08',
   },
   {
     path: ROUTES.qtLopHocPhan,

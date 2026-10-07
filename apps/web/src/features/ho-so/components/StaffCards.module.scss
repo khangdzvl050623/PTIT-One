@@ -1,0 +1,260 @@
+@use '@/styles/tokens' as tokens;
+
+/* Thẻ trắng cột giữa — cùng khuôn với biểu đồ "Kết quả học tập" của sinh viên. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+  padding: tokens.$space-lg tokens.$space-xl;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: tokens.$radius-sm;
+  box-shadow: var(--panel-shadow);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  padding-bottom: tokens.$space-md;
+  border-bottom: 1px solid var(--notice-border);
+
+  h3 {
+    margin: 0;
+    font-size: tokens.$font-size-sm;
+    font-weight: 600;
+    color: var(--accent-red);
+  }
+}
+
+.count {
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+.empty {
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+/* --- Lớp phụ trách ------------------------------------------------------ */
+
+.classes {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-md;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: tokens.$space-sm tokens.$space-md;
+    background: var(--tile-brand-bg);
+    border-left: 3px solid var(--accent-red);
+    border-radius: tokens.$radius-sm;
+  }
+}
+
+.classTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.4;
+  color: var(--notice-text);
+
+  small {
+    display: block;
+    font-size: tokens.$font-size-2xs;
+    color: var(--notice-meta);
+  }
+}
+
+.classMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: tokens.$space-md;
+  margin-top: tokens.$space-xs;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+}
+
+.seats {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-sm;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter,
+.meterLg {
+  display: block;
+  overflow: hidden;
+  background: var(--notice-border);
+  border-radius: 3px;
+
+  span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(to right, var(--panel-header-from), var(--panel-header-to));
+  }
+}
+
+.meter {
+  width: 60px;
+  height: 5px;
+}
+
+.meterLg {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 1px tokens.$space-sm;
+  font-size: tokens.$font-size-2xs;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 3px;
+}
+
+.NHAP {
+  color: var(--tile-warm-text);
+  background: var(--tile-warm-bg);
+}
+
+.DA_CONG_BO {
+  color: var(--progress-done);
+  background: color-mix(in srgb, var(--progress-done) 12%, transparent);
+}
+
+.DA_KHOA {
+  color: var(--notice-meta);
+  background: var(--field-icon-bg);
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+
+  a {
+    font-size: tokens.$font-size-xs;
+    color: var(--accent-red);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+/* --- Thống kê ----------------------------------------------------------- */
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-sm;
+}
+
+.blockTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: tokens.$space-sm;
+  margin: 0;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-text);
+
+  b {
+    color: var(--accent-red);
+  }
+
+  small {
+    margin-left: auto;
+    font-size: tokens.$font-size-xs;
+    color: var(--notice-meta);
+  }
+}
+
+/* Thanh xếp chồng: khe 2px giữa các đoạn. */
+.stack {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+
+  span {
+    height: 100%;
+  }
+}
+
+.daKhoa {
+  background: var(--notice-meta);
+}
+
+.daCongBo {
+  background: var(--progress-done);
+}
+
+.chuaCongBo {
+  background: var(--tile-warm-text);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-xs tokens.$space-lg;
+  margin: 0;
+  padding: 0;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: tokens.$space-xs;
+  }
+
+  b {
+    color: var(--notice-text);
+  }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.campusTable {
+  width: 100%;
+  font-size: tokens.$font-size-xs;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: tokens.$space-xs tokens.$space-sm;
+    text-align: right;
+    border-bottom: 1px solid var(--notice-border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  thead th {
+    font-weight: 600;
+    color: var(--notice-meta);
+  }
+
+  /* Cột tên cơ sở căn trái cả tiêu đề lẫn dữ liệu. */
+  thead th:first-child,
+  tbody th {
+    font-weight: 600;
+    text-align: left;
+    color: var(--notice-text);
+  }
+}

@@ -28,7 +28,7 @@ export const MOCK_ACCOUNTS: Readonly<Record<string, MockAccount>> = {
     homeCampus: 'HCM',
   },
   GVHCM001: {
-    hoTen: 'Trần Thị Bình',
+    hoTen: 'Đặng Quốc Việt',
     role: 'GIANG_VIEN',
     entityId: 'GVHCM001',
     homeCampus: 'HCM',

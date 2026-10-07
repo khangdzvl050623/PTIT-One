@@ -3,8 +3,14 @@ import { Route, Routes } from 'react-router-dom'
 
 import { DefaultLayout } from '@/app/layouts'
 import { RequireAuth } from '@/features/auth'
+import { AccountAdminPage } from '@/pages/AccountAdminPage'
 import { AccountPage } from '@/pages/AccountPage'
+import { AdminClassesPage } from '@/pages/AdminClassesPage'
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
+import { AdminRegistrationPage } from '@/pages/AdminRegistrationPage'
+import { CatalogAdminPage } from '@/pages/CatalogAdminPage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
+import { GradeEntryPage } from '@/pages/GradeEntryPage'
 import { GradesPage } from '@/pages/GradesPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -15,6 +21,7 @@ import { PrerequisitePage } from '@/pages/PrerequisitePage'
 import { ProgramPage } from '@/pages/ProgramPage'
 import { RegistrationPage } from '@/pages/RegistrationPage'
 import { SemesterTimetablePage } from '@/pages/SemesterTimetablePage'
+import { TeachingClassesPage } from '@/pages/TeachingClassesPage'
 import { TimetablePage } from '@/pages/TimetablePage'
 import { UserInfoPage } from '@/pages/UserInfoPage'
 import { ROUTES } from '@/shared/constants'
@@ -32,6 +39,13 @@ import { NAV_ITEMS } from './navigation'
  */
 /** Màn đã dựng xong, theo đường dẫn. Mục chưa có ở đây dùng trang giữ chỗ. */
 const SCREENS: Partial<Record<string, ReactNode>> = {
+  [ROUTES.gvLopPhuTrach]: <TeachingClassesPage />,
+  [ROUTES.gvNhapDiem]: <GradeEntryPage />,
+  [ROUTES.qtTongQuan]: <AdminDashboardPage />,
+  [ROUTES.qtHoSo]: <AccountAdminPage />,
+  [ROUTES.qtDangKy]: <AdminRegistrationPage />,
+  [ROUTES.qtLopHocPhan]: <AdminClassesPage />,
+  [ROUTES.qtDanhMuc]: <CatalogAdminPage />,
   [ROUTES.svDangKy]: <RegistrationPage />,
   [ROUTES.svDotDangKy]: <PeriodPage />,
   [ROUTES.svMonHoc]: <PrerequisitePage />,

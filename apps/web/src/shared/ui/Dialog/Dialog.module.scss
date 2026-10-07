@@ -67,7 +67,7 @@
 }
 
 .body {
-  padding: tokens.$space-xl tokens.$space-2xl;
+  padding: 0 tokens.$space-2xl;
   overflow-y: auto;
 }
 
@@ -76,7 +76,6 @@
   justify-content: flex-end;
   gap: tokens.$space-md;
   padding: tokens.$space-lg tokens.$space-2xl;
-  border-top: 1px solid var(--notice-border);
 }
 
 .closeBtn {
