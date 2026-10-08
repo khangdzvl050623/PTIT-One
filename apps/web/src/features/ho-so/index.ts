@@ -26,6 +26,9 @@ export type { StatTileProps } from './components/StatTile'
 export { StudentInfoPanel } from './components/StudentInfoPanel'
 export type { StudentInfoPanelProps } from './components/StudentInfoPanel'
 
+export { TeacherInfoPanel } from './components/TeacherInfoPanel'
+export type { TeacherInfoPanelProps } from './components/TeacherInfoPanel'
+
 export { TeachingClasses } from './components/TeachingClasses'
 export type { TeachingClassesProps } from './components/TeachingClasses'
 
@@ -56,8 +59,21 @@ export type {
   StudentSummary,
   TeacherProfile,
   TeachingClass,
+  PersonalProfile,
   TermReport,
   TermResults,
   UpdateMyProfileInput,
 } from './types'
-export { fetchProfile, fetchResults, fetchSummary, updateMyProfile } from './api/profileApi'
+export {
+  fetchProfile,
+  fetchResults,
+  fetchSummary,
+  fetchTeacherProfile,
+  fetchUnreadCount,
+  removeAvatar,
+  removeTeacherAvatar,
+  updateMyProfile,
+  updateMyTeacherProfile,
+  uploadAvatar,
+  uploadTeacherAvatar,
+} from './api/profileApi'

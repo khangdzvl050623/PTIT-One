@@ -3,10 +3,12 @@ import { fetchGrades } from '@/features/bang-diem/api/mockGradesApi'
 import { ApiError } from '@/shared/api'
 
 import { DEMO_PROFILE, DEMO_SUMMARY } from '../data/profile'
+import { DEMO_TEACHER } from '../data/staff'
 import type {
   CourseResult,
   StudentProfile,
   StudentSummary,
+  TeacherProfile,
   TermResults,
   UpdateMyProfileInput,
 } from '../types'
@@ -39,14 +41,7 @@ export async function updateMyProfile(input: UpdateMyProfileInput): Promise<Stud
 
   const saved: StudentProfile = {
     ...read(),
-    gioiTinh: input.gioiTinh,
-    dienThoai: trim(input.dienThoai),
-    soCCCD: trim(input.soCCCD),
-    emailCaNhan: trim(input.emailCaNhan),
-    noiSinh: trim(input.noiSinh),
-    danToc: trim(input.danToc),
-    tonGiao: trim(input.tonGiao),
-    hoKhau: trim(input.hoKhau),
+    ...lyLich(input),
     // anhDaiDien KHÔNG nằm ở đây: ảnh có đường riêng, như bản thật.
   }
   write(saved)
@@ -66,12 +61,7 @@ export async function updateMyProfile(input: UpdateMyProfileInput): Promise<Stud
 export async function uploadAvatar(file: File): Promise<StudentProfile> {
   await delay()
   requireVerifiedEmail()
-  if (!file.type.startsWith('image/')) {
-    throw new ApiError(400, {
-      code: 'IMAGE_FORMAT_INVALID',
-      message: 'Chỉ nhận ảnh JPEG, PNG, GIF, WEBP hoặc BMP.',
-    })
-  }
+  requireImage(file)
   const saved: StudentProfile = { ...read(), anhDaiDien: URL.createObjectURL(file) }
   write(saved)
   return saved
@@ -99,6 +89,11 @@ export async function fetchSummary(): Promise<StudentSummary> {
   return DEMO_SUMMARY
 }
 
+export async function fetchUnreadCount(): Promise<number> {
+  await delay()
+  return DEMO_SUMMARY.thongBaoChuaDoc
+}
+
 /**
  * Biểu đồ điểm dùng CÙNG nguồn với bảng điểm, nên nó cũng thấy điểm giảng viên
  * vừa công bố. Dùng `DEMO_RESULTS` riêng thì hai màn cùng nói về một thứ mà ra
@@ -122,6 +117,92 @@ export async function fetchResults(): Promise<readonly TermResults[]> {
   }
   // Kỳ cũ trước, cho trục thời gian đi xuôi — như bản http.
   return [...theoKy.values()].sort((a, b) => a.maHocKy.localeCompare(b.maHocKy))
+}
+
+// --- Giảng viên ------------------------------------------------------
+
+const GV_KEY = 'ptitone:mock:ho-so-giang-vien'
+
+/**
+ * Hồ sơ giảng viên ĐANG ĐĂNG NHẬP.
+ *
+ * Lấy mã và họ tên từ phiên chứ không trả cứng `DEMO_TEACHER`: đăng nhập bằng
+ * tài khoản giảng viên khác mà màn hình vẫn hiện tên người cũ thì trông như dữ
+ * liệu sai. Phần hành chính còn lại (khoa, cơ sở, học vị) vẫn lấy theo dữ liệu
+ * mẫu vì bản giả không có danh mục giảng viên.
+ */
+export async function fetchTeacherProfile(): Promise<TeacherProfile> {
+  await delay()
+  return readTeacher()
+}
+
+export async function updateMyTeacherProfile(
+  input: UpdateMyProfileInput,
+): Promise<TeacherProfile> {
+  await delay()
+  requireVerifiedEmail()
+  return writeTeacher({ ...readTeacher(), ...lyLich(input) })
+}
+
+export async function uploadTeacherAvatar(file: File): Promise<TeacherProfile> {
+  await delay()
+  requireVerifiedEmail()
+  requireImage(file)
+  return writeTeacher({ ...readTeacher(), anhDaiDien: URL.createObjectURL(file) })
+}
+
+export async function removeTeacherAvatar(): Promise<TeacherProfile> {
+  await delay()
+  requireVerifiedEmail()
+  return writeTeacher({ ...readTeacher(), anhDaiDien: null })
+}
+
+function readTeacher(): TeacherProfile {
+  const user = currentMockUser()
+  const base: TeacherProfile = {
+    ...DEMO_TEACHER,
+    maGiangVien: user?.entityId ?? DEMO_TEACHER.maGiangVien,
+    hoTen: user?.hoTen ?? DEMO_TEACHER.hoTen,
+    email: user?.email ?? DEMO_TEACHER.email,
+  }
+  try {
+    const raw = window.localStorage.getItem(GV_KEY + ':' + base.maGiangVien)
+    return raw ? { ...base, ...(JSON.parse(raw) as Partial<TeacherProfile>) } : base
+  } catch {
+    return base
+  }
+}
+
+function writeTeacher(profile: TeacherProfile): TeacherProfile {
+  try {
+    window.localStorage.setItem(GV_KEY + ':' + profile.maGiangVien, JSON.stringify(profile))
+  } catch {
+    /* Xem ghi chú ở `write`. */
+  }
+  return profile
+}
+
+/** Tám ô lý lịch, đã cắt khoảng trắng — dùng chung cho cả hai vai. */
+function lyLich(input: UpdateMyProfileInput) {
+  return {
+    gioiTinh: input.gioiTinh,
+    dienThoai: trim(input.dienThoai),
+    soCCCD: trim(input.soCCCD),
+    emailCaNhan: trim(input.emailCaNhan),
+    noiSinh: trim(input.noiSinh),
+    danToc: trim(input.danToc),
+    tonGiao: trim(input.tonGiao),
+    hoKhau: trim(input.hoKhau),
+  }
+}
+
+function requireImage(file: File): void {
+  if (!file.type.startsWith('image/')) {
+    throw new ApiError(400, {
+      code: 'IMAGE_FORMAT_INVALID',
+      message: 'Chỉ nhận ảnh JPEG, PNG, GIF, WEBP hoặc BMP.',
+    })
+  }
 }
 
 /** Chuỗi rỗng hoặc toàn khoảng trắng = bỏ trống, như `MyProfileService.trim`. */

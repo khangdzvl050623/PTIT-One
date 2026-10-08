@@ -111,6 +111,8 @@ người dùng và đổi được bất cứ lúc nào.
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
 | POST | `/api/classes/{maLopHP}/students/{maSinhVien}/remove` | `ADMIN_CO_SO` *(cơ sở của lớp)* |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
+| GET | `/api/me/teacher-profile` | `GIANG_VIEN` |
+| PUT · POST · DELETE | `/api/me/teacher-profile` · `/avatar` | `GIANG_VIEN` **đã xác minh email** |
 | GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
 | PUT | `/api/me/profile` | `SINH_VIEN` **đã xác minh email** |
 | POST · DELETE | `/api/me/profile/avatar` | `SINH_VIEN` **đã xác minh email** |
@@ -387,6 +389,19 @@ bị từ chối.
   tải vì Cloudinary chèn số phiên bản, nhờ đó trình duyệt không hiện ảnh cache.
 - URL có thể chết (ảnh bị xoá ngoài hệ thống). UI phải có đường lui — `IdPhoto`
   quay về khung mặc định thay vì để trình duyệt hiện icon ảnh lỗi.
+
+### Hồ sơ giảng viên tự sửa
+
+- `/api/me/teacher-profile` **song song** với `/api/me/profile` của sinh viên:
+  cùng tám ô lý lịch, cùng cổng chặn email đã xác minh, cùng quy tắc "thay toàn
+  bộ", cùng cách tải và gỡ ảnh. Đường riêng vì hai vai trả hai hình dạng khác
+  nhau — gộp một đường sẽ buộc client tự đoán kiểu theo vai trò.
+- Phần hành chính của giảng viên là `hoTen`, `hocVi`, `maKhoa`, `maCoSo` —
+  Phòng Đào tạo quản, không nằm trong request. Gửi kèm thì bị **bỏ qua**.
+- Cột lý lịch ở `GiangVien` do `V9` thêm, đúng bộ cột `V8` đã thêm cho
+  `SinhVien`. `UQ_GiangVien_SoCCCD` chỉ unique trong bảng này — không chặn một
+  số CCCD vừa nằm ở `SinhVien` vừa ở `GiangVien`, vì đồ án không có bảng người
+  dùng chung.
 
 ### Thống kê
 
@@ -741,7 +756,12 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Nhận dạng 5 định dạng · RIFF không phải WEBP · file thực thi đổi tên | đúng loại / từ chối | ✓ |
 | Đổi ảnh khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED` | ✓ |
 | Gỡ ảnh khi chưa cấu hình Cloudinary | `200`, cột về `NULL` | ✓ |
-| GV / admin tải hoặc gỡ ảnh đại diện | `403` | ✓ |
+| GV / admin tải hoặc gỡ ảnh đại diện của sinh viên | `403` | ✓ |
+| GV xem và sửa hồ sơ giảng viên của mình | `200`, các ô lưu đúng | ✓ |
+| GV gửi kèm `hocVi` / `maKhoa` / `hoTen` | bị bỏ qua, dữ liệu hành chính giữ nguyên | ✓ |
+| GV sửa hồ sơ khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED`, không ghi gì | ✓ |
+| GV tải "ảnh" là file chữ · gỡ ảnh khi kho tắt | `400 IMAGE_FORMAT_INVALID` · `200` | ✓ |
+| SV / admin gọi `/api/me/teacher-profile` | `403` | ✓ |
 | GV / admin cơ sở / Master xem hoặc sửa `/api/me/profile` | `403` | ✓ |
 | Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |

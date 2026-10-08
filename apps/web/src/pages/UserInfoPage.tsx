@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import type { ReactNode } from 'react'
 
 import { LoginPanel, ROLE_LABELS, useAuth } from '@/features/auth'
@@ -9,12 +10,10 @@ import {
   DEMO_CAMPUS_REPORTS,
   DEMO_MASTER_ADMIN,
   DEMO_SYSTEM_REPORT,
-  DEMO_TEACHER,
-  DEMO_TEACHER_SUMMARY,
-  DEMO_TEACHING,
-  DEMO_TEN_HOC_KY_HIEN_TAI,
   FeatureLinks,
   fetchProfile,
+  fetchTeacherProfile,
+  fetchUnreadCount,
   fetchResults,
   fetchSummary,
   GradeChart,
@@ -25,12 +24,14 @@ import {
   STUDENT_FEATURES,
   StatTile,
   StudentInfoPanel,
+  TeacherInfoPanel,
   TEACHER_FEATURES,
   TeachingClasses,
   TermReportCard,
 } from '@/features/ho-so'
 import type { FeatureLink } from '@/features/ho-so'
-import { StudyProgress, useTimetables } from '@/features/lich-hoc'
+import { StudyProgress, useTerms, useTimetables } from '@/features/lich-hoc'
+import { teachingClasses } from '@/features/nhap-diem'
 import { AccessStats } from '@/features/thong-ke'
 import { ROUTES } from '@/shared/constants'
 import { useAsyncData } from '@/shared/lib'
@@ -154,34 +155,42 @@ function InfoLayout(props: {
 
 /** Giảng viên: hồ sơ + công tác giảng dạy, lớp phụ trách học kỳ này. */
 function TeacherInfo({ user }: { user: SessionUser }) {
-  const gv = DEMO_TEACHER
-  const lop = DEMO_TEACHING
-  const chuaCongBo = lop.filter((c) => c.trangThaiDiem === 'NHAP').length
+  const profile = useAsyncData(fetchTeacherProfile)
+  const { terms, defaultTerm, loading: loadingKy } = useTerms()
+  /* Chờ có mã học kỳ thật rồi mới hỏi lớp: gọi với chuỗi rỗng thì API trả
+     rỗng, và màn hình sẽ hiện "0 lớp" như thể giảng viên không dạy gì. */
+  const load = useCallback(
+    () => (defaultTerm ? teachingClasses(defaultTerm) : Promise.resolve([])),
+    [defaultTerm],
+  )
+  const classes = useAsyncData(load)
+  const unread = useAsyncData(fetchUnreadCount)
+
+  const lop = classes.data ?? []
+  const dangMo = lop.filter((c) => c.trangThai === 'MO').length
+  const tenHocKy = terms.find((t) => t.maHocKy === defaultTerm)?.tenHocKy ?? '—'
 
   return (
     <InfoLayout
       features={TEACHER_FEATURES}
       profile={
         <>
-          <ProfilePanel
-            title="Thông tin giảng viên"
-            photo
-            rows={[
-              { label: 'Mã GV', value: gv.maGiangVien },
-              { label: 'Họ tên', value: gv.hoTen },
-              { label: 'Học vị', value: gv.hocVi },
-              { label: 'Khoa', value: gv.tenKhoa },
-              { label: 'Cơ sở', value: gv.tenCoSo },
-              { label: 'Email', value: gv.email },
-              { label: 'Tài khoản', value: user.username },
-              { label: 'Vai trò', value: ROLE_LABELS[user.role] },
-            ]}
-          />
+          {profile.loading ? <p>Đang tải hồ sơ…</p> : null}
+          {profile.error ? <p role="alert">{profile.error}</p> : null}
+          {profile.data ? (
+            <TeacherInfoPanel
+              profile={profile.data}
+              tenDangNhap={user.username}
+              vaiTro={ROLE_LABELS[user.role]}
+              emailDaXacMinh={user.emailDaXacMinh}
+              onProfileSaved={() => profile.reload()}
+            />
+          ) : null}
           <ProfilePanel
             title="Công tác giảng dạy"
             icon="chalkboard"
             rows={[
-              { label: 'Học kỳ', value: DEMO_TEN_HOC_KY_HIEN_TAI },
+              { label: 'Học kỳ', value: loadingKy ? '…' : tenHocKy },
               { label: 'Lớp phụ trách', value: lop.length },
               { label: 'Sinh viên', value: lop.reduce((s, c) => s + c.soLuongDaDangKy, 0) },
               { label: 'Tín chỉ giảng dạy', value: lop.reduce((s, c) => s + c.soTinChi, 0) },
@@ -193,26 +202,32 @@ function TeacherInfo({ user }: { user: SessionUser }) {
         <>
           <StatTile
             label="Thông báo mới, chưa xem"
-            value={DEMO_TEACHER_SUMMARY.thongBaoChuaDoc}
+            value={unread.data ?? '—'}
             icon="bell"
             href={ROUTES.thongBao}
           />
           <div className={styles.tilePair}>
+            {/* Mỗi lớp một buổi/tuần trong dữ liệu hiện có, nên đếm lớp là đủ;
+                cần chính xác hơn thì đổi sang /api/me/teaching-schedule?tuan=. */}
             <StatTile
               label="Buổi dạy trong tuần"
-              value={DEMO_TEACHER_SUMMARY.buoiDayTrongTuan}
+              value={lop.length}
               icon="calendar"
               href={ROUTES.gvLopPhuTrach}
               tone="brand"
             />
+            {/* Không phải "lớp chưa công bố điểm": /api/me/teaching-classes
+                không trả trạng thái bảng điểm, nên con số đó chỉ bịa được. */}
             <StatTile
-              label="Lớp chưa công bố điểm"
-              value={chuaCongBo}
+              label="Lớp đang mở"
+              value={dangMo}
               icon="book"
               href={ROUTES.gvNhapDiem}
               tone="warm"
             />
           </div>
+          {classes.loading ? <p>Đang tải lớp phụ trách…</p> : null}
+          {classes.error ? <p role="alert">{classes.error}</p> : null}
           <TeachingClasses
             title="Lớp phụ trách học kỳ này"
             classes={lop}

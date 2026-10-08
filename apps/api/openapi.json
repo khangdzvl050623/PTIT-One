@@ -1531,6 +1531,62 @@
         },
         "type" : "object"
       },
+      "TeacherDetail" : {
+        "properties" : {
+          "anhDaiDien" : {
+            "type" : "string"
+          },
+          "danToc" : {
+            "type" : "string"
+          },
+          "dienThoai" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "emailCaNhan" : {
+            "type" : "string"
+          },
+          "gioiTinh" : {
+            "type" : "string"
+          },
+          "hoKhau" : {
+            "type" : "string"
+          },
+          "hoTen" : {
+            "type" : "string"
+          },
+          "hocVi" : {
+            "type" : "string"
+          },
+          "maCoSo" : {
+            "type" : "string"
+          },
+          "maGiangVien" : {
+            "type" : "string"
+          },
+          "maKhoa" : {
+            "type" : "string"
+          },
+          "noiSinh" : {
+            "type" : "string"
+          },
+          "soCCCD" : {
+            "type" : "string"
+          },
+          "tenCoSo" : {
+            "type" : "string"
+          },
+          "tenKhoa" : {
+            "type" : "string"
+          },
+          "tonGiao" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Term" : {
         "properties" : {
           "maHocKy" : {
@@ -1711,6 +1767,49 @@
         "type" : "object"
       },
       "UpdateMyProfileRequest" : {
+        "properties" : {
+          "danToc" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "dienThoai" : {
+            "pattern" : "\\s*|[0-9 +().-]{8,20}",
+            "type" : "string"
+          },
+          "emailCaNhan" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "pattern" : "\\s*|[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
+            "type" : "string"
+          },
+          "gioiTinh" : {
+            "pattern" : "\\s*|NAM|NU",
+            "type" : "string"
+          },
+          "hoKhau" : {
+            "maxLength" : 255,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "noiSinh" : {
+            "maxLength" : 150,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "soCCCD" : {
+            "pattern" : "\\s*|[0-9]{9}|[0-9]{12}",
+            "type" : "string"
+          },
+          "tonGiao" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdateMyTeacherProfileRequest" : {
         "properties" : {
           "danToc" : {
             "maxLength" : 50,
@@ -3235,7 +3334,7 @@
     },
     "/api/me/profile" : {
       "get" : {
-        "operationId" : "myProfile",
+        "operationId" : "myProfile_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -3251,7 +3350,7 @@
         "tags" : [ "my-profile-controller" ]
       },
       "put" : {
-        "operationId" : "updateMyProfile",
+        "operationId" : "updateMyProfile_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3279,7 +3378,7 @@
     },
     "/api/me/profile/avatar" : {
       "delete" : {
-        "operationId" : "removeAvatar",
+        "operationId" : "removeAvatar_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -3295,7 +3394,7 @@
         "tags" : [ "my-profile-controller" ]
       },
       "post" : {
-        "operationId" : "uploadAvatar",
+        "operationId" : "uploadAvatar_1",
         "requestBody" : {
           "content" : {
             "multipart/form-data" : {
@@ -3325,6 +3424,100 @@
           }
         },
         "tags" : [ "my-profile-controller" ]
+      }
+    },
+    "/api/me/teacher-profile" : {
+      "get" : {
+        "operationId" : "myProfile",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeacherDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-teacher-profile-controller" ]
+      },
+      "put" : {
+        "operationId" : "updateMyProfile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMyTeacherProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeacherDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-teacher-profile-controller" ]
+      }
+    },
+    "/api/me/teacher-profile/avatar" : {
+      "delete" : {
+        "operationId" : "removeAvatar",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeacherDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-teacher-profile-controller" ]
+      },
+      "post" : {
+        "operationId" : "uploadAvatar",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [ "file" ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TeacherDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-teacher-profile-controller" ]
       }
     },
     "/api/me/teaching-classes" : {

@@ -8,7 +8,12 @@ export const {
   fetchProfile,
   fetchResults,
   fetchSummary,
+  fetchTeacherProfile,
+  fetchUnreadCount,
   removeAvatar,
+  removeTeacherAvatar,
   updateMyProfile,
+  updateMyTeacherProfile,
   uploadAvatar,
+  uploadTeacherAvatar,
 } = pickApi<typeof httpProfileApi>(httpProfileApi, mockProfileApi)

@@ -63,14 +63,14 @@ public class CloudinaryUploader {
     }
 
     /**
-     * @param maSinhVien quyết định {@code public_id}, nên ảnh của người này
+     * @param maThucThe quyết định {@code public_id}, nên ảnh của người này
      *                   không bao giờ ghi đè ảnh của người khác
      * @return {@code secure_url} có số phiên bản, lưu thẳng vào {@code AnhDaiDien}
      */
-    public String upload(String maSinhVien, byte[] bytes, ImageKind kind) {
+    public String upload(String maThucThe, byte[] bytes, ImageKind kind) {
         requireEnabled();
         Map<String, String> signed = new TreeMap<>(Map.of(
-                "public_id", properties.publicId(maSinhVien),
+                "public_id", properties.publicId(maThucThe),
                 "overwrite", "true",
                 /* Ghi đè cùng public_id thì CDN vẫn giữ bản cũ ở biên; không có
                    cờ này, ảnh mới có thể cả tiếng sau mới thấy. */
@@ -81,7 +81,7 @@ public class CloudinaryUploader {
         signed.forEach(form::add);
         form.add("api_key", properties.apiKey().trim());
         form.add("signature", sign(signed));
-        form.add("file", filePart(maSinhVien, bytes, kind));
+        form.add("file", filePart(maThucThe, bytes, kind));
 
         Map<?, ?> response = send("/image/upload", form);
         Object url = response.get("secure_url");
@@ -101,12 +101,12 @@ public class CloudinaryUploader {
      * Cloudinary — ngược hẳn với {@link #upload}, nơi không bật kho thì thật
      * sự không lưu được gì.
      */
-    public void delete(String maSinhVien) {
+    public void delete(String maThucThe) {
         if (!enabled()) {
             return;
         }
         Map<String, String> signed = new TreeMap<>(Map.of(
-                "public_id", properties.publicId(maSinhVien),
+                "public_id", properties.publicId(maThucThe),
                 "invalidate", "true",
                 "timestamp", String.valueOf(clock.instant().getEpochSecond())));
 
@@ -164,8 +164,8 @@ public class CloudinaryUploader {
     }
 
     /** Tên file phải có để Spring gửi phần này dạng file chứ không dạng trường chữ. */
-    private static ByteArrayResource filePart(String maSinhVien, byte[] bytes, ImageKind kind) {
-        String name = maSinhVien + "." + kind.name().toLowerCase();
+    private static ByteArrayResource filePart(String maThucThe, byte[] bytes, ImageKind kind) {
+        String name = maThucThe + "." + kind.name().toLowerCase();
         return new ByteArrayResource(bytes) {
             @Override
             public String getFilename() {

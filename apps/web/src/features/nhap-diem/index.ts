@@ -5,7 +5,7 @@ export type { GradeBookProps } from './components/GradeBook'
 export { TeachingClassList } from './components/TeachingClassList'
 export type { TeachingClassListProps } from './components/TeachingClassList'
 
-export { teachingSchedule } from './api/teachingApi'
+export { teachingClasses, teachingSchedule } from './api/teachingApi'
 export { DEMO_MA_HOC_KY, TERM_NAMES } from './data/demo'
 export { formatLich } from './lib/format'
 export type {

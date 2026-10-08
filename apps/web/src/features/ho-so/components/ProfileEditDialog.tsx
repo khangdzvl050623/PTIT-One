@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { ApiError } from '@/shared/api'
 import { Dialog, Select } from '@/shared/ui'
 
-import { removeAvatar, updateMyProfile, uploadAvatar } from '../api/profileApi'
-import type { StudentProfile, UpdateMyProfileInput } from '../types'
+import type { PersonalProfile, UpdateMyProfileInput } from '../types'
 import { IdPhoto } from './IdPhoto'
 import styles from './ProfileEditDialog.module.scss'
 
@@ -14,15 +13,26 @@ const MAX_MB = 5
 /** Năm định dạng `ImageKind` của API nhận; trình duyệt nào cũng hiện được. */
 const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,image/bmp'
 
-export interface ProfileEditDialogProps {
+export interface ProfileEditDialogProps<T extends PersonalProfile> {
   open: boolean
   onClose: () => void
-  profile: StudentProfile
+  profile: T
   /** Gọi sau khi lưu xong, kèm hồ sơ server vừa trả — cha dùng để hiện ngay. */
-  onSaved: (profile: StudentProfile) => void
+  onSaved: (profile: T) => void
+  /**
+   * Ba thao tác lưu, do cha truyền vào.
+   *
+   * Nhờ vậy hộp thoại không biết mình đang sửa hồ sơ sinh viên hay giảng viên:
+   * hai vai gọi hai endpoint khác nhau nhưng nhận cùng bộ ô và trả cùng phần
+   * lý lịch. Để component tự chọn endpoint theo vai trò thì nó phải import
+   * `auth`, và mỗi vai mới lại phải sửa vào đây.
+   */
+  save: (input: UpdateMyProfileInput) => Promise<T>
+  upload: (file: File) => Promise<T>
+  remove: () => Promise<T>
 }
 
-/** Chín ô lý lịch, đúng thân của `PUT /api/me/profile`. */
+/** Tám ô lý lịch, đúng thân của `PUT /api/me/profile`. */
 type Form = { [K in keyof UpdateMyProfileInput]: string }
 
 const GIOI_TINH = [
@@ -32,20 +42,29 @@ const GIOI_TINH = [
 ]
 
 /**
- * Biểu mẫu sinh viên tự điền phần lý lịch và ảnh đại diện.
+ * Biểu mẫu tự điền phần lý lịch và ảnh đại diện — dùng chung cho sinh viên và
+ * giảng viên.
  *
- * Chỉ chín ô server nhận: họ tên, ngày sinh, cơ sở, chương trình và trạng thái
- * do Phòng Đào tạo quản nên **không** xuất hiện ở đây — đặt chúng vào form chỉ
- * để disabled sẽ khiến người dùng tưởng là sửa được ở đâu đó.
+ * Chỉ tám ô server nhận: họ tên, ngày sinh, cơ sở, chương trình, học vị và
+ * trạng thái do Phòng Đào tạo quản nên **không** xuất hiện ở đây — đặt chúng
+ * vào form chỉ để disabled sẽ khiến người dùng tưởng là sửa được ở đâu đó.
  *
- * Form gửi lại **cả chín ô** mỗi lần lưu vì endpoint thay toàn bộ phần lý lịch.
+ * Form gửi lại **cả tám ô** mỗi lần lưu vì endpoint thay toàn bộ phần lý lịch.
  * Xoá nội dung một ô rồi lưu là cách xoá dữ liệu cũ.
  *
  * ⚠️ Cha chỉ **mount** component này khi đang mở. Nhờ vậy state form khởi tạo
  * lại từ hồ sơ mới nhất mỗi lần mở, không cần effect đồng bộ — mà effect đó
  * cũng dễ reset form ngay giữa lúc người dùng đang gõ.
  */
-export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEditDialogProps) {
+export function ProfileEditDialog<T extends PersonalProfile>({
+  open,
+  onClose,
+  profile,
+  onSaved,
+  save: saveProfile,
+  upload,
+  remove,
+}: ProfileEditDialogProps<T>) {
   const [form, setForm] = useState<Form>(() => toForm(profile))
   const [anh, setAnh] = useState<string | null>(profile.anhDaiDien)
   const [saving, setSaving] = useState(false)
@@ -80,7 +99,7 @@ export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEd
     }
     setUploading(true)
     try {
-      const saved = await uploadAvatar(file)
+      const saved = await upload(file)
       setAnh(saved.anhDaiDien)
       onSaved(saved)
     } catch (cause) {
@@ -94,7 +113,7 @@ export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEd
     setError(null)
     setUploading(true)
     try {
-      const saved = await removeAvatar()
+      const saved = await remove()
       setAnh(saved.anhDaiDien)
       onSaved(saved)
     } catch (cause) {
@@ -108,7 +127,7 @@ export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEd
     setSaving(true)
     setError(null)
     try {
-      onSaved(await updateMyProfile(toInput(form)))
+      onSaved(await saveProfile(toInput(form)))
       onClose()
     } catch (cause) {
       fail(cause)
@@ -273,7 +292,7 @@ export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEd
 }
 
 /** `null` → `''`: ô trống của HTML là chuỗi rỗng, không có khái niệm null. */
-function toForm(profile: StudentProfile): Form {
+function toForm(profile: PersonalProfile): Form {
   return {
     gioiTinh: profile.gioiTinh ?? '',
     dienThoai: profile.dienThoai ?? '',

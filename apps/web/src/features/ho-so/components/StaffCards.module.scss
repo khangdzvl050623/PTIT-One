@@ -137,6 +137,23 @@
   background: var(--field-icon-bg);
 }
 
+/* Trạng thái LỚP (không phải trạng thái bảng điểm): lớp đang mở là bình thường,
+   dự kiến là chờ, đã huỷ là cảnh báo. */
+.MO {
+  color: var(--progress-done);
+  background: color-mix(in srgb, var(--progress-done) 12%, transparent);
+}
+
+.DU_KIEN {
+  color: var(--tile-warm-text);
+  background: var(--tile-warm-bg);
+}
+
+.DA_HUY {
+  color: var(--accent-red);
+  background: var(--tile-brand-bg);
+}
+
 .foot {
   display: flex;
   justify-content: flex-end;

@@ -29,9 +29,14 @@ public record CloudinaryProperties(
         return hasText(cloudName) && hasText(apiKey) && hasText(apiSecret);
     }
 
-    /** Ảnh của mỗi sinh viên dùng MỘT id cố định, nên tải ảnh mới là ghi đè ảnh cũ. */
-    public String publicId(String maSinhVien) {
-        return folder().trim() + "/" + maSinhVien;
+    /**
+     * Ảnh của mỗi người dùng MỘT id cố định, nên tải ảnh mới là ghi đè ảnh cũ.
+     *
+     * @param maThucThe mã sinh viên hoặc mã giảng viên. Hai không gian mã này
+     *                  không trùng nhau nên dùng chung một thư mục là an toàn.
+     */
+    public String publicId(String maThucThe) {
+        return folder().trim() + "/" + maThucThe;
     }
 
     private static boolean hasText(String value) {

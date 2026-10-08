@@ -51,6 +51,7 @@ $scripts = @(
     @{ Path = 'central/migrations/V6__email_va_ma_xac_thuc.sql'; Plain = $true }
     @{ Path = 'central/migrations/V7__ma_co_so_chu_hoa.sql'; Plain = $true }
     @{ Path = 'central/migrations/V8__ho_so_sinh_vien.sql'; Plain = $true }
+    @{ Path = 'central/migrations/V9__ho_so_giang_vien.sql'; Plain = $true }
     @{ Path = 'central/seed/10-auth-seed.sql'; Plain = $true }
     @{ Path = 'central/seed/20-hoc-vu-seed.sql'; Plain = $true }
     @{ Path = 'central/seed/99-reset-fixture.sql'; Plain = $true }
