@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -113,7 +115,7 @@ public class AccountService {
             // Hai Admin cùng cấp một mã: người sau thua ở UNIQUE, cả giao dịch rollback.
             throw accountExists(entityId);
         }
-        return issueCode(entityId, normalizeEmail(email), true, clock.instant());
+        return issueCode(entityId, normalizeEmail(email), true, clock.instant(), nguoiCap());
     }
 
     /**
@@ -136,7 +138,7 @@ public class AccountService {
         Instant now = clock.instant();
         codes.revokeLive(username, now);
         String email = accounts.findContact(username).map(AccountContact::email).orElse(null);
-        return issueCode(username, email, sendByEmail, now);
+        return issueCode(username, email, sendByEmail, now, nguoiCap());
     }
 
     /**
@@ -154,7 +156,8 @@ public class AccountService {
         }
         Instant now = clock.instant();
         codes.revokeLive(username, now);
-        issueCode(username, contact.email(), true, now);
+        // Chính chủ tự xin, không có admin nào đứng sau.
+        issueCode(username, contact.email(), true, now, username);
     }
 
     /**
@@ -224,11 +227,78 @@ public class AccountService {
         return accounts.search(blankToNull(maCoSo), role);
     }
 
-    private ActivationCode issueCode(String username, String email, boolean sendByEmail, Instant now) {
+    /**
+     * Admin cấp lại mật khẩu cho người đã kích hoạt — lối thoát duy nhất khi
+     * người dùng quên mật khẩu VÀ không còn vào được hòm thư đã lưu.
+     *
+     * <p>Không có nó thì ba đường đều tắc: {@code forgot-password} chỉ gửi tới
+     * email đã xác minh, {@code PUT /api/auth/email} đòi mật khẩu hiện tại, và
+     * {@code activation-code} từ chối tài khoản đã kích hoạt.
+     *
+     * <p><b>Admin không đặt mật khẩu hộ.</b> Thao tác này xoá mật khẩu cũ rồi
+     * cấp một mã dùng một lần; chủ tài khoản tự đặt mật khẩu mới ở màn kích
+     * hoạt. Nhờ vậy vẫn giữ được tính chất "không ai ngoài chủ tài khoản biết
+     * mật khẩu của họ", và {@code setInitialPassword} giữ nguyên ràng buộc chỉ
+     * ghi khi chưa có mật khẩu.
+     *
+     * <p>Thứ tự có chủ ý: thu hồi phiên → thu hồi mã còn sống → xoá mật khẩu →
+     * cấp mã mới. Thu hồi mã cũ trước khi cấp mã mới là bắt buộc vì
+     * {@code UQ_MaKichHoat_ConSong} chỉ cho một mã sống mỗi tài khoản.
+     *
+     * <p>Đổi email là thao tác RIÊNG ({@code PUT /api/accounts/{u}/email}):
+     * gộp hai việc thì nhật ký không phân biệt được "admin sửa email gõ nhầm"
+     * với "admin chiếm tài khoản".
+     *
+     * @return mã trao tay khi tài khoản không có email hoặc chưa bật gửi thư;
+     *         ngược lại mã CHỈ đi qua thư và Admin không thấy
+     */
+    @Transactional
+    public ActivationCode forcePasswordReset(String username) {
+        AccountSummary account = requireSummary(username);
+        if (account.loaiNguoiDung() == Role.ADMIN_MASTER) {
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_MANAGEABLE",
+                    "Tài khoản Admin Master không cấp lại mật khẩu qua đây.");
+        }
+        if (!HOAT_DONG.equals(account.trangThai())) {
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_MANAGEABLE",
+                    "Tài khoản %s đang %s. Mở lại trước khi cấp lại mật khẩu."
+                            .formatted(username, account.trangThai()));
+        }
+
+        Instant now = clock.instant();
+        sessions.revokeAll(username, SessionService.REVOKE_PASSWORD_RESET);
+        codes.revokeLive(username, now);
+        if (accounts.clearPassword(username) != 1) {
+            throw new ApiException(HttpStatus.CONFLICT, "ACCOUNT_NOT_MANAGEABLE",
+                    "Không cấp lại mật khẩu được cho %s.".formatted(username));
+        }
+        String email = accounts.findContact(username).map(AccountContact::email).orElse(null);
+        log.info("{} cấp lại mật khẩu cho {}", nguoiCap(), username);
+        return issueCode(username, email, true, now, nguoiCap());
+    }
+
+    /**
+     * Người đang thực hiện request, cho cột kiểm toán {@code NguoiCap}.
+     *
+     * <p>Đọc từ SecurityContext chứ không nhận qua tham số: {@code provision}
+     * đi qua bốn tầng ({@code *Controller} → {@code *ProvisioningService} →
+     * đây), và thêm một tham số chỉ phục vụ kiểm toán vào cả bốn chữ ký sẽ làm
+     * bẩn những phương thức không liên quan gì tới kiểm toán.
+     *
+     * <p>{@code null} khi không có phiên — các luồng chạy nền hoặc test.
+     */
+    private static String nguoiCap() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth == null || !auth.isAuthenticated() ? null : auth.getName();
+    }
+
+    /** @param nguoiCap ai gây ra việc cấp mã — xem `V10`; {@code null} nếu không rõ */
+    private ActivationCode issueCode(String username, String email, boolean sendByEmail, Instant now,
+            String nguoiCap) {
         ActivationSecret secret = ActivationSecret.generate();
         Instant expiresAt = now.plus(properties.activationTtl());
         String recipient = sendByEmail && email != null && mailer.enabled() ? email : null;
-        codes.insert(UUID.randomUUID(), username, secret.hash(), now, expiresAt, recipient);
+        codes.insert(UUID.randomUUID(), username, secret.hash(), now, expiresAt, recipient, nguoiCap);
         if (recipient == null) {
             return new ActivationCode(username, secret.value(), expiresAt, null);
         }

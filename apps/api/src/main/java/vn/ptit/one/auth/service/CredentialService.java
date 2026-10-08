@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.util.Locale;
 
 import org.springframework.context.annotation.Profile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,8 @@ import vn.ptit.one.shared.mail.Mailer;
 @Service
 @Profile("central")
 public class CredentialService {
+
+    private static final Logger log = LoggerFactory.getLogger(CredentialService.class);
 
     static final Duration WINDOW = Duration.ofMinutes(15);
     /** Sai mật khẩu hiện tại khi đổi mật khẩu/email. */
@@ -68,6 +72,29 @@ public class CredentialService {
         AccountRecord account = requireCurrentPassword(user.username(), currentPassword);
         String normalized = AccountContact.normalize(email);
         writer.changeEmail(user.username(), account.credential().source(), normalized);
+        return new AccountEmail(normalized, false);
+    }
+
+    /**
+     * Admin đặt email thay cho chủ tài khoản.
+     *
+     * <p>Có vì tự đổi email đòi **mật khẩu hiện tại** — người đã quên mật khẩu
+     * và mất hòm thư cũ thì không qua được cửa đó, và cũng không khôi phục
+     * được vì mã khôi phục chỉ gửi tới địa chỉ cũ. Đây là bước một của lối
+     * thoát; bước hai là {@code POST /api/accounts/{u}/password-reset}.
+     *
+     * <p>Email mới ở trạng thái **chưa xác minh**, cố ý. Admin bấm "đã xác
+     * minh" hộ thì một lỗi gõ sai sẽ tạo ra một email được hệ thống tin tưởng
+     * mà không ai sở hữu. Nó tự thành đã xác minh khi chủ tài khoản dùng được
+     * mã gửi tới đó ở bước hai.
+     *
+     * @return email mới, luôn kèm {@code daXacMinh = false}
+     */
+    public AccountEmail adminChangeEmail(String username, String email) {
+        AccountContact contact = requireContact(username);
+        String normalized = AccountContact.normalize(email);
+        writer.adminSetEmail(username, contact.source(), normalized);
+        log.info("Đặt email mới cho {} (chưa xác minh)", username);
         return new AccountEmail(normalized, false);
     }
 

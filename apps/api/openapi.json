@@ -75,6 +75,18 @@
         },
         "type" : "object"
       },
+      "AdminChangeEmailRequest" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email" ],
+        "type" : "object"
+      },
       "AssignTeacherRequest" : {
         "properties" : {
           "maGiangVien" : {
@@ -1934,6 +1946,68 @@
           "schema" : {
             "default" : true,
             "type" : "boolean"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivationCode"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/accounts/{tenDangNhap}/email" : {
+      "put" : {
+        "operationId" : "changeEmail_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tenDangNhap",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AdminChangeEmailRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountEmail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/accounts/{tenDangNhap}/password-reset" : {
+      "post" : {
+        "operationId" : "forcePasswordReset",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tenDangNhap",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
           }
         } ],
         "responses" : {

@@ -120,6 +120,8 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 | GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |
 | GET · POST · PUT · DELETE | `/api/notifications` · `/preview` · `/{id}` · `/{id}/send` | `ADMIN_MASTER` · `ADMIN_CO_SO` · `GIANG_VIEN` — chỉ bản **mình soạn** |
+| PUT | `/api/accounts/{tenDangNhap}/email` | `ADMIN_MASTER` |
+| POST | `/api/accounts/{tenDangNhap}/password-reset` | `ADMIN_MASTER` |
 
 ### Hai quy tắc phạm vi
 
@@ -490,6 +492,11 @@ bị từ chối.
   Khoá thu hồi mọi phiên và tăng phiên bản trong cùng giao dịch — access token
   cũ bị từ chối ngay. Không khoá được Admin Master.
 - `GET /api/accounts?maCoSo=&loaiNguoiDung=` liệt kê danh bạ, có `daKichHoat`.
+- **Email tài khoản KHÔNG unique.** Nhiều tài khoản gắn được cùng một địa chỉ.
+  Cố ý: email không phải định danh đăng nhập, và `forgot-password` nhận
+  `{tenDangNhap, email}` — email chỉ để **đối chiếu**, mã bay tới địa chỉ đã
+  lưu của đúng tài khoản đó. Cái giá: ai nắm hòm thư dùng chung thì khôi phục
+  được mọi tài khoản gắn nó.
 
 ### Email, đổi mật khẩu, quên mật khẩu (A1)
 
@@ -518,6 +525,35 @@ bị từ chối.
   nhớ): đăng nhập sai 10 lần/tài khoản hoặc 50 lần/IP; xin mã khôi phục 3
   lần/tài khoản hoặc 20 lần/IP; nhập sai mã khôi phục 20 lần/IP; sai mật khẩu
   hiện tại 10 lần/tài khoản. Chỉ lần **sai** mới bị đếm khi đăng nhập.
+
+### Khi người dùng mất cả mật khẩu lẫn hòm thư
+
+Ba đường tự phục vụ đều tắc trong ca này: `forgot-password` chỉ gửi mã tới email
+**đã xác minh**, `PUT /api/auth/email` đòi **mật khẩu hiện tại**, và
+`activation-code` từ chối tài khoản **đã kích hoạt**. Lối thoát là hai thao tác
+của Admin Master, **tách riêng có chủ ý**:
+
+1. `PUT /api/accounts/{u}/email` `{email}` — đặt email mới, **chưa xác minh**.
+   Admin không bấm "đã xác minh" hộ: một lỗi gõ sai sẽ tạo ra địa chỉ được hệ
+   thống tin tưởng mà không ai sở hữu. Không đụng tới mật khẩu, không gửi thư.
+2. `POST /api/accounts/{u}/password-reset` → `201` — thu hồi mọi phiên, thu hồi
+   mã còn sống, **xoá mật khẩu**, cấp mã dùng một lần. Có email thì mã chỉ đi
+   qua thư; không có thì mã hiện **một lần** để Admin trao tay.
+
+Chủ tài khoản đặt mật khẩu mới ở màn **kích hoạt** (`POST /api/auth/activate`),
+và nếu mã tới qua thư thì email mới **tự thành đã xác minh** — dùng được mã
+trong thư là đã chứng minh sở hữu hòm thư.
+
+**Admin không bao giờ nhập mật khẩu hộ.** Tính chất "không ai ngoài chủ tài
+khoản biết mật khẩu của họ" được giữ nguyên.
+
+Hai lưu ý khi vận hành:
+
+- Sau bước 2 tài khoản **không đăng nhập được** cho tới khi đặt mật khẩu mới.
+  Đó là ý nghĩa của "cấp lại", không phải tác dụng phụ.
+- Đây là **công cụ chiếm tài khoản**: Admin cấp mã cho bất kỳ ai và có thể tự
+  dùng mã đó. `MaKichHoat.NguoiCap` (`V10`) ghi lại ai cấp — tách hai thao tác
+  cũng để nhật ký phân biệt được "sửa email gõ nhầm" với "chiếm tài khoản".
 
 ### Phiên đăng nhập
 
@@ -692,6 +728,14 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Cấp SV với CTĐT không có | `400 PROGRAM_NOT_FOUND`, không còn hồ sơ hay danh bạ mồ côi | ✓ |
 | Nhập sai mã 5 lần rồi nhập đúng | `400` — mã đã bị thu hồi | ✓ |
 | Cấp lại mã | mã trước mất hiệu lực, mã mới dùng được | ✓ |
+| Admin đặt email mới | `200`, `daXacMinh: false`, mật khẩu không đổi | ✓ |
+| Admin đặt email sai định dạng | `400 VALIDATION_ERROR` | ✓ |
+| Admin cấp lại mật khẩu | `201` kèm mã, mật khẩu cũ bị xoá, đăng nhập `401` | ✓ |
+| Dùng mã đó đặt mật khẩu mới | vào được bằng mật khẩu mới, mật khẩu cũ chết | ✓ |
+| Cấp lại hai lần | mã lần một `400 ACTIVATION_INVALID` | ✓ |
+| Cấp lại cho Admin Master | `409 ACCOUNT_NOT_MANAGEABLE` | ✓ |
+| `MaKichHoat.NguoiCap` sau khi Admin cấp | ghi đúng tên Admin | ✓ |
+| Admin cơ sở / GV / SV gọi hai đường này | `403` | ✓ |
 | Khoá tài khoản đang có phiên | phiên cũ `401` ngay; đăng nhập lại `401`; mở lại thì vào được | ✓ |
 | Cấp hồ sơ có email | mã chỉ đi qua thư; kích hoạt xong email đã xác minh | ✓ |
 | Quên mật khẩu với email gõ sai | `202`, không có thư nào | ✓ |

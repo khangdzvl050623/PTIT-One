@@ -74,6 +74,26 @@ public class CredentialWriter {
         issue(username, VerificationPurpose.XAC_MINH_EMAIL, email);
     }
 
+    /**
+     * Admin đặt email thay cho chủ tài khoản — dùng khi người dùng mất quyền
+     * vào hòm thư cũ nên không tự đổi được (tự đổi cần mật khẩu hiện tại).
+     *
+     * <p>Khác {@link #changeEmail}: KHÔNG gửi mã xác minh. Người vừa mất hòm
+     * thư thì cũng không xác minh được, và việc này không nên đòi hỏi máy chủ
+     * thư phải đang bật. Email mới nằm ở trạng thái **chưa xác minh** cho tới
+     * khi chủ tài khoản dùng được mã của lần cấp lại mật khẩu gửi tới đó —
+     * đúng cơ chế {@code consumeActivation} đã dùng: dùng được mã trong thư là
+     * đã chứng minh sở hữu hòm thư.
+     *
+     * <p>Mã xác minh đang chờ cho địa chỉ CŨ bị thu hồi, nếu không nó vẫn còn
+     * sống và xác minh nhầm địa chỉ không còn là của tài khoản.
+     */
+    @Transactional
+    public void adminSetEmail(String username, Source source, String email) {
+        accounts.setEmail(username, source, email);
+        codes.revokeLive(username, VerificationPurpose.XAC_MINH_EMAIL, clock.instant());
+    }
+
     /** Gửi lại mã tới email ĐANG CHỜ xác minh; mã cũ mất hiệu lực. */
     @Transactional
     public void resendEmailVerification(String username, String email) {
