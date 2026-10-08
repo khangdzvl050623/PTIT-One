@@ -95,6 +95,7 @@ người dùng và đổi được bất cứ lúc nào.
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
 | DELETE | `/api/courses/{maMonHoc}` | `ADMIN_MASTER` |
 | GET | `/api/faculties` · `/api/terms` · `/api/teachers` · `/api/prerequisites` · `/api/campuses` | — |
+| GET | `/api/health/media` | — *(cần đăng nhập; không lộ khoá, chỉ `cloudName`)* |
 | GET | `/api/schedules?maHocKy=` | — *(phạm vi cơ sở như `/api/classes`)* |
 | GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
@@ -370,6 +371,14 @@ bị từ chối.
 - `DELETE /api/me/profile/avatar` gỡ ảnh. **Chạy được cả khi chưa cấu hình
   Cloudinary** — kết quả mong muốn là "không còn ảnh", mà kho tắt thì điều đó
   vốn đã đúng. Ngược lại, `POST` khi chưa cấu hình trả `503 UPLOAD_DISABLED`.
+- Tải ảnh hỏng theo **hai kiểu rất khác nhau** mà người dùng chỉ thấy một mã
+  `503`. Phân biệt bằng `code`, và `GET /api/health/media` trả lời vế đầu mà
+  không phải đọc log máy chủ:
+  - `UPLOAD_DISABLED` — API **không thấy cấu hình**. Hay gặp nhất là chạy API
+    bằng `mvnw spring-boot:run` thay vì `.\scripts\dev-api.ps1`: chỉ script đó
+    nạp `apps/api/.env`, Spring không tự đọc tệp này.
+  - `UPLOAD_FAILED` — Cloudinary từ chối. Lý do thật (`Invalid Signature`,
+    `Invalid cloud_name`…) nằm ở log API, dòng `Cloudinary từ chối`.
 - DB chỉ lưu URL (`SinhVien.AnhDaiDien`, `V8`), không lưu byte: ảnh đại diện
   không phải dữ liệu nghiệp vụ, và Phần 2 phân mảnh `SinhVien` nên cột nhị phân
   sẽ làm phình mọi snapshot nhân bản.

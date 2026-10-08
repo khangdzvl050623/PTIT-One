@@ -39,6 +39,23 @@ DELETE FROM dbo.LichHoc;
 DELETE FROM dbo.LopHocPhan;
 DELETE FROM dbo.DotDangKy;
 
+/* Trả trạng thái 10 tài khoản seed về đúng bảng ở đầu 10-auth-seed.sql.
+   B26DCCN003 và B26DCCN004 CỐ Ý không đăng nhập được — có ca test dựa vào
+   đúng hai trạng thái đó, nên bấm "mở khoá" trong màn quản trị tài khoản là
+   làm đỏ AuthFlowIntegrationTest. Tài khoản bạn tự cấp không nằm trong bảng
+   này nên không bị đụng tới. */
+UPDATE d
+   SET TrangThai = s.TrangThai
+  FROM dbo.DanhBaNguoiDung d
+  JOIN (VALUES
+        ('B26DCCN001', 'HOAT_DONG'), ('B26DCCN002', 'HOAT_DONG'),
+        ('B26DCCN003', 'CHO_KICH_HOAT'), ('B26DCCN004', 'NGUNG'),
+        ('B25DCCN001', 'HOAT_DONG'), ('GVHCM001', 'HOAT_DONG'),
+        ('GVHN001', 'HOAT_DONG'), ('admin.hcm', 'HOAT_DONG'),
+        ('admin.hn', 'HOAT_DONG'), ('admin.master', 'HOAT_DONG')
+       ) AS s (TenDangNhap, TrangThai) ON s.TenDangNhap = d.TenDangNhap
+ WHERE d.TrangThai <> s.TrangThai;
+
 COMMIT;
 GO
 

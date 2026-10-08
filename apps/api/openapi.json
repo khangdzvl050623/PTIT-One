@@ -877,6 +877,20 @@
         "required" : [ "password", "username" ],
         "type" : "object"
       },
+      "MediaHealthResponse" : {
+        "properties" : {
+          "cloudName" : {
+            "type" : "string"
+          },
+          "hint" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ProgramCourse" : {
         "properties" : {
           "batBuoc" : {
@@ -2972,6 +2986,24 @@
           }
         },
         "tags" : [ "database-health-controller" ]
+      }
+    },
+    "/api/health/media" : {
+      "get" : {
+        "operationId" : "media",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MediaHealthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "media-health-controller" ]
       }
     },
     "/api/me/enrollments" : {
