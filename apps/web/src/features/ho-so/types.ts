@@ -44,7 +44,11 @@ export interface StudentProfile {
  * Phòng Đào tạo quản, server không nhận chúng ở đây.
  *
  * **Thay toàn bộ, không vá từng ô**: ô nào để `''` hoặc `null` thì giá trị cũ
- * bị XOÁ. Vì vậy biểu mẫu phải gửi lại cả chín ô, kể cả ô người dùng không sửa.
+ * bị XOÁ. Vì vậy biểu mẫu phải gửi lại cả tám ô, kể cả ô người dùng không sửa.
+ *
+ * Không có `anhDaiDien`: ảnh đi qua `POST /api/me/profile/avatar` (tải file) và
+ * `DELETE` cùng đường. Nhận URL ở đây thì sinh viên trỏ ảnh sang địa chỉ bất kỳ
+ * trên internet được, và cột `AnhDaiDien` sẽ có hai đường ghi.
  */
 export interface UpdateMyProfileInput {
   gioiTinh: 'NAM' | 'NU' | null
@@ -55,8 +59,6 @@ export interface UpdateMyProfileInput {
   danToc: string | null
   tonGiao: string | null
   hoKhau: string | null
-  /** URL `https://` trên dịch vụ ảnh; API không nhận file. */
-  anhDaiDien: string | null
 }
 
 /** Ba ô số liệu nhanh ở cột giữa. */

@@ -35,13 +35,7 @@ export async function fetchProfile(): Promise<StudentProfile> {
  */
 export async function updateMyProfile(input: UpdateMyProfileInput): Promise<StudentProfile> {
   await delay()
-
-  if (!currentMockUser()?.emailDaXacMinh) {
-    throw new ApiError(409, {
-      code: 'EMAIL_NOT_VERIFIED',
-      message: 'Cần xác minh email trước khi sửa hồ sơ. Vào Tài khoản > Email để xác minh.',
-    })
-  }
+  requireVerifiedEmail()
 
   const saved: StudentProfile = {
     ...read(),
@@ -53,10 +47,51 @@ export async function updateMyProfile(input: UpdateMyProfileInput): Promise<Stud
     danToc: trim(input.danToc),
     tonGiao: trim(input.tonGiao),
     hoKhau: trim(input.hoKhau),
-    anhDaiDien: trim(input.anhDaiDien),
+    // anhDaiDien KHÔNG nằm ở đây: ảnh có đường riêng, như bản thật.
   }
   write(saved)
   return saved
+}
+
+/**
+ * Tải ảnh đại diện.
+ *
+ * Không có Cloudinary nên dùng `URL.createObjectURL`: ảnh hiện đúng ngay trong
+ * phiên này, nhưng **mất sau khi F5** vì blob URL chỉ sống trong bộ nhớ trang.
+ * Khi đó `IdPhoto` quay về khung mặc định — cùng cách nó xử lý một URL
+ * Cloudinary đã bị xoá, nên giao diện không có nhánh nào mới.
+ *
+ * Giữ hai cổng chặn của bản thật: cần email đã xác minh, và chỉ nhận ảnh.
+ */
+export async function uploadAvatar(file: File): Promise<StudentProfile> {
+  await delay()
+  requireVerifiedEmail()
+  if (!file.type.startsWith('image/')) {
+    throw new ApiError(400, {
+      code: 'IMAGE_FORMAT_INVALID',
+      message: 'Chỉ nhận ảnh JPEG, PNG, GIF, WEBP hoặc BMP.',
+    })
+  }
+  const saved: StudentProfile = { ...read(), anhDaiDien: URL.createObjectURL(file) }
+  write(saved)
+  return saved
+}
+
+export async function removeAvatar(): Promise<StudentProfile> {
+  await delay()
+  requireVerifiedEmail()
+  const saved: StudentProfile = { ...read(), anhDaiDien: null }
+  write(saved)
+  return saved
+}
+
+function requireVerifiedEmail(): void {
+  if (!currentMockUser()?.emailDaXacMinh) {
+    throw new ApiError(409, {
+      code: 'EMAIL_NOT_VERIFIED',
+      message: 'Cần xác minh email trước khi sửa hồ sơ. Vào Tài khoản > Email để xác minh.',
+    })
+  }
 }
 
 export async function fetchSummary(): Promise<StudentSummary> {

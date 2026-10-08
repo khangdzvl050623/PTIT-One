@@ -15,6 +15,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import vn.ptit.one.shared.config.TraceIdFilter;
@@ -61,6 +62,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
                 "Dữ liệu gửi lên không hợp lệ.", Map.of(ex.getParameterName(), "Bắt buộc."),
                 TraceIdFilter.current(request)));
+    }
+
+    /**
+     * File tải lên vượt trần {@code spring.servlet.multipart.max-file-size}.
+     *
+     * <p>Không có nhánh này thì Spring trả {@code 500} và người dùng chỉ thấy
+     * "lỗi máy chủ" cho một việc họ sửa được bằng cách chọn ảnh nhỏ hơn.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> tooLarge(HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(ApiError.of("FILE_TOO_LARGE",
+                "Ảnh quá lớn. Chọn ảnh dưới 5MB.", TraceIdFilter.current(request)));
     }
 
     @ExceptionHandler(DataAccessException.class)

@@ -1698,12 +1698,6 @@
       },
       "UpdateMyProfileRequest" : {
         "properties" : {
-          "anhDaiDien" : {
-            "maxLength" : 500,
-            "minLength" : 0,
-            "pattern" : "\\s*|https://.+",
-            "type" : "string"
-          },
           "danToc" : {
             "maxLength" : 50,
             "minLength" : 0,
@@ -3235,6 +3229,56 @@
             }
           },
           "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      }
+    },
+    "/api/me/profile/avatar" : {
+      "delete" : {
+        "operationId" : "removeAvatar",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "my-profile-controller" ]
+      },
+      "post" : {
+        "operationId" : "uploadAvatar",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [ "file" ],
+                "type" : "object"
+              }
+            }
+          }
         },
         "responses" : {
           "200" : {

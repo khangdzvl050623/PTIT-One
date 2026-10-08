@@ -67,17 +67,29 @@ public class StudentRepository {
      * Thay TOÀN BỘ phần lý lịch. Tham số {@code null} ghi {@code NULL} —
      * để trống một ô là xoá giá trị cũ, không phải "giữ nguyên".
      *
+     * <p>KHÔNG đụng {@code AnhDaiDien}: ảnh có đường ghi riêng
+     * ({@link #updateAvatar}), nên biểu mẫu lý lịch không vô tình xoá ảnh.
+     *
      * @return 0 nếu không có sinh viên đó
      */
     public int updateProfile(String maSinhVien, String gioiTinh, String dienThoai, String soCCCD,
-            String emailCaNhan, String noiSinh, String danToc, String tonGiao, String hoKhau,
-            String anhDaiDien) {
+            String emailCaNhan, String noiSinh, String danToc, String tonGiao, String hoKhau) {
         return jdbc.update("""
                 UPDATE dbo.SinhVien
                    SET GioiTinh = ?, DienThoai = ?, SoCCCD = ?, EmailCaNhan = ?,
-                       NoiSinh = ?, DanToc = ?, TonGiao = ?, HoKhau = ?, AnhDaiDien = ?
+                       NoiSinh = ?, DanToc = ?, TonGiao = ?, HoKhau = ?
                  WHERE MaSinhVien = ?
                 """, gioiTinh, dienThoai, soCCCD, emailCaNhan, noiSinh, danToc, tonGiao, hoKhau,
+                maSinhVien);
+    }
+
+    /**
+     * Đặt hoặc xoá ({@code null}) URL ảnh đại diện.
+     *
+     * @return 0 nếu không có sinh viên đó
+     */
+    public int updateAvatar(String maSinhVien, String anhDaiDien) {
+        return jdbc.update("UPDATE dbo.SinhVien SET AnhDaiDien = ? WHERE MaSinhVien = ?",
                 anhDaiDien, maSinhVien);
     }
 

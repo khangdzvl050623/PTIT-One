@@ -51,6 +51,39 @@
   color: var(--notice-meta);
 }
 
+/* Khối ảnh: xem trước bên trái, hai nút và lời giải thích bên phải. */
+.avatar {
+  display: flex;
+  gap: tokens.$space-xl;
+  align-items: flex-start;
+  padding-top: tokens.$space-lg;
+  border-top: 1px solid var(--notice-border);
+}
+
+.avatarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-md;
+  align-items: center;
+}
+
+.avatarLabel {
+  flex: 1 0 100%;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  color: var(--notice-text);
+}
+
+/* <label class="ghost"> đóng vai nút chọn file; input gốc ẩn nhưng VẪN nằm
+   trong DOM và nhận được focus bàn phím qua nhãn. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 .formError {
   margin: 0;
   font-size: tokens.$font-size-xs;

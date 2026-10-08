@@ -12,6 +12,14 @@ import { toApiError } from './errors'
 export interface ApiRequest extends Omit<RequestInit, 'body'> {
   /** Body dạng object — tự `JSON.stringify` và đặt `Content-Type`. */
   json?: unknown
+  /**
+   * Body dạng `multipart/form-data` — dùng khi tải file lên.
+   *
+   * **Không** đặt `Content-Type` cho loại body này: trình duyệt phải tự sinh,
+   * vì header còn phải kèm `boundary` ngăn cách các phần. Đặt tay là server
+   * không tách được phần nào ra phần nào.
+   */
+  form?: FormData
 }
 
 type Reauthenticator = () => Promise<boolean>
@@ -78,6 +86,8 @@ async function send(path: string, request: ApiRequest): Promise<Response> {
   if (request.json !== undefined) {
     headers.set('Content-Type', 'application/json')
     body = JSON.stringify(request.json)
+  } else if (request.form) {
+    body = request.form
   }
 
   return fetch(path, {

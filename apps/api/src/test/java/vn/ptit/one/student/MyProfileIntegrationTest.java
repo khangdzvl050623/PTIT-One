@@ -37,6 +37,11 @@ class MyProfileIntegrationTest {
     private static final String PASSWORD = "PtitOne@2026";
     private static final String SV = "B26DCCN001";
     private static final String PROFILE = "/api/me/profile";
+    private static final String AVATAR = PROFILE + "/avatar";
+
+    /** PNG 1×1 hợp lệ — đủ để qua bước nhận dạng byte đầu file. */
+    private static final byte[] PNG_1PX = java.util.Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
     @LocalServerPort
     private int port;
@@ -133,16 +138,35 @@ class MyProfileIntegrationTest {
         HttpResponse<String> response = signedIn(SV).put(PROFILE, """
                 {"gioiTinh":"NU","dienThoai":"0988777666","soCCCD":"001303004455",
                  "emailCaNhan":"mai.tran@gmail.com","noiSinh":"Nghệ An",
-                 "danToc":"Tày","tonGiao":"Phật giáo","hoKhau":"12 Nguyễn Trãi, Vinh",
-                 "anhDaiDien":"https://res.cloudinary.com/demo/image/upload/mai.jpg"}
+                 "danToc":"Tày","tonGiao":"Phật giáo","hoKhau":"12 Nguyễn Trãi, Vinh"}
                 """);
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThat(response.body()).contains("\"gioiTinh\":\"NU\"", "\"soCCCD\":\"001303004455\"",
-                "res.cloudinary.com");
+        assertThat(response.body()).contains("\"gioiTinh\":\"NU\"", "\"soCCCD\":\"001303004455\"");
         assertThat(cot("DienThoai")).isEqualTo("0988777666");
         assertThat(cot("HoKhau")).isEqualTo("12 Nguyễn Trãi, Vinh");
         assertThat(cot("TonGiao")).isEqualTo("Phật giáo");
+    }
+
+    /**
+     * Ảnh đại diện KHÔNG nằm trong biểu mẫu lý lịch.
+     *
+     * <p>Hai lý do: sinh viên không trỏ được ảnh sang URL bất kỳ trên internet,
+     * và lưu lý lịch không vô tình xoá mất ảnh đã tải lên.
+     */
+    @Test
+    void bieuMauLyLichKhongDungToiAnh() throws Exception {
+        verifyEmail();
+        jdbc.update("UPDATE dbo.SinhVien SET AnhDaiDien = ? WHERE MaSinhVien = ?",
+                "https://res.cloudinary.com/demo/image/upload/v1/ptitone/avatar/" + SV + ".jpg", SV);
+
+        HttpResponse<String> response = signedIn(SV).put(PROFILE, """
+                {"gioiTinh":"NAM","anhDaiDien":"https://ke-xau.example/anh.jpg"}
+                """);
+
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        // Ô lạ bị bỏ qua, và ảnh đang có vẫn nguyên.
+        assertThat(cot("AnhDaiDien")).contains("res.cloudinary.com").doesNotContain("ke-xau");
     }
 
     /** Thay TOÀN BỘ phần lý lịch: ô bỏ trống là XOÁ giá trị cũ, không phải giữ nguyên. */
@@ -180,19 +204,18 @@ class MyProfileIntegrationTest {
         Browser sv = signedIn(SV);
         sv.put(PROFILE, """
                 {"gioiTinh":"NAM","dienThoai":"0901234567","soCCCD":"079208001234",
-                 "emailCaNhan":"an.nguyen@gmail.com",
-                 "anhDaiDien":"https://res.cloudinary.com/demo/image/upload/an.jpg"}
+                 "emailCaNhan":"an.nguyen@gmail.com"}
                 """);
         assertThat(cot("SoCCCD")).isEqualTo("079208001234");
 
         HttpResponse<String> response = sv.put(PROFILE, """
                 {"gioiTinh":"","dienThoai":"","soCCCD":"","emailCaNhan":"",
-                 "noiSinh":"","danToc":"","tonGiao":"","hoKhau":"","anhDaiDien":""}
+                 "noiSinh":"","danToc":"","tonGiao":"","hoKhau":""}
                 """);
 
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
         for (String ten : new String[] { "GioiTinh", "DienThoai", "SoCCCD", "EmailCaNhan",
-                "NoiSinh", "DanToc", "TonGiao", "HoKhau", "AnhDaiDien" }) {
+                "NoiSinh", "DanToc", "TonGiao", "HoKhau" }) {
             assertThat(cot(ten)).as(ten).isNull();
         }
     }
@@ -209,8 +232,6 @@ class MyProfileIntegrationTest {
                 new Ca("{\"soCCCD\":\"123\"}", "soCCCD"),
                 new Ca("{\"emailCaNhan\":\"khong-phai-email\"}", "emailCaNhan"),
                 new Ca("{\"dienThoai\":\"abc\"}", "dienThoai"),
-                // Ảnh phải là https: nhúng ảnh http vào trang https là nội dung hỗn hợp.
-                new Ca("{\"anhDaiDien\":\"http://example.com/a.jpg\"}", "anhDaiDien"),
         }) {
             HttpResponse<String> response = sv.put(PROFILE, ca.than());
             assertThat(response.statusCode()).as(ca.than()).isEqualTo(400);
@@ -224,7 +245,61 @@ class MyProfileIntegrationTest {
         for (String username : new String[] { "GVHCM001", "admin.hcm", "admin.master" }) {
             assertThat(signedIn(username).get(PROFILE).statusCode()).as(username).isEqualTo(403);
             assertThat(signedIn(username).put(PROFILE, "{}").statusCode()).as(username).isEqualTo(403);
+            assertThat(signedIn(username).upload(AVATAR, PNG_1PX).statusCode())
+                    .as(username).isEqualTo(403);
+            assertThat(signedIn(username).delete(AVATAR).statusCode()).as(username).isEqualTo(403);
         }
+    }
+
+    // --- Ảnh đại diện ----------------------------------------------------
+
+    /**
+     * Định dạng xét theo BYTE ĐẦU FILE.
+     *
+     * <p>Gửi chữ thường nhưng khai {@code image/png} và đặt tên {@code .png} —
+     * nếu server tin `Content-Type` hay đuôi tên thì ca này lọt, và đó là
+     * đường đưa file bất kỳ lên kho ảnh.
+     */
+    @Test
+    void khongPhaiAnhThiBiChan() throws Exception {
+        verifyEmail();
+
+        HttpResponse<String> response = signedIn(SV)
+                .upload(AVATAR, "<?php echo 1; ?>".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(400);
+        assertThat(response.body()).contains("IMAGE_FORMAT_INVALID");
+        assertThat(cot("AnhDaiDien")).isNull();
+    }
+
+    /** Cùng cổng chặn với sửa lý lịch: chưa xác minh email thì chưa đổi được ảnh. */
+    @Test
+    void chuaXacMinhEmailThiKhongDoiDuocAnh() throws Exception {
+        HttpResponse<String> tai = signedIn(SV).upload(AVATAR, PNG_1PX);
+        assertThat(tai.statusCode()).as(tai.body()).isEqualTo(409);
+        assertThat(tai.body()).contains("EMAIL_NOT_VERIFIED");
+
+        HttpResponse<String> go = signedIn(SV).delete(AVATAR);
+        assertThat(go.statusCode()).as(go.body()).isEqualTo(409);
+        assertThat(go.body()).contains("EMAIL_NOT_VERIFIED");
+    }
+
+    /**
+     * Gỡ ảnh chạy được cả khi chưa cấu hình Cloudinary.
+     *
+     * <p>Kết quả mong muốn là "không còn ảnh"; kho ảnh tắt thì điều đó vốn đã
+     * đúng, nên chặn ở đây sẽ khoá sinh viên lại với một tấm ảnh cũ.
+     */
+    @Test
+    void goAnhDuocKeCaKhiChuaCauHinhKhoAnh() throws Exception {
+        verifyEmail();
+        jdbc.update("UPDATE dbo.SinhVien SET AnhDaiDien = ? WHERE MaSinhVien = ?",
+                "https://res.cloudinary.com/demo/image/upload/v1/cu.jpg", SV);
+
+        HttpResponse<String> response = signedIn(SV).delete(AVATAR);
+
+        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+        assertThat(cot("AnhDaiDien")).isNull();
     }
 
     // --- Tiện ích --------------------------------------------------------
@@ -267,15 +342,53 @@ class MyProfileIntegrationTest {
             return send("PUT", path, json);
         }
 
+        HttpResponse<String> delete(String path) throws Exception {
+            HttpRequest.Builder request = HttpRequest.newBuilder(uri(path))
+                    .timeout(Duration.ofSeconds(10)).DELETE();
+            csrf(request);
+            return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+        }
+
+        /**
+         * Gửi file như biểu mẫu web: {@code multipart/form-data}, trường
+         * {@code file}, kèm tên file và {@code Content-Type} TỰ KHAI.
+         *
+         * <p>Khai `image/png` cho mọi nội dung là có chủ ý — ca kiểm định dạng
+         * dựa vào đó để chứng minh server không tin hai thứ này.
+         */
+        HttpResponse<String> upload(String path, byte[] bytes) throws Exception {
+            String boundary = "----ptitone" + System.nanoTime();
+            var out = new java.io.ByteArrayOutputStream();
+            out.write(("--" + boundary + "\r\n"
+                    + "Content-Disposition: form-data; name=\"file\"; filename=\"anh.png\"\r\n"
+                    + "Content-Type: image/png\r\n\r\n")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            out.write(bytes);
+            out.write(("\r\n--" + boundary + "--\r\n")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            HttpRequest.Builder request = HttpRequest.newBuilder(uri(path))
+                    .timeout(Duration.ofSeconds(20))
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(out.toByteArray()));
+            csrf(request);
+            return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+        }
+
         private HttpResponse<String> send(String method, String path, String json) throws Exception {
             HttpRequest.Builder request = HttpRequest.newBuilder(uri(path)).timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/json")
                     .method(method, HttpRequest.BodyPublishers.ofString(json));
+            csrf(request);
+            return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+        }
+
+        /** Header CSRF như SPA gửi; thiếu nó thì mọi request ghi bị chặn trước controller. */
+        private void csrf(HttpRequest.Builder request) {
             String xsrf = cookie("XSRF-TOKEN");
             if (xsrf != null) {
                 request.header("X-XSRF-TOKEN", xsrf);
             }
-            return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
         }
 
         private String cookie(String name) {

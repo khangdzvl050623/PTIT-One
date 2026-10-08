@@ -1,12 +1,19 @@
 package vn.ptit.one.student.controller;
 
+import java.io.IOException;
+
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 
@@ -47,5 +54,27 @@ public class MyProfileController {
     public StudentDetail updateMyProfile(@AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody UpdateMyProfileRequest body) {
         return profiles.updateMyProfile(user, body);
+    }
+
+    /**
+     * Tải ảnh đại diện từ máy người dùng.
+     *
+     * <p>Nhận **file thật** (`multipart/form-data`, trường `file`), không nhận
+     * URL: ảnh lên Cloudinary rồi server tự ghi URL vào hồ sơ. Nhận URL từ
+     * client thì sinh viên trỏ ảnh sang địa chỉ bất kỳ trên internet được.
+     *
+     * <p>Định dạng nhận: JPEG, PNG, GIF, WEBP, BMP — xét theo byte đầu file.
+     * Trần kích thước đặt ở {@code spring.servlet.multipart.max-file-size}.
+     */
+    @PostMapping(path = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public StudentDetail uploadAvatar(@AuthenticationPrincipal AuthenticatedUser user,
+            @RequestPart("file") MultipartFile file) throws IOException {
+        return profiles.updateAvatar(user, file.getBytes());
+    }
+
+    /** Gỡ ảnh đại diện; màn hồ sơ quay về khung mặc định. */
+    @DeleteMapping("/avatar")
+    public StudentDetail removeAvatar(@AuthenticationPrincipal AuthenticatedUser user) {
+        return profiles.removeAvatar(user);
     }
 }

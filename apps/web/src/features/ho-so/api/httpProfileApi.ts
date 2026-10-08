@@ -30,6 +30,26 @@ export function updateMyProfile(input: UpdateMyProfileInput): Promise<StudentPro
   return apiFetch<StudentProfile>('/api/me/profile', { method: 'PUT', json: input })
 }
 
+/**
+ * Tải ảnh đại diện từ máy người dùng.
+ *
+ * Gửi **file thật** dạng `multipart/form-data`; server kiểm định dạng bằng byte
+ * đầu file, đẩy lên Cloudinary rồi tự ghi URL vào hồ sơ. Client không bao giờ
+ * đặt URL, nên không trỏ được ảnh sang địa chỉ bất kỳ.
+ *
+ * Không đặt `Content-Type`: trình duyệt phải tự sinh, vì nó còn phải kèm
+ * `boundary` của phần thân. Đặt tay là server không tách được các phần.
+ */
+export function uploadAvatar(file: File): Promise<StudentProfile> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiFetch<StudentProfile>('/api/me/profile/avatar', { method: 'POST', form })
+}
+
+export function removeAvatar(): Promise<StudentProfile> {
+  return apiFetch<StudentProfile>('/api/me/profile/avatar', { method: 'DELETE' })
+}
+
 interface UnreadCount {
   soChuaDoc: number
 }

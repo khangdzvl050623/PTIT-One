@@ -112,6 +112,7 @@ người dùng và đổi được bất cứ lúc nào.
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
 | GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
 | PUT | `/api/me/profile` | `SINH_VIEN` **đã xác minh email** |
+| POST · DELETE | `/api/me/profile/avatar` | `SINH_VIEN` **đã xác minh email** |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 | GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |
@@ -350,10 +351,33 @@ bị từ chối.
   trắng — kể cả ở những ô có định dạng, nên UI **không cần** tự đổi `""` thành
   `null` trước khi gửi.
 - `gioiTinh` ∈ `NAM` · `NU`. `soCCCD` 9 hoặc 12 chữ số và **unique toàn trường**
-  (index filtered, bỏ qua `NULL`). `anhDaiDien` phải là URL `https://` — ảnh
-  `http://` nhúng vào trang `https` là nội dung hỗn hợp, trình duyệt chặn.
-- API **không nhận file**: `anhDaiDien` là URL do client tự tải lên dịch vụ ảnh.
-  Phần 1 không có endpoint upload.
+  (index filtered, bỏ qua `NULL`).
+
+### Ảnh đại diện
+
+- **Không đặt bằng URL.** `anhDaiDien` không nằm trong `PUT /api/me/profile`;
+  nhận URL từ client thì sinh viên trỏ ảnh sang địa chỉ bất kỳ trên internet
+  được, và cột `AnhDaiDien` sẽ có hai đường ghi.
+- `POST /api/me/profile/avatar` nhận **file thật**, `multipart/form-data`,
+  trường `file`. Server đẩy lên Cloudinary rồi tự ghi URL trả về vào hồ sơ;
+  response là hồ sơ đầy đủ như `GET`.
+- Định dạng xét theo **byte đầu file**, không theo `Content-Type` hay đuôi tên —
+  cả hai do client đặt. Nhận JPEG · PNG · GIF · WEBP · BMP, sai thì
+  `400 IMAGE_FORMAT_INVALID`. HEIC của iPhone **không** nhận: Chrome và Firefox
+  không hiện được.
+- Trần 5MB (`spring.servlet.multipart.max-file-size`); vượt thì
+  `413 FILE_TOO_LARGE`.
+- `DELETE /api/me/profile/avatar` gỡ ảnh. **Chạy được cả khi chưa cấu hình
+  Cloudinary** — kết quả mong muốn là "không còn ảnh", mà kho tắt thì điều đó
+  vốn đã đúng. Ngược lại, `POST` khi chưa cấu hình trả `503 UPLOAD_DISABLED`.
+- DB chỉ lưu URL (`SinhVien.AnhDaiDien`, `V8`), không lưu byte: ảnh đại diện
+  không phải dữ liệu nghiệp vụ, và Phần 2 phân mảnh `SinhVien` nên cột nhị phân
+  sẽ làm phình mọi snapshot nhân bản.
+- Mỗi sinh viên dùng **một `public_id` cố định** (`<folder>/<MaSinhVien>`), nên
+  tải ảnh mới là ghi đè ảnh cũ — không tích ảnh mồ côi. URL vẫn đổi sau mỗi lần
+  tải vì Cloudinary chèn số phiên bản, nhờ đó trình duyệt không hiện ảnh cache.
+- URL có thể chết (ảnh bị xoá ngoài hệ thống). UI phải có đường lui — `IdPhoto`
+  quay về khung mặc định thay vì để trình duyệt hiện icon ảnh lỗi.
 
 ### Thống kê
 
@@ -561,7 +585,11 @@ bị từ chối.
 | `MAIL_DISABLED` | 503 | Chưa cấu hình gửi thư |
 | `EMAIL_NOT_SET` | 409 | Gửi lại mã xác minh khi chưa có email |
 | `EMAIL_ALREADY_VERIFIED` | 409 | Gửi lại mã xác minh khi email đã xác minh |
-| `EMAIL_NOT_VERIFIED` | 409 | Sửa hồ sơ khi email chưa xác minh |
+| `EMAIL_NOT_VERIFIED` | 409 | Sửa hồ sơ hoặc đổi ảnh khi email chưa xác minh |
+| `IMAGE_FORMAT_INVALID` | 400 | File tải lên không phải JPEG/PNG/GIF/WEBP/BMP |
+| `FILE_TOO_LARGE` | 413 | Ảnh vượt 5MB |
+| `UPLOAD_DISABLED` | 503 | Chưa cấu hình Cloudinary |
+| `UPLOAD_FAILED` | 503 | Cloudinary lỗi hoặc không trả URL |
 | `AUTH_TOO_MANY_ATTEMPTS` | 429 | Vượt giới hạn tần suất; đợi rồi thử lại |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
@@ -698,7 +726,13 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Sửa hồ sơ, bỏ bớt một ô khỏi request | ô đó về `null` — thay toàn bộ, không vá | ✓ |
 | Gửi ô trống kiểu `""` cho cả 9 ô | `200`, xoá sạch — không `400` ở ô có định dạng | ✓ |
 | Ô toàn khoảng trắng | lưu `NULL`, không lưu `''` | ✓ |
-| `gioiTinh` lạ · CCCD 3 số · email sai · ảnh `http://` | `400 VALIDATION_ERROR`, nêu đúng tên ô | ✓ |
+| `gioiTinh` lạ · CCCD 3 số · email sai · điện thoại chữ | `400 VALIDATION_ERROR`, nêu đúng tên ô | ✓ |
+| Gửi `anhDaiDien` kèm biểu mẫu lý lịch | bị bỏ qua, ảnh đang có giữ nguyên | ✓ |
+| Tải "ảnh" thật ra là file chữ, khai `image/png`, tên `.png` | `400 IMAGE_FORMAT_INVALID` | ✓ |
+| Nhận dạng 5 định dạng · RIFF không phải WEBP · file thực thi đổi tên | đúng loại / từ chối | ✓ |
+| Đổi ảnh khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED` | ✓ |
+| Gỡ ảnh khi chưa cấu hình Cloudinary | `200`, cột về `NULL` | ✓ |
+| GV / admin tải hoặc gỡ ảnh đại diện | `403` | ✓ |
 | GV / admin cơ sở / Master xem hoặc sửa `/api/me/profile` | `403` | ✓ |
 | Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |
