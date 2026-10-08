@@ -2,7 +2,6 @@ import { Navigate, useLocation } from 'react-router-dom'
 
 import { safeTarget } from '@/app/router/navigation'
 import { LoginPanel, useAuth } from '@/features/auth'
-import { ROUTES } from '@/shared/constants'
 
 import styles from './LoginPage.module.scss'
 
@@ -26,8 +25,8 @@ export function LoginPage() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        {/* Chưa biết vai trò nên chưa kiểm được; LoginPanel kiểm sau khi đăng nhập. */}
-        <LoginPanel redirectTo={from ?? ROUTES.userInfo} />
+        {/* Vai trò chỉ biết sau khi đăng nhập, nên đưa hàm chọn đích xuống. */}
+        <LoginPanel redirectTo={(role) => safeTarget(from, role)} />
       </div>
     </div>
   )

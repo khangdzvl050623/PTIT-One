@@ -5,11 +5,11 @@ import { ApiError } from '@/shared/api'
 import { LABELS, ROUTES } from '@/shared/constants'
 import { Icon, Panel } from '@/shared/ui'
 
-import { safeTarget } from '@/app/router/navigation'
 import { API_MODE } from '@/shared/api'
 import { MOCK_ACCOUNTS } from '../api/mockAuthApi'
 import { useAuth } from '../model/AuthContext'
 import { ROLE_LABELS } from '../model/types'
+import type { Role } from '../model/types'
 import { LoginForm } from './LoginForm'
 import type { LoginCredentials } from './LoginForm'
 import styles from './LoginPanel.module.scss'
@@ -17,8 +17,16 @@ import styles from './LoginPanel.module.scss'
 const NETWORK_MESSAGE = 'Không kết nối được máy chủ. Vui lòng thử lại.'
 
 export interface LoginPanelProps {
-  /** Nơi chuyển tới sau khi đăng nhập. Bỏ trống thì ở nguyên trang hiện tại. */
-  redirectTo?: string
+  /**
+   * Nơi chuyển tới sau khi đăng nhập. Bỏ trống thì ở nguyên trang hiện tại.
+   *
+   * Là **hàm nhận vai trò**, không phải chuỗi: đích đến phụ thuộc vai trò (một
+   * tuyến của vai trò khác sẽ rơi vào `/khong-du-quyen`), mà vai trò chỉ biết
+   * sau khi đăng nhập xong. Việc chọn đích thuộc tầng tuyến đường — để component
+   * này tự tính thì nó phải import `app/router`, tạo vòng
+   * `navigation → features/auth → LoginPanel → navigation`.
+   */
+  redirectTo?: (role: Role) => string
 }
 
 /**
@@ -36,10 +44,8 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
     setError(null)
     try {
       const signedIn = await signIn(username, password)
-      /* Kiểm đích đến SAU khi biết vai trò: người dùng có thể bị chặn ở một
-         tuyến của vai trò khác, quay lại thẳng sẽ rơi vào /khong-du-quyen và
-         trông như đăng nhập hỏng dù phiên hợp lệ. */
-      if (redirectTo) navigate(safeTarget(redirectTo, signedIn.role), { replace: true })
+      // Tính đích SAU khi biết vai trò — xem ghi chú ở `redirectTo`.
+      if (redirectTo) navigate(redirectTo(signedIn.role), { replace: true })
     } catch (cause) {
       /* Backend cố tình trả cùng một thông báo cho sai mật khẩu, tài khoản
          chưa kích hoạt và tài khoản bị ngừng — để form này không trở thành
