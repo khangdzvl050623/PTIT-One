@@ -108,6 +108,13 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
         pending={pending}
         errorMessage={error}
       />
+      {/* Tài khoản vừa được cấp chưa có mật khẩu nên KHÔNG đăng nhập được —
+          không có lối này thì màn kích hoạt coi như không tồn tại. */}
+      <p className={styles.helpLinks}>
+        <Link to={ROUTES.kichHoat}>Kích hoạt tài khoản lần đầu</Link>
+        <Link to={ROUTES.quenMatKhau}>Quên mật khẩu?</Link>
+      </p>
+
       {API_MODE === 'mock' ? (
         <p className={styles.mockHint}>
           Chế độ demo, chưa nối API. Mật khẩu bất kỳ, tài khoản:{' '}

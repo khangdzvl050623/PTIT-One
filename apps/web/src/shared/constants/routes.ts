@@ -5,6 +5,9 @@
 export const ROUTES = {
   home: '/',
   login: '/dang-nhap',
+  /** Chưa đăng nhập được vẫn phải vào: tài khoản mới cấp chưa có mật khẩu. */
+  kichHoat: '/kich-hoat',
+  quenMatKhau: '/quen-mat-khau',
   account: '/tai-khoan',
   userInfo: '/thong-tin',
   thongBao: '/thong-bao',

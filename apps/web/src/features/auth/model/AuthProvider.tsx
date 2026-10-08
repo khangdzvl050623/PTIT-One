@@ -104,6 +104,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = useCallback(() => endSession(authApi.logout), [endSession])
   const signOutEverywhere = useCallback(() => endSession(authApi.logoutAll), [endSession])
 
+  /**
+   * Đọc lại danh tính từ server. Cần sau khi đổi thứ nằm TRONG phiên mà không
+   * đi qua đăng nhập — hiện là xác minh email: `emailDaXacMinh` quyết định
+   * banner nhắc và nút sửa hồ sơ, không đọc lại thì giao diện đứng yên cho tới
+   * lần đăng nhập sau.
+   *
+   * Nuốt lỗi: đây là làm tươi nền. Phiên mất thật thì request kế tiếp của
+   * người dùng sẽ gặp `401` và lớp API xử lý, không cần màn hình nào vỡ ở đây.
+   */
+  const reloadUser = useCallback(async () => {
+    try {
+      apply(await authApi.fetchCurrentUser())
+    } catch {
+      /* Giữ nguyên trạng thái đang có. */
+    }
+  }, [apply])
+
   const hasRole = useCallback(
     (...roles: Role[]) => {
       const current = userRef.current
@@ -113,8 +130,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, signIn, signOut, signOutEverywhere, hasRole }),
-    [status, user, signIn, signOut, signOutEverywhere, hasRole],
+    () => ({ status, user, signIn, signOut, signOutEverywhere, reloadUser, hasRole }),
+    [status, user, signIn, signOut, signOutEverywhere, reloadUser, hasRole],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

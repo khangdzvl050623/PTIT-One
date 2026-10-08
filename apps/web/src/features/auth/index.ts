@@ -1,4 +1,9 @@
-// Barrel export cho feature "auth" — đăng nhập, phiên và chặn tuyến.
+// Barrel export cho feature "auth" — đăng nhập, phiên, chặn tuyến và A1.
+export { ActivateForm } from './components/ActivateForm'
+export { ChangePasswordForm } from './components/ChangePasswordForm'
+export { EmailNotice } from './components/EmailNotice'
+export { EmailPanel } from './components/EmailPanel'
+export { ForgotPasswordForm } from './components/ForgotPasswordForm'
 export { LoginForm } from './components/LoginForm'
 export type { LoginCredentials, LoginFormProps } from './components/LoginForm'
 export { LoginPanel } from './components/LoginPanel'
@@ -9,4 +14,4 @@ export { AuthProvider } from './model/AuthProvider'
 export { useAuth } from './model/AuthContext'
 export type { AuthContextValue } from './model/AuthContext'
 export { ROLES, ROLE_LABELS } from './model/types'
-export type { AuthStatus, Role, SessionUser } from './model/types'
+export type { AccountEmail, AuthStatus, Role, SessionUser } from './model/types'

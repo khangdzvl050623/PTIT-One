@@ -72,6 +72,27 @@
   }
 }
 
+/* Hai lối thoát dưới biểu mẫu: chưa có mật khẩu (kích hoạt) và mất mật khẩu
+   (khôi phục). Đặt cạnh nhau vì người dùng thường không biết mình thuộc ca nào. */
+.helpLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-xs tokens.$space-lg;
+  justify-content: space-between;
+  margin: tokens.$space-md 0 0;
+  font-size: tokens.$font-size-sm;
+
+  a {
+    color: var(--notice-text);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--accent-red);
+      text-decoration: underline;
+    }
+  }
+}
+
 .mockHint {
   margin: tokens.$space-sm 0 0;
   font-size: tokens.$font-size-xs;

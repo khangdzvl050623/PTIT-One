@@ -42,3 +42,15 @@ export interface SessionUser {
 }
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous'
+
+/**
+ * Khớp `AccountEmail` — email của tài khoản đang đăng nhập.
+ *
+ * Chưa xác minh thì **không tự khôi phục mật khẩu được**: mã khôi phục chỉ gửi
+ * tới địa chỉ đã xác minh, nên người chưa xác minh phải nhờ Admin cấp lại.
+ */
+export interface AccountEmail {
+  /** `null` khi tài khoản chưa đặt email bao giờ. */
+  email: string | null
+  daXacMinh: boolean
+}

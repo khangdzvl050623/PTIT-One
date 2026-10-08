@@ -9,6 +9,12 @@ import { AdminClassesPage } from '@/pages/AdminClassesPage'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminRegistrationPage } from '@/pages/AdminRegistrationPage'
 import { CatalogAdminPage } from '@/pages/CatalogAdminPage'
+import {
+  ActivatePage,
+  ChangePasswordPage,
+  EmailPage,
+  ForgotPasswordPage,
+} from '@/pages/CredentialPages'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { GradeEntryPage } from '@/pages/GradeEntryPage'
 import { GradesPage } from '@/pages/GradesPage'
@@ -39,6 +45,8 @@ import { NAV_ITEMS } from './navigation'
  */
 /** Màn đã dựng xong, theo đường dẫn. Mục chưa có ở đây dùng trang giữ chỗ. */
 const SCREENS: Partial<Record<string, ReactNode>> = {
+  [ROUTES.doiMatKhau]: <ChangePasswordPage />,
+  [ROUTES.email]: <EmailPage />,
   [ROUTES.gvLopPhuTrach]: <TeachingClassesPage />,
   [ROUTES.gvNhapDiem]: <GradeEntryPage />,
   [ROUTES.qtTongQuan]: <AdminDashboardPage />,
@@ -61,6 +69,10 @@ export function AppRoutes() {
       <Route element={<DefaultLayout />}>
         <Route path={ROUTES.home} element={<HomePage />} />
         <Route path={ROUTES.login} element={<LoginPage />} />
+        {/* Hai tuyến này CỐ Ý không gác: tài khoản mới cấp chưa có mật khẩu, và
+            người quên mật khẩu thì không đăng nhập trước được. */}
+        <Route path={ROUTES.kichHoat} element={<ActivatePage />} />
+        <Route path={ROUTES.quenMatKhau} element={<ForgotPasswordPage />} />
         <Route path={ROUTES.forbidden} element={<ForbiddenPage />} />
 
         <Route element={<RequireAuth />}>

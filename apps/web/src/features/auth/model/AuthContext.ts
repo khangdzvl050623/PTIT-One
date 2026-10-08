@@ -10,6 +10,8 @@ export interface AuthContextValue {
   signOut: () => Promise<void>
   /** Đăng xuất khỏi mọi thiết bị. */
   signOutEverywhere: () => Promise<void>
+  /** Đọc lại danh tính từ server sau khi đổi thứ nằm trong phiên (xác minh email). */
+  reloadUser: () => Promise<void>
   hasRole: (...roles: Role[]) => boolean
 }
 

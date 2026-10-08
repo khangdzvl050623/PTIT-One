@@ -1,6 +1,7 @@
 import { ApiError } from '@/shared/api'
 
 import type { Role, SessionUser } from '../model/types'
+import { readCredential } from './mockCredentialStore'
 
 /**
  * Auth giả để dựng UI khi chưa chạy backend. Cùng chữ ký với `httpAuthApi`,
@@ -23,9 +24,11 @@ interface MockAccount {
 }
 
 /**
- * `emailDaXacMinh` để `true` cho sinh viên: biểu mẫu sửa hồ sơ cần cờ này, và
- * bản giả phải cho dựng được giao diện ở trạng thái dùng được. Muốn thử nhánh
- * bị chặn thì đổi thành `false` ngay tại đây.
+ * Sinh viên bắt đầu **chưa có email**: đó là trạng thái thật của tài khoản vừa
+ * được cấp, và là điểm xuất phát của luồng A1 (kích hoạt → thêm email → xác
+ * minh → mở khoá sửa hồ sơ). Để sẵn "đã xác minh" thì không thử được luồng đó.
+ *
+ * Giảng viên và Admin cơ sở để sẵn đã xác minh, cho khỏi màn nào cũng vướng.
  */
 export const MOCK_ACCOUNTS: Readonly<Record<string, MockAccount>> = {
   B26DCCN001: {
@@ -33,8 +36,8 @@ export const MOCK_ACCOUNTS: Readonly<Record<string, MockAccount>> = {
     role: 'SINH_VIEN',
     entityId: 'B26DCCN001',
     homeCampus: 'HCM',
-    email: 'b26dccn001@stu.ptithcm.edu.vn',
-    emailDaXacMinh: true,
+    email: null,
+    emailDaXacMinh: false,
   },
   GVHCM001: {
     hoTen: 'Đặng Quốc Việt',
@@ -81,14 +84,31 @@ export async function login(username: string, password: string): Promise<Session
   }
 
   const now = Date.now()
+  const ten = username.trim()
+  /* Email đã thêm/xác minh ở phiên trước phải còn sau khi đăng xuất rồi vào
+     lại — bản thật lưu ở DB, bản giả lưu ở store riêng. */
+  const credential = readCredential(ten)
   const user: SessionUser = {
-    username: username.trim(),
+    username: ten,
     ...account,
+    ...(credential
+      ? { email: credential.email, emailDaXacMinh: credential.daXacMinh }
+      : {}),
     expiresAt: new Date(now + SESSION_MS).toISOString(),
     accessExpiresAt: new Date(now + ACCESS_MS).toISOString(),
   }
   write(user)
   return user
+}
+
+/**
+ * Vá vài trường của phiên đang mở. `mockCredentialApi` dùng sau khi xác minh
+ * email: cờ `emailDaXacMinh` nằm trong phiên nên không vá thì giao diện vẫn
+ * tưởng chưa xác minh cho tới lần đăng nhập sau.
+ */
+export function patchMockSession(patch: Partial<SessionUser>): void {
+  const user = read()
+  if (user) write({ ...user, ...patch })
 }
 
 /**
