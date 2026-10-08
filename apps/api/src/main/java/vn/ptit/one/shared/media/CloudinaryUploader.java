@@ -20,6 +20,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import vn.ptit.one.shared.exception.ApiException;
 
@@ -85,7 +86,8 @@ public class CloudinaryUploader {
         Map<?, ?> response = send("/image/upload", form);
         Object url = response.get("secure_url");
         if (url == null) {
-            throw unavailable(new IllegalStateException("Cloudinary không trả secure_url"));
+            log.warn("Cloudinary không trả secure_url, khoá nhận được: {}", response.keySet());
+            throw unavailable();
         }
         return url.toString();
     }
@@ -124,8 +126,16 @@ public class CloudinaryUploader {
                     .retrieve()
                     .body(Map.class);
             return body == null ? Map.of() : body;
+        } catch (RestClientResponseException ex) {
+            /* Thân phản hồi của Cloudinary mới nói lý do thật ("Invalid Signature",
+               "Invalid cloud_name", "Stale request"...). Thiếu nó thì log chỉ còn
+               một con số và người đọc không biết sửa gì. */
+            log.warn("Cloudinary từ chối {} ({}): {}", path, ex.getStatusCode(),
+                    ex.getResponseBodyAsString());
+            throw unavailable();
         } catch (RestClientException ex) {
-            throw unavailable(ex);
+            log.warn("Không gọi được Cloudinary {}: {}", path, ex.toString());
+            throw unavailable();
         }
     }
 
@@ -171,8 +181,7 @@ public class CloudinaryUploader {
         }
     }
 
-    private ApiException unavailable(Exception cause) {
-        log.warn("Cloudinary lỗi: {}", cause.toString());
+    private ApiException unavailable() {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "UPLOAD_FAILED",
                 "Không lưu được ảnh lúc này. Thử lại sau.");
     }
