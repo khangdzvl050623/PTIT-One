@@ -1,0 +1,44 @@
+@use '@/styles/tokens' as tokens;
+
+/* Dải nhắc nằm trên cùng nội dung, trong khung trang — không phủ lên menu và
+   không dính đáy màn hình: đây là việc nên làm sớm, không phải báo động. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$space-sm tokens.$space-md;
+  align-items: center;
+  padding: tokens.$space-md tokens.$space-lg;
+  margin-bottom: tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.5;
+  color: var(--notice-text);
+  background: var(--tile-brand-bg);
+  border: 1px solid var(--tile-brand-border);
+  border-radius: tokens.$radius-sm;
+}
+
+.icon {
+  flex: none;
+  color: var(--accent-red);
+}
+
+.text {
+  flex: 1 1 320px;
+  margin: 0;
+}
+
+.action {
+  flex: none;
+  padding: tokens.$space-xs tokens.$space-lg;
+  font-weight: 600;
+  color: var(--ptit-on-brand);
+  text-decoration: none;
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  border: 1px solid var(--ptit-red-border);
+  border-radius: tokens.$radius-sm;
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}

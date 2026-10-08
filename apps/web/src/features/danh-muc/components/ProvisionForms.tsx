@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { ApiError } from '@/shared/api'
+import { API_MODE, ApiError } from '@/shared/api'
 import { Icon, Select } from '@/shared/ui'
 
 import * as api from '../api/directoryApi'
@@ -117,6 +117,12 @@ function FormShell(props: FormShellProps) {
  * Bỏ trống là giữ đúng luồng hợp đồng: tài khoản chưa có mật khẩu, người dùng
  * tự đặt bằng mã kích hoạt. Điền vào là đi nhánh chỉ có ở bản giả — xem
  * `DemoInitialPassword` trong `../types`.
+ *
+ * **Không hiện khi chạy API thật** (chốt 08/10/2026): `CreateStudentRequest`
+ * và `CreateTeacherRequest` không có trường mật khẩu, `httpDirectoryApi` luôn
+ * gửi `matKhauBanDau: null`. Để ô này hiện ở chế độ `api` thì Admin gõ mật
+ * khẩu, server bỏ qua, mà ghi chú dưới form lại hứa "đăng nhập được ngay" —
+ * một lời hứa sai ngay trên màn hình.
  */
 function PasswordField(props: {
   value: string
@@ -125,6 +131,8 @@ function PasswordField(props: {
 }) {
   const [hien, setHien] = useState(false)
   const loi = loiMatKhau(props.value, props.tenDangNhap)
+
+  if (API_MODE === 'api') return null
 
   return (
     <label>
