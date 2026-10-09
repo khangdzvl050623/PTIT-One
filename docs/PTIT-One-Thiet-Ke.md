@@ -70,7 +70,7 @@
 | D1 | Đăng ký liên cơ sở (Home/Host) | ✅ Làm |
 | D2 | Master cho dữ liệu tham chiếu | ✅ **Database `PTITONE_MASTER` riêng biệt, đặt trên hạ tầng SRV-HCM** — Master là một *vai trò*, không phải một cơ sở (xem C0) |
 | **D14** | **Tách Master khỏi CSDL vận hành** | ✅ **Có.** `PTITONE_MASTER` là Publisher; cả ba CSDL vận hành (`PTITONE_HCM`, `PTITONE_HN`, `PTITONE_DN`) đều là Subscriber → topology **đối xứng hoàn toàn** |
-| **D15** | **Master colocate hay chạy máy riêng** | ⏳ **Quyết ở tuần 3 theo số máy thật.** 3 máy → colocate trên SRV-HCM · 4 máy → nút `SRV-MASTER` riêng. **Kiến trúc logic không đổi trong cả hai trường hợp** (xem C0) |
+| **D15** | **Master colocate hay chạy máy riêng** | ✅ **Chốt 09/10/2026: 4 máy → `SRV-MASTER` là nút RIÊNG.** Đổi `MASTER` trong `db/config.ps1`. **Kiến trúc logic không đổi** (xem C0) |
 | D3 | Chủ sở hữu `DangKyHocPhan` | ✅ **Host Campus** (cơ sở mở lớp) |
 | **D4** | **Distributed transaction / 2PC** | ✅ **BẮT BUỘC có một luồng** — đặt tại **chuyển cơ sở sinh viên** (D8). Không đặt vào đăng ký học phần vì đó là đường nóng có tranh chấp |
 | **D17** | **Xét duyệt đăng ký liên cơ sở** | ✅ **Tự động theo điều kiện**, không có bước cán bộ duyệt thủ công. Bước duyệt người không thêm khái niệm CSDLPT nào, chỉ làm demo mất 2 ngày thay vì 2 giây. ⚠️ UI ghi **"Đang xử lý"**, không ghi "Chờ duyệt" |
@@ -84,7 +84,7 @@
 | D9 | VPN | ✅ **Radmin** (bám tài liệu GV); Tailscale là dự phòng |
 | D10 | Kiểu instance SQL Server | ⚠️ Quyết cùng D12 — 2 site thì default instance; ≥3 site trên ít máy thì named instance |
 | D11 | `READ_COMMITTED_SNAPSHOT` | ✅ Bật |
-| **D12** | **Số cơ sở** | ✅ **Thiết kế cho N · triển khai 3 (HCM · HN · ĐN) · dự phòng 2.** Chốt cuối tuần 1 sau spike |
+| **D12** | **Số cơ sở** | ✅ **Chốt 09/10/2026: triển khai 3 cơ sở (HCM · HN · ĐN) + Master riêng = 4 nút.** Thiết kế vẫn viết cho N; dự phòng 2 nếu spike hỏng |
 | D13 | Phân quyền ở tầng CSDL | ✅ **Trigger = toàn vẹn theo site · Database role = quyền theo vai trò · Ứng dụng = quyền theo dòng** |
 | — | Phân mảnh dọc / hỗn hợp | ✅ **Không làm.** Đề bài chỉ liệt kê ngang, dẫn xuất, nhân bản. Có phân tích bác bỏ tại G6 |
 | — | Tính sẵn sàng cho dữ liệu liên cơ sở | ✅ **Local projection (read model)** ở tầng ứng dụng, không dùng publication chiều ngược |
@@ -2379,6 +2379,13 @@ Cố tình đảo thứ tự khóa ở một luồng để tạo deadlock, bắt
 ---
 
 # PHẦN H — LỘ TRÌNH 8 TUẦN
+
+> ⚠️ **Lộ trình dưới đây viết theo thứ tự CŨ** — hạ tầng trước, ứng dụng sau.
+> Nhóm đã đảo thứ tự đó (**D20**, 24/09/2026): Phần 1 làm ứng dụng trên một
+> database tập trung và **đã xong**, tức tuần 5–6 ở đây không còn phải làm.
+> Thứ tự thực thi hiện hành nằm ở [kế hoạch Phần 2](PTIT-One-Ke-Hoach-Phan-2.md).
+> Giữ nguyên mục này vì nó vẫn là bản ghi những **hạng mục** phải có.
+
 
 ```
 TUẦN 1  ── Phân tích + Cổng chặn kỹ thuật
