@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { ApiError } from '@/shared/api'
-import { downloadCsv } from '@/shared/lib'
+import { downloadCsv, useAsyncData } from '@/shared/lib'
 import { Dialog, Icon, Select, Skeleton, SkeletonRows } from '@/shared/ui'
 
 import * as api from '../api/directoryApi'
-import { CAMPUSES } from '../data/demo'
 import type {
   AccountSummary,
   ProvisionResult,
@@ -71,6 +70,9 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const [emailMoi, setEmailMoi] = useState('')
+  /* Lấy từ API, không dùng hằng số: ô lọc liệt kê cơ sở không có thật thì
+     người dùng chọn xong chỉ thấy bảng rỗng mà không hiểu vì sao. */
+  const campuses = useAsyncData(api.fetchCampuses)
 
   const reload = useCallback(async () => {
     setAccounts(
@@ -228,7 +230,7 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
           value={maCoSo}
           options={[
             { value: ALL, label: 'Mọi cơ sở' },
-            ...CAMPUSES.map((c) => ({ value: c.maCoSo, label: c.tenCoSo })),
+            ...(campuses.data ?? []).map((c) => ({ value: c.maCoSo, label: c.tenCoSo })),
           ]}
           onChange={setMaCoSo}
         />

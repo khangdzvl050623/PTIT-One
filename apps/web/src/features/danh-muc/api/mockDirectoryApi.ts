@@ -5,10 +5,13 @@ import type {
   AccountEmailState,
   AccountSummary,
   ActivationCode,
+  Campus,
   CreateStudentInput,
   CreateTeacherInput,
+  Faculty,
   LoaiNguoiDung,
   ProvisionResult,
+  StudyProgram,
   TrangThaiTaiKhoan,
 } from '../types'
 
@@ -206,6 +209,23 @@ export async function forcePasswordReset(tenDangNhap: string): Promise<Activatio
   )
   save(state)
   return maKichHoat(tenDangNhap, state.emails[tenDangNhap] ?? null)
+}
+
+/* --- Danh mục cho ô chọn -------------------------------------------------- */
+
+export async function fetchFaculties(): Promise<readonly Faculty[]> {
+  await delay()
+  return FACULTIES
+}
+
+export async function fetchPrograms(): Promise<readonly StudyProgram[]> {
+  await delay()
+  return PROGRAMS
+}
+
+export async function fetchCampuses(): Promise<readonly Campus[]> {
+  await delay()
+  return CAMPUSES
 }
 
 /* --- Cấp hồ sơ ------------------------------------------------------------ */

@@ -4,11 +4,14 @@ import type {
   AccountEmailState,
   AccountSummary,
   ActivationCode,
+  Campus,
   CreateStudentInput,
   CreateTeacherInput,
+  Faculty,
   LoaiNguoiDung,
   ProvisionResult,
   StudentProfile,
+  StudyProgram,
   Teacher,
   TrangThaiTaiKhoan,
 } from '../types'
@@ -80,6 +83,26 @@ export function forcePasswordReset(tenDangNhap: string): Promise<ActivationCode>
     `/api/accounts/${encodeURIComponent(tenDangNhap)}/password-reset`,
     { method: 'POST' },
   )
+}
+
+/* --- Danh mục cho ô chọn -------------------------------------------------
+ *
+ * Phải gọi API, KHÔNG được viết cứng: mã trong dữ liệu mẫu đã lệch hẳn khỏi
+ * database thật (`CNTT2` vs `CNTT`, `CNTT-2022` vs `CN-CNTT-2022`). Danh sách
+ * cứng làm Admin chọn một mục trông hợp lệ rồi nhận `400 FACULTY_UNKNOWN`
+ * hoặc `400 PROGRAM_NOT_FOUND` mà không hiểu vì sao.
+ */
+
+export function fetchFaculties(): Promise<readonly Faculty[]> {
+  return apiFetch<readonly Faculty[]>('/api/faculties')
+}
+
+export function fetchPrograms(): Promise<readonly StudyProgram[]> {
+  return apiFetch<readonly StudyProgram[]>('/api/programs')
+}
+
+export function fetchCampuses(): Promise<readonly Campus[]> {
+  return apiFetch<readonly Campus[]>('/api/campuses')
 }
 
 export function changeStatus(
