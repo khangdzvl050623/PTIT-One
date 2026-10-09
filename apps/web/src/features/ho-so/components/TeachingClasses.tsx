@@ -3,10 +3,17 @@ import { Link } from 'react-router-dom'
 import type { TeachingClass } from '../types'
 import styles from './StaffCards.module.scss'
 
-const TRANG_THAI_DIEM: Record<TeachingClass['trangThaiDiem'], string> = {
-  NHAP: 'Chưa công bố',
-  DA_CONG_BO: 'Đã công bố',
+const TRANG_THAI_LOP: Record<string, string> = {
+  DU_KIEN: 'Dự kiến',
+  MO: 'Đang mở',
   DA_KHOA: 'Đã khoá',
+  DA_HUY: 'Đã huỷ',
+}
+
+const HINH_THUC: Record<string, string> = {
+  TRUC_TIEP: 'Trực tiếp',
+  TRUC_TUYEN: 'Trực tuyến',
+  KET_HOP: 'Kết hợp',
 }
 
 export interface TeachingClassesProps {
@@ -16,7 +23,15 @@ export interface TeachingClassesProps {
   gradeHref: string
 }
 
-/** Lớp GV phụ trách: sĩ số, lịch và trạng thái bảng điểm. */
+/**
+ * Lớp GV phụ trách: sĩ số, hình thức học và trạng thái lớp.
+ *
+ * Hiện **trạng thái lớp**, không phải trạng thái bảng điểm:
+ * `GET /api/me/teaching-classes` trả `ClassSection`, không kèm bảng điểm cũng
+ * không kèm lịch. Muốn hai thứ đó thì phải gọi thêm `/grades` và
+ * `/teaching-schedule` cho từng lớp — màn "Lớp phụ trách" làm việc đó, còn ô
+ * tóm tắt này thì không đáng.
+ */
 export function TeachingClasses({ title, classes, gradeHref }: TeachingClassesProps) {
   return (
     <section className={styles.card}>
@@ -37,12 +52,12 @@ export function TeachingClasses({ title, classes, gradeHref }: TeachingClassesPr
                     {c.maLopHP} · {c.soTinChi} TC
                   </small>
                 </span>
-                <span className={`${styles.badge} ${styles[c.trangThaiDiem]}`}>
-                  {TRANG_THAI_DIEM[c.trangThaiDiem]}
+                <span className={`${styles.badge} ${styles[c.trangThai]}`}>
+                  {TRANG_THAI_LOP[c.trangThai] ?? c.trangThai}
                 </span>
               </div>
               <div className={styles.classMeta}>
-                <span>{c.lich}</span>
+                <span>{HINH_THUC[c.hinhThucHoc] ?? c.hinhThucHoc}</span>
                 <span className={styles.seats}>
                   <span
                     className={styles.meter}

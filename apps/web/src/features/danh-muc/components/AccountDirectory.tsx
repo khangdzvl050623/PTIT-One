@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { ApiError } from '@/shared/api'
-import { downloadCsv } from '@/shared/lib'
+import { downloadCsv, useAsyncData } from '@/shared/lib'
 import { Dialog, Icon, Select, Skeleton, SkeletonRows } from '@/shared/ui'
 
 import * as api from '../api/directoryApi'
-import { CAMPUSES } from '../data/demo'
 import type {
   AccountSummary,
   ProvisionResult,
@@ -35,6 +34,8 @@ type Modal =
   | { kind: 'result'; result: ProvisionResult; tieuDe: string }
   | { kind: 'status'; account: AccountSummary; toi: TrangThaiTaiKhoan }
   | { kind: 'reissue'; account: AccountSummary }
+  | { kind: 'email'; account: AccountSummary }
+  | { kind: 'reset'; account: AccountSummary }
 
 function fold(s: string): string {
   return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/đ/gi, 'd').toLowerCase()
@@ -68,6 +69,10 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
   const [modal, setModal] = useState<Modal | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const [emailMoi, setEmailMoi] = useState('')
+  /* Lấy từ API, không dùng hằng số: ô lọc liệt kê cơ sở không có thật thì
+     người dùng chọn xong chỉ thấy bảng rỗng mà không hiểu vì sao. */
+  const campuses = useAsyncData(api.fetchCampuses)
 
   const reload = useCallback(async () => {
     setAccounts(
@@ -149,6 +154,66 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
       .finally(() => setBusy(false))
   }
 
+  function confirmEmail() {
+    if (modal?.kind !== 'email') return
+    const { account } = modal
+    setBusy(true)
+    setNotice(null)
+    void api
+      .changeAccountEmail(account.tenDangNhap, emailMoi)
+      .then(
+        (saved) => {
+          setNotice({
+            tone: 'success',
+            text: `Đã đặt email ${saved.email} cho ${account.tenDangNhap}. Chưa xác minh — `
+              + 'sẽ tự xác minh khi người dùng dùng được mã gửi tới đó.',
+          })
+          setModal(null)
+          setEmailMoi('')
+        },
+        (cause: unknown) => {
+          setNotice({
+            tone: 'error',
+            text: cause instanceof ApiError ? cause.message : 'Không đổi được email.',
+          })
+        },
+      )
+      .finally(() => setBusy(false))
+  }
+
+  function confirmReset() {
+    if (modal?.kind !== 'reset') return
+    const { account } = modal
+    setBusy(true)
+    setNotice(null)
+    void api
+      .forcePasswordReset(account.tenDangNhap)
+      .then(
+        (code) => {
+          setModal({
+            kind: 'result',
+            tieuDe: `Cấp lại mật khẩu — ${account.tenDangNhap}`,
+            result: {
+              ma: account.tenDangNhap,
+              hoTen: account.maThucThe ?? account.tenDangNhap,
+              loai: account.loaiNguoiDung === 'GIANG_VIEN' ? 'GIANG_VIEN' : 'SINH_VIEN',
+              kichHoat: code,
+              matKhauBanDau: null,
+            },
+          })
+          void reload()
+        },
+        (cause: unknown) => {
+          setNotice({
+            tone: 'error',
+            text: cause instanceof ApiError ? cause.message : 'Không cấp lại được mật khẩu.',
+          })
+          setModal(null)
+        },
+      )
+      .finally(() => setBusy(false))
+  }
+
   /* Đang tải thì vẫn dựng nguyên bộ khung: thanh lọc dùng được ngay, chỗ bảng
      là khung xương. Trả về một dòng "Đang tải…" sẽ làm cả màn nhảy một nhịp
      khi dữ liệu về. */
@@ -165,7 +230,7 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
           value={maCoSo}
           options={[
             { value: ALL, label: 'Mọi cơ sở' },
-            ...CAMPUSES.map((c) => ({ value: c.maCoSo, label: c.tenCoSo })),
+            ...(campuses.data ?? []).map((c) => ({ value: c.maCoSo, label: c.tenCoSo })),
           ]}
           onChange={setMaCoSo}
         />
@@ -266,7 +331,18 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
                         <span className={styles.muted}>Không quản trị được</span>
                       ) : (
                         <>
-                          {a.daKichHoat ? null : (
+                          {a.daKichHoat ? (
+                            /* Đã kích hoạt thì không cấp lại mã được nữa —
+                               lối thoát khi quên mật khẩu là cấp lại mật khẩu. */
+                            <button
+                              type="button"
+                              className={styles.ghost}
+                              disabled={busy}
+                              onClick={() => setModal({ kind: 'reset', account: a })}
+                            >
+                              Cấp lại mật khẩu
+                            </button>
+                          ) : (
                             <button
                               type="button"
                               className={styles.ghost}
@@ -276,6 +352,17 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
                               Cấp lại mã
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className={styles.ghost}
+                            disabled={busy}
+                            onClick={() => {
+                              setEmailMoi('')
+                              setModal({ kind: 'email', account: a })
+                            }}
+                          >
+                            Đổi email
+                          </button>
                           <button
                             type="button"
                             className={khoa ? styles.ghost : styles.danger}
@@ -393,6 +480,56 @@ export function AccountDirectory({ demo = false, reloadKey = 0 }: AccountDirecto
           </p>
         </ConfirmDialog>
       ) : null}
+
+      {modal?.kind === 'email' ? (
+        <ConfirmDialog
+          title={`Đổi email — ${modal.account.tenDangNhap}`}
+          confirmLabel="Lưu email"
+          busy={busy}
+          confirmDisabled={emailMoi.trim().length === 0}
+          onClose={() => setModal(null)}
+          onConfirm={confirmEmail}
+        >
+          <p>
+            Dùng khi người dùng <b>mất quyền vào hòm thư cũ</b> nên không tự đổi được — tự đổi cần
+            mật khẩu hiện tại.
+          </p>
+          <label className={styles.dialogField}>
+            Email mới
+            <input
+              type="email"
+              value={emailMoi}
+              onChange={(event) => setEmailMoi(event.target.value)}
+              placeholder="vidu@gmail.com"
+              maxLength={254}
+              disabled={busy}
+            />
+          </label>
+          <p className={styles.hintBox}>
+            Email mới ở trạng thái <b>chưa xác minh</b>, và sẽ tự thành đã xác minh khi người dùng
+            dùng được mã gửi tới đó. Thao tác này <b>không</b> đụng tới mật khẩu.
+          </p>
+        </ConfirmDialog>
+      ) : null}
+
+      {modal?.kind === 'reset' ? (
+        <ConfirmDialog
+          title={`Cấp lại mật khẩu — ${modal.account.tenDangNhap}`}
+          confirmLabel="Cấp lại mật khẩu"
+          busy={busy}
+          onClose={() => setModal(null)}
+          onConfirm={confirmReset}
+        >
+          <p>
+            Mọi phiên bị thu hồi và <b>mật khẩu hiện tại bị xoá</b>. Tài khoản{' '}
+            <b>không đăng nhập được</b> cho tới khi chủ tài khoản tự đặt mật khẩu mới bằng mã này.
+          </p>
+          <p className={styles.hintBox}>
+            Bạn <b>không</b> đặt mật khẩu hộ. Tài khoản có email thì mã chỉ đi qua thư và bạn không
+            thấy mã; không có email thì mã hiện <b>một lần</b> để đọc cho người dùng qua điện thoại.
+          </p>
+        </ConfirmDialog>
+      ) : null}
     </div>
   )
 }
@@ -414,6 +551,13 @@ function ConfirmDialog(props: {
   extra?: ReactNode
   onClose: () => void
   onConfirm: () => void
+  /**
+   * Khoá riêng nút xác nhận khi biểu mẫu chưa hợp lệ.
+   *
+   * Tách khỏi `busy`: `busy` còn đổi nhãn thành "Đang xử lý…" và khoá cả nút
+   * Huỷ, nên dùng nó để chặn một ô trống sẽ khiến hộp thoại không đóng được.
+   */
+  confirmDisabled?: boolean
   children: ReactNode
 }) {
   return (
@@ -432,7 +576,7 @@ function ConfirmDialog(props: {
             type="button"
             className={props.danger ? styles.dangerSolid : styles.primary}
             onClick={props.onConfirm}
-            disabled={props.busy}
+            disabled={props.busy || props.confirmDisabled}
           >
             {props.busy ? 'Đang xử lý…' : props.confirmLabel}
           </button>

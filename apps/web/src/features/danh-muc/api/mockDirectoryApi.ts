@@ -2,12 +2,16 @@ import { ApiError } from '@/shared/api'
 
 import { CAMPUSES, DEMO_ACCOUNTS, EMAILS, FACULTIES, PROGRAMS } from '../data/demo'
 import type {
+  AccountEmailState,
   AccountSummary,
   ActivationCode,
+  Campus,
   CreateStudentInput,
   CreateTeacherInput,
+  Faculty,
   LoaiNguoiDung,
   ProvisionResult,
+  StudyProgram,
   TrangThaiTaiKhoan,
 } from '../types'
 
@@ -39,17 +43,21 @@ const HAN_MA_MS = 7 * 24 * 60 * 60 * 1000
 
 interface State {
   accounts: AccountSummary[]
+  /** Email đã lưu theo tài khoản. Admin đổi được nên không thể là hằng số. */
+  emails: Record<string, string>
 }
 
 function initial(): State {
-  return { accounts: DEMO_ACCOUNTS.map((a) => ({ ...a })) }
+  return { accounts: DEMO_ACCOUNTS.map((a) => ({ ...a })), emails: { ...EMAILS } }
 }
 
 /* localStorage có thể ném lỗi ở chế độ riêng tư — khi đó mỗi lần F5 là một phiên mới. */
 function load(): State {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as State) : initial()
+    /* Hợp nhất với initial(): bản lưu từ trước khi thêm `emails` sẽ thiếu khoá
+       đó, và `state.emails[...]` sẽ ném. */
+    return raw ? { ...initial(), ...(JSON.parse(raw) as Partial<State>) } : initial()
   } catch {
     return initial()
   }
@@ -125,7 +133,7 @@ export async function reissueActivationCode(
   }
   /* Không có email đã lưu thì dù xin gửi thư vẫn ra mã trao tay — gửi vào hư
      không rồi báo "đã gửi" là cách chắc chắn làm Admin tưởng xong việc. */
-  return maKichHoat(tenDangNhap, guiEmail ? (EMAILS[tenDangNhap] ?? null) : null)
+  return maKichHoat(tenDangNhap, guiEmail ? (state.emails[tenDangNhap] ?? null) : null)
 }
 
 /**
@@ -151,6 +159,73 @@ export async function changeStatus(
   state.accounts = state.accounts.map((a) => (a.tenDangNhap === tenDangNhap ? next : a))
   save(state)
   return next
+}
+
+/**
+ * `PUT /api/accounts/{tenDangNhap}/email` — Admin đặt email mới cho người mất
+ * quyền vào hòm thư cũ.
+ *
+ * Luôn trả `daXacMinh: false`: admin không xác minh hộ được. Xem ghi chú ở
+ * `CredentialService.adminChangeEmail`.
+ */
+export async function changeAccountEmail(
+  tenDangNhap: string,
+  email: string,
+): Promise<AccountEmailState> {
+  await delay()
+  const state = load()
+  requireAccount(state, tenDangNhap)
+  const normalized = email.trim().toLowerCase()
+  state.emails = { ...state.emails, [tenDangNhap]: normalized }
+  save(state)
+  return { email: normalized, daXacMinh: false }
+}
+
+/**
+ * `POST /api/accounts/{tenDangNhap}/password-reset`.
+ *
+ * Giữ hai hệ quả dễ bị quên khi dựng giao diện: tài khoản quay về **chưa kích
+ * hoạt** (không đăng nhập được cho tới khi đặt mật khẩu mới), và mã chỉ hiện
+ * cho Admin khi tài khoản KHÔNG có email.
+ */
+export async function forcePasswordReset(tenDangNhap: string): Promise<ActivationCode> {
+  await delay()
+  const state = load()
+  const account = requireAccount(state, tenDangNhap)
+  if (account.loaiNguoiDung === 'ADMIN_MASTER') {
+    throw new ApiError(409, {
+      code: 'ACCOUNT_NOT_MANAGEABLE',
+      message: 'Tài khoản Admin Master không cấp lại mật khẩu qua đây.',
+    })
+  }
+  if (account.trangThai !== 'HOAT_DONG') {
+    throw new ApiError(409, {
+      code: 'ACCOUNT_NOT_MANAGEABLE',
+      message: `Tài khoản ${tenDangNhap} đang ${account.trangThai}. Mở lại trước khi cấp lại mật khẩu.`,
+    })
+  }
+  state.accounts = state.accounts.map((a) =>
+    a.tenDangNhap === tenDangNhap ? { ...a, daKichHoat: false } : a,
+  )
+  save(state)
+  return maKichHoat(tenDangNhap, state.emails[tenDangNhap] ?? null)
+}
+
+/* --- Danh mục cho ô chọn -------------------------------------------------- */
+
+export async function fetchFaculties(): Promise<readonly Faculty[]> {
+  await delay()
+  return FACULTIES
+}
+
+export async function fetchPrograms(): Promise<readonly StudyProgram[]> {
+  await delay()
+  return PROGRAMS
+}
+
+export async function fetchCampuses(): Promise<readonly Campus[]> {
+  await delay()
+  return CAMPUSES
 }
 
 /* --- Cấp hồ sơ ------------------------------------------------------------ */

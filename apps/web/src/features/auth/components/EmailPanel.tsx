@@ -11,17 +11,24 @@ import { useAuth } from '../model/AuthContext'
 import type { AccountEmail } from '../model/types'
 import styles from './AuthForms.module.scss'
 
-const NETWORK = 'Không kết nối được máy chủ. Vui lòng thử lại.'
+const NETWORK = 'Không kết nối được máy chủ. Thử lại sau.'
 
 /**
  * Thêm email cá nhân và xác minh bằng mã 6 số.
  *
- * Đây là màn **tự phục vụ** thay cho việc Admin gõ hộ email lúc cấp hồ sơ: chỉ
- * người đang đăng nhập mới đặt được email của mình, và mã chỉ tới đúng địa chỉ
- * vừa nhập — nên xác minh được là đã chứng minh sở hữu hòm thư đó.
+ * Màn này có **ba trạng thái**, và việc chính của mỗi trạng thái khác nhau:
  *
- * Xác minh xong mới có hai thứ: tự khôi phục mật khẩu khi quên, và sửa được
- * phần lý lịch trong hồ sơ.
+ * | Trạng thái | Việc chính | Việc phụ |
+ * |---|---|---|
+ * | chưa có email | thêm email | — |
+ * | có email, chưa xác minh | **nhập mã** | dùng email khác |
+ * | đã xác minh | đổi email | — |
+ *
+ * Bảng này là lý do component dài hơn một biểu mẫu thường. Bản đầu tiên đặt
+ * "Đổi email" lên trên trong mọi trạng thái, nên người đang có email chờ xác
+ * minh — ví dụ vừa được Admin đặt hộ — nhìn thấy dòng "Email hiện tại: X" rồi
+ * ngay dưới là một ô email trống đòi nhập lại. Không ai đoán được rằng việc
+ * cần làm là bấm "Gửi lại mã" ở tận cuối trang.
  */
 export function EmailPanel() {
   const { reloadUser } = useAuth()
@@ -30,11 +37,13 @@ export function EmailPanel() {
   const [diaChi, setDiaChi] = useState('')
   const [matKhau, setMatKhau] = useState('')
   const [ma, setMa] = useState('')
+  const [doiEmail, setDoiEmail] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   const hienTai = email.data
+  const choXacMinh = Boolean(hienTai?.email) && !hienTai?.daXacMinh
 
   async function run(action: () => Promise<void>) {
     setPending(true)
@@ -52,10 +61,12 @@ export function EmailPanel() {
   function handleChangeEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     void run(async () => {
-      await changeEmail(diaChi.trim(), matKhau)
+      const moi = diaChi.trim()
+      await changeEmail(moi, matKhau)
       setMatKhau('')
       setDiaChi('')
-      setNotice(`Đã gửi mã 6 số tới ${diaChi.trim()}. Mã có hạn 10 phút.`)
+      setDoiEmail(false)
+      setNotice(`Đã gửi mã 6 số tới ${moi}. Mã có hạn 10 phút.`)
       email.reload()
       /* Đổi email là MẤT trạng thái đã xác minh — phiên phải biết ngay, nếu
          không nút sửa hồ sơ vẫn mở trong khi server đã từ chối. */
@@ -77,12 +88,67 @@ export function EmailPanel() {
   function handleResend() {
     void run(async () => {
       await resendEmailCode()
-      setNotice('Đã gửi lại mã. Mã trước đó hết hiệu lực.')
+      setNotice(`Đã gửi lại mã tới ${hienTai?.email}. Mã trước đó hết hiệu lực.`)
     })
   }
 
   if (email.loading) return <p>Đang tải thông tin email…</p>
   if (email.error) return <p role="alert">{email.error}</p>
+
+  /** Ô nhập email + mật khẩu hiện tại. Dùng ở cả "thêm" lẫn "đổi". */
+  const bieuMauEmail = (
+    <form className={styles.form} onSubmit={handleChangeEmail}>
+      <label className={styles.field}>
+        Email
+        <input
+          className={styles.input}
+          type="email"
+          value={diaChi}
+          onChange={(event) => setDiaChi(event.target.value)}
+          placeholder="vidu@gmail.com"
+          autoComplete="email"
+          maxLength={254}
+          disabled={pending}
+          required
+        />
+      </label>
+
+      <label className={styles.field}>
+        Mật khẩu hiện tại
+        <input
+          className={styles.input}
+          type="password"
+          value={matKhau}
+          onChange={(event) => setMatKhau(event.target.value)}
+          autoComplete="current-password"
+          disabled={pending}
+          required
+        />
+      </label>
+
+      <p className={styles.hint}>
+        Cần mật khẩu hiện tại để người khác mượn máy không đổi được email khôi phục.
+        {hienTai?.daXacMinh ? ' Đổi email thì phải xác minh lại từ đầu.' : ''}
+      </p>
+
+      <div className={styles.actions}>
+        <button className={styles.primary} type="submit" disabled={pending}>
+          <Icon name="bell" size="15px" />
+          {pending ? 'Đang gửi…' : 'Lưu và gửi mã'}
+        </button>
+        {choXacMinh ? (
+          <button
+            className={styles.ghost}
+            type="button"
+            onClick={() => setDoiEmail(false)}
+            disabled={pending}
+          >
+            Thôi, quay lại
+          </button>
+        ) : null}
+      </div>
+    </form>
+  )
 
   return (
     <>
@@ -103,94 +169,75 @@ export function EmailPanel() {
         </p>
       )}
 
-      <form className={styles.form} onSubmit={handleChangeEmail}>
-        <p className={styles.stepTitle}>
-          {hienTai?.email ? 'Đổi email' : 'Thêm email cá nhân'}
-        </p>
+      {/* Chờ xác minh: việc chính là NHẬP MÃ, không phải đổi email. */}
+      {choXacMinh && !doiEmail ? (
+        <>
+          <form className={styles.form} onSubmit={handleVerify}>
+            <p className={styles.stepTitle}>Xác minh {hienTai?.email}</p>
+            <p className={styles.hint}>
+              Mã 6 số đã được gửi tới địa chỉ này. Không thấy thư thì xem hộp spam, hoặc
+              bấm <b>Gửi lại mã</b>.
+            </p>
 
-        <label className={styles.field}>
-          Email
-          <input
-            className={styles.input}
-            type="email"
-            value={diaChi}
-            onChange={(event) => setDiaChi(event.target.value)}
-            placeholder="vidu@gmail.com"
-            autoComplete="email"
-            maxLength={254}
-            disabled={pending}
-            required
-          />
-        </label>
+            <label className={styles.field}>
+              Mã xác minh
+              <input
+                className={`${styles.input} ${styles.code}`}
+                value={ma}
+                onChange={(event) => setMa(event.target.value)}
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                autoComplete="one-time-code"
+                placeholder="000000"
+                disabled={pending}
+                required
+              />
+            </label>
 
-        <label className={styles.field}>
-          Mật khẩu hiện tại
-          <input
-            className={styles.input}
-            type="password"
-            value={matKhau}
-            onChange={(event) => setMatKhau(event.target.value)}
-            autoComplete="current-password"
-            disabled={pending}
-            required
-          />
-        </label>
+            <div className={styles.actions}>
+              <button className={styles.primary} type="submit" disabled={pending}>
+                <Icon name="check" size="15px" />
+                {pending ? 'Đang xác minh…' : 'Xác minh'}
+              </button>
+              <button
+                className={styles.ghost}
+                type="button"
+                onClick={handleResend}
+                disabled={pending}
+              >
+                Gửi lại mã
+              </button>
+            </div>
 
-        {/* Nói trước hệ quả: người dùng đang có email đã xác minh mà đổi sẽ mất
-            trạng thái đó, và đó là lúc dễ tự khoá mình ra ngoài nhất. */}
-        <p className={styles.hint}>
-          Cần mật khẩu hiện tại để người khác mượn máy không đổi được email khôi phục.
-          {hienTai?.daXacMinh ? ' Đổi email thì phải xác minh lại từ đầu.' : ''}
-        </p>
+            {API_MODE === 'mock' ? (
+              <p className={styles.hint}>Chế độ demo: mã xác minh luôn là {MA_DEMO}.</p>
+            ) : null}
+          </form>
 
-        <div className={styles.actions}>
-          <button className={styles.primary} type="submit" disabled={pending}>
-            <Icon name="bell" size="15px" />
-            {pending ? 'Đang gửi…' : 'Lưu và gửi mã'}
-          </button>
-        </div>
-      </form>
-
-      {hienTai?.email && !hienTai.daXacMinh ? (
-        <form className={`${styles.form} ${styles.step}`} onSubmit={handleVerify}>
-          <p className={styles.stepTitle}>Nhập mã xác minh</p>
-
-          <label className={styles.field}>
-            Mã 6 số trong thư
-            <input
-              className={`${styles.input} ${styles.code}`}
-              value={ma}
-              onChange={(event) => setMa(event.target.value)}
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              autoComplete="one-time-code"
-              placeholder="000000"
-              disabled={pending}
-              required
-            />
-          </label>
-
-          <div className={styles.actions}>
-            <button className={styles.primary} type="submit" disabled={pending}>
-              <Icon name="check" size="15px" />
-              {pending ? 'Đang xác minh…' : 'Xác minh'}
-            </button>
-            <button
-              className={styles.ghost}
-              type="button"
-              onClick={handleResend}
-              disabled={pending}
-            >
-              Gửi lại mã
-            </button>
+          {/* Lối phụ: địa chỉ đang chờ là sai (gõ nhầm, hoặc Admin đặt hộ nhầm). */}
+          <div className={styles.step}>
+            <p className={styles.hint}>Địa chỉ trên không phải của bạn?</p>
+            <div className={styles.actions}>
+              <button
+                className={styles.ghost}
+                type="button"
+                onClick={() => setDoiEmail(true)}
+                disabled={pending}
+              >
+                Dùng email khác
+              </button>
+            </div>
           </div>
-
-          {API_MODE === 'mock' ? (
-            <p className={styles.hint}>Chế độ demo: mã xác minh luôn là {MA_DEMO}.</p>
-          ) : null}
-        </form>
-      ) : null}
+        </>
+      ) : (
+        <>
+          <p className={styles.stepTitle}>
+            {hienTai?.email ? 'Đổi email' : 'Thêm email cá nhân'}
+          </p>
+          {bieuMauEmail}
+        </>
+      )}
 
       {notice ? (
         <p className={`${styles.message} ${styles.success}`} role="status">

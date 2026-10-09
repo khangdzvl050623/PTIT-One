@@ -9,6 +9,8 @@ import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.Role;
 import vn.ptit.one.auth.service.AccountService;
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.shared.media.CloudinaryUploader;
+import vn.ptit.one.shared.media.ImageKind;
 import vn.ptit.one.student.dto.UpdateMyProfileRequest;
 import vn.ptit.one.student.model.StudentDetail;
 import vn.ptit.one.student.repository.StudentRepository;
@@ -26,10 +28,20 @@ public class MyProfileService {
 
     private final StudentRepository students;
     private final AccountService accounts;
+    private final CloudinaryUploader cloudinary;
 
-    public MyProfileService(StudentRepository students, AccountService accounts) {
+    public MyProfileService(StudentRepository students, AccountService accounts,
+            CloudinaryUploader cloudinary) {
         this.students = students;
         this.accounts = accounts;
+        this.cloudinary = cloudinary;
+    }
+
+    private void requireVerifiedEmail(AuthenticatedUser user) {
+        if (!accounts.emailVerified(user.username())) {
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_NOT_VERIFIED",
+                    "Cần xác minh email trước khi sửa hồ sơ. Vào Tài khoản > Email để xác minh.");
+        }
     }
 
     public StudentDetail myProfile(AuthenticatedUser user) {
@@ -54,20 +66,71 @@ public class MyProfileService {
      */
     @Transactional
     public StudentDetail updateMyProfile(AuthenticatedUser user, UpdateMyProfileRequest body) {
-        String maSinhVien = requireStudent(user);
-
-        if (!accounts.emailVerified(user.username())) {
-            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_NOT_VERIFIED",
-                    "Cần xác minh email trước khi sửa hồ sơ. Vào Tài khoản > Email để xác minh.");
-        }
+        String maSinhVien = requireVerifiedStudent(user);
 
         if (students.updateProfile(maSinhVien, trim(body.gioiTinh()), trim(body.dienThoai()),
                 trim(body.soCCCD()), trim(body.emailCaNhan()), trim(body.noiSinh()),
-                trim(body.danToc()), trim(body.tonGiao()), trim(body.hoKhau()),
-                trim(body.anhDaiDien())) != 1) {
+                trim(body.danToc()), trim(body.tonGiao()), trim(body.hoKhau())) != 1) {
             throw notFound(maSinhVien);
         }
         return students.findDetail(maSinhVien).orElseThrow(() -> notFound(maSinhVien));
+    }
+
+    /**
+     * Thay ảnh đại diện bằng file người dùng chọn.
+     *
+     * <p>Thứ tự có chủ ý: kiểm xong rồi **đẩy lên Cloudinary trước**, ghi DB
+     * sau. Ngược lại thì DB có thể trỏ tới ảnh chưa bao giờ tồn tại. Đổi lại,
+     * nếu ghi DB hỏng thì có một ảnh thừa trên Cloudinary — nhưng ảnh đó mang
+     * đúng {@code public_id} của sinh viên này nên lần tải sau ghi đè lên nó,
+     * không tích rác.
+     *
+     * <p>Định dạng nhận theo **byte đầu file**, không theo {@code Content-Type}
+     * hay đuôi tên: cả hai thứ đó do client đặt.
+     */
+    @Transactional
+    public StudentDetail updateAvatar(AuthenticatedUser user, byte[] bytes) {
+        String maSinhVien = requireVerifiedStudent(user);
+        if (bytes == null || bytes.length == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Chưa chọn ảnh.");
+        }
+        ImageKind kind = ImageKind.of(bytes);
+        if (kind == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "IMAGE_FORMAT_INVALID",
+                    "Chỉ nhận ảnh JPEG, PNG, GIF, WEBP hoặc BMP.");
+        }
+        if (!students.exists(maSinhVien)) {
+            throw notFound(maSinhVien);
+        }
+
+        String url = cloudinary.upload(maSinhVien, bytes, kind);
+        if (students.updateAvatar(maSinhVien, url) != 1) {
+            throw notFound(maSinhVien);
+        }
+        return students.findDetail(maSinhVien).orElseThrow(() -> notFound(maSinhVien));
+    }
+
+    /**
+     * Xoá ảnh đại diện.
+     *
+     * <p>Xoá DB trước, Cloudinary sau: hỏng ở bước sau thì chỉ còn một file
+     * không ai trỏ tới, còn làm ngược lại sẽ để hồ sơ trỏ vào ảnh đã mất.
+     */
+    @Transactional
+    public StudentDetail removeAvatar(AuthenticatedUser user) {
+        String maSinhVien = requireVerifiedStudent(user);
+        if (students.updateAvatar(maSinhVien, null) != 1) {
+            throw notFound(maSinhVien);
+        }
+        cloudinary.delete(maSinhVien);
+        return students.findDetail(maSinhVien).orElseThrow(() -> notFound(maSinhVien));
+    }
+
+    /** Hai cổng của mọi thao tác tự sửa hồ sơ: đúng vai sinh viên, và email đã xác minh. */
+    private String requireVerifiedStudent(AuthenticatedUser user) {
+        String maSinhVien = requireStudent(user);
+        requireVerifiedEmail(user);
+        return maSinhVien;
     }
 
     /** Chuỗi rỗng hoặc toàn khoảng trắng = bỏ trống, lưu NULL chứ không lưu ''. */

@@ -4,6 +4,7 @@ import type {
   CourseResult,
   StudentProfile,
   StudentSummary,
+  TeacherProfile,
   TermResults,
   UpdateMyProfileInput,
 } from '../types'
@@ -30,8 +31,64 @@ export function updateMyProfile(input: UpdateMyProfileInput): Promise<StudentPro
   return apiFetch<StudentProfile>('/api/me/profile', { method: 'PUT', json: input })
 }
 
+/**
+ * Tải ảnh đại diện từ máy người dùng.
+ *
+ * Gửi **file thật** dạng `multipart/form-data`; server kiểm định dạng bằng byte
+ * đầu file, đẩy lên Cloudinary rồi tự ghi URL vào hồ sơ. Client không bao giờ
+ * đặt URL, nên không trỏ được ảnh sang địa chỉ bất kỳ.
+ *
+ * Không đặt `Content-Type`: trình duyệt phải tự sinh, vì nó còn phải kèm
+ * `boundary` của phần thân. Đặt tay là server không tách được các phần.
+ */
+export function uploadAvatar(file: File): Promise<StudentProfile> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiFetch<StudentProfile>('/api/me/profile/avatar', { method: 'POST', form })
+}
+
+export function removeAvatar(): Promise<StudentProfile> {
+  return apiFetch<StudentProfile>('/api/me/profile/avatar', { method: 'DELETE' })
+}
+
+// --- Giảng viên ------------------------------------------------------
+//
+// Đường riêng chứ không dùng chung `/api/me/profile`: hai vai trả hai hình
+// dạng khác nhau, gộp một đường sẽ buộc màn hình tự đoán kiểu theo vai trò.
+
+const GV = '/api/me/teacher-profile'
+
+export function fetchTeacherProfile(): Promise<TeacherProfile> {
+  return apiFetch<TeacherProfile>(GV)
+}
+
+export function updateMyTeacherProfile(input: UpdateMyProfileInput): Promise<TeacherProfile> {
+  return apiFetch<TeacherProfile>(GV, { method: 'PUT', json: input })
+}
+
+export function uploadTeacherAvatar(file: File): Promise<TeacherProfile> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiFetch<TeacherProfile>(`${GV}/avatar`, { method: 'POST', form })
+}
+
+export function removeTeacherAvatar(): Promise<TeacherProfile> {
+  return apiFetch<TeacherProfile>(`${GV}/avatar`, { method: 'DELETE' })
+}
+
 interface UnreadCount {
   soChuaDoc: number
+}
+
+/**
+ * Số thông báo chưa đọc. Dùng được cho CẢ sinh viên và giảng viên —
+ * `/api/me/notifications` mở cho hai vai đó.
+ *
+ * Tách riêng khỏi {@link fetchSummary} vì ba ô số liệu của sinh viên gộp thêm
+ * thời khoá biểu và tín chỉ, hai thứ giảng viên không có.
+ */
+export async function fetchUnreadCount(): Promise<number> {
+  return (await apiFetch<UnreadCount>('/api/me/notifications/unread-count')).soChuaDoc
 }
 
 interface TimetableResponse {

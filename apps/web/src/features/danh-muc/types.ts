@@ -136,6 +136,13 @@ export interface ProvisionResult {
   matKhauBanDau: string | null
 }
 
+/** Khớp `AccountEmail` — email của một tài khoản, sau khi Admin đặt lại. */
+export interface AccountEmailState {
+  email: string | null
+  /** Luôn `false` ngay sau khi Admin đặt: admin không xác minh hộ được. */
+  daXacMinh: boolean
+}
+
 /** Khớp `Faculty` — `GET /api/faculties`. */
 export interface Faculty {
   maKhoa: string

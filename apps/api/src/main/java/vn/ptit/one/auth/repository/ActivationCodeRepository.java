@@ -20,8 +20,9 @@ import vn.ptit.one.auth.model.ActivationCodeRecord;
 public class ActivationCodeRepository {
 
     private static final String INSERT = """
-            INSERT INTO dbo.MaKichHoat (MaKichHoat, TenDangNhap, MaHash, ThoiDiemTao, ThoiDiemHetHan, EmailNhan)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO dbo.MaKichHoat (MaKichHoat, TenDangNhap, MaHash, ThoiDiemTao, ThoiDiemHetHan,
+                                        EmailNhan, NguoiCap)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
 
     private static final String REVOKE_LIVE = """
@@ -58,11 +59,16 @@ public class ActivationCodeRepository {
         this.jdbc = jdbc;
     }
 
-    /** @param emailNhan địa chỉ nhận mã qua thư; {@code null} khi mã trao cho Admin */
+    /**
+     * @param emailNhan địa chỉ nhận mã qua thư; {@code null} khi mã trao cho Admin
+     * @param nguoiCap  tên đăng nhập của người gây ra việc cấp mã — admin với
+     *                  thao tác quản trị, chính chủ với lần tự xin gửi lại.
+     *                  {@code null} khi không xác định được. Xem `V10`.
+     */
     public void insert(UUID codeId, String username, byte[] hash, Instant createdAt, Instant expiresAt,
-            String emailNhan) {
+            String emailNhan, String nguoiCap) {
         jdbc.update(INSERT, codeId.toString(), username, hash, SqlTime.toDb(createdAt), SqlTime.toDb(expiresAt),
-                emailNhan);
+                emailNhan, nguoiCap);
     }
 
     public int revokeLive(String username, Instant now) {

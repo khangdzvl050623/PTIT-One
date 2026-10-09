@@ -10,6 +10,11 @@ import jakarta.validation.constraints.Size;
  * hay {@code trangThai}: đó là dữ liệu hành chính do Phòng Đào tạo quản, sinh
  * viên sửa được thì hồ sơ mất giá trị pháp lý.
  *
+ * <p>Cũng không có {@code anhDaiDien} (chốt 08/10/2026): ảnh đặt bằng
+ * {@code POST /api/me/avatar} và xoá bằng {@code DELETE /api/me/avatar}. Nhận
+ * URL từ client thì sinh viên trỏ ảnh đại diện sang địa chỉ bất kỳ trên
+ * internet được, và cột {@code AnhDaiDien} sẽ có hai đường ghi.
+ *
  * <p>Mọi trường đều cho {@code null} — để trống là hợp lệ. Gửi {@code null}
  * nghĩa là XOÁ giá trị cũ, vì đây là thay toàn bộ phần lý lịch chứ không vá
  * từng ô.
@@ -34,9 +39,5 @@ public record UpdateMyProfileRequest(
         @Size(max = 150, message = "Nơi sinh quá dài.") String noiSinh,
         @Size(max = 50, message = "Dân tộc quá dài.") String danToc,
         @Size(max = 50, message = "Tôn giáo quá dài.") String tonGiao,
-        @Size(max = 255, message = "Hộ khẩu quá dài.") String hoKhau,
-        /* URL ảnh trên dịch vụ ngoài (Cloudinary). Chỉ nhận https để không
-           nhúng ảnh qua kết nối không mã hoá vào trang đã chạy https. */
-        @Pattern(regexp = "\\s*|https://.+", message = "Ảnh đại diện phải là liên kết https.")
-        @Size(max = 500, message = "Liên kết ảnh quá dài.") String anhDaiDien) {
+        @Size(max = 255, message = "Hộ khẩu quá dài.") String hoKhau) {
 }

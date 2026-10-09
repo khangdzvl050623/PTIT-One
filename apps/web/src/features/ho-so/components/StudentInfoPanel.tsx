@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { Icon, Panel } from '@/shared/ui'
 
+import { removeAvatar, updateMyProfile, uploadAvatar } from '../api/profileApi'
 import type { StudentProfile } from '../types'
 import { IdPhoto } from './IdPhoto'
 import { InfoTable } from './InfoTable'
@@ -93,6 +94,9 @@ export function StudentInfoPanel({
           onClose={() => setEditing(false)}
           profile={profile}
           onSaved={onProfileSaved}
+          save={updateMyProfile}
+          upload={uploadAvatar}
+          remove={removeAvatar}
         />
       ) : null}
 

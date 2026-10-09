@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
-import { CAMPUSES, FACULTIES, PROGRAMS } from '../data/demo'
+import { useAsyncData } from '@/shared/lib'
+
+import { fetchCampuses, fetchFaculties, fetchPrograms } from '../api/directoryApi'
 import type { ProvisionResult } from '../types'
 import { StudentForm, TeacherForm } from './ProvisionForms'
 import { ProvisionResultCard } from './ProvisionResultCard'
@@ -19,10 +21,22 @@ export interface ProvisionPanelProps {
  * Hai form giữ state riêng, nên chuyển qua lại không mất những gì đang gõ dở.
  * Kết quả (mã kích hoạt hoặc mật khẩu đặt sẵn) vẫn hiện bằng hộp thoại vì đó
  * là thứ Admin phải đọc và lưu ngay, không nên để lẫn vào form.
+ *
+ * ⚠️ Ba danh mục (cơ sở, khoa, CTĐT) **lấy từ API**, không dùng hằng số trong
+ * `data/demo.ts`. Mã của dữ liệu mẫu đã lệch hẳn khỏi database thật — `CNTT2`
+ * vs `CNTT`, `CNTT-2022` vs `CN-CNTT-2022` — nên danh sách cứng làm Admin chọn
+ * một mục trông hợp lệ rồi nhận `400 FACULTY_UNKNOWN` / `400 PROGRAM_NOT_FOUND`
+ * mà không hiểu vì sao. Cùng loại lỗi với mã học kỳ viết cứng trước đây.
  */
 export function ProvisionPanel({ onCreated }: ProvisionPanelProps) {
   const [loai, setLoai] = useState<Loai>('SINH_VIEN')
   const [result, setResult] = useState<ProvisionResult | null>(null)
+  const campuses = useAsyncData(fetchCampuses)
+  const faculties = useAsyncData(fetchFaculties)
+  const programs = useAsyncData(fetchPrograms)
+
+  const loadingDanhMuc = campuses.loading || faculties.loading || programs.loading
+  const loiDanhMuc = campuses.error ?? faculties.error ?? programs.error
 
   function done(next: ProvisionResult) {
     setResult(next)
@@ -58,12 +72,33 @@ export function ProvisionPanel({ onCreated }: ProvisionPanelProps) {
       {/* Cả hai cùng gắn trên cây, chỉ ẩn đi — chuyển tab không xoá dữ liệu
           đang gõ. `hidden` là `display: none`, nên mỗi lần hiện lại trình duyệt
           chạy lại hiệu ứng `tabIn` của form vừa mở. */}
-      <div className={styles.tabPanel} hidden={loai !== 'SINH_VIEN'}>
-        <StudentForm campuses={CAMPUSES} programs={PROGRAMS} onDone={done} />
-      </div>
-      <div className={styles.tabPanel} hidden={loai !== 'GIANG_VIEN'}>
-        <TeacherForm campuses={CAMPUSES} faculties={FACULTIES} onDone={done} />
-      </div>
+      {loadingDanhMuc ? <p className={styles.hintBox}>Đang tải danh mục…</p> : null}
+      {loiDanhMuc ? (
+        <p className={styles.notice} role="alert">
+          Không tải được danh mục cơ sở / khoa / chương trình: {loiDanhMuc}
+        </p>
+      ) : null}
+
+      {/* Dựng form SAU khi có danh mục: hai form chọn sẵn phần tử đầu tiên lúc
+          khởi tạo, nên dựng lúc danh sách còn rỗng sẽ để ô chọn trống vĩnh viễn. */}
+      {!loadingDanhMuc && !loiDanhMuc ? (
+        <>
+          <div className={styles.tabPanel} hidden={loai !== 'SINH_VIEN'}>
+            <StudentForm
+              campuses={campuses.data ?? []}
+              programs={programs.data ?? []}
+              onDone={done}
+            />
+          </div>
+          <div className={styles.tabPanel} hidden={loai !== 'GIANG_VIEN'}>
+            <TeacherForm
+              campuses={campuses.data ?? []}
+              faculties={faculties.data ?? []}
+              onDone={done}
+            />
+          </div>
+        </>
+      ) : null}
 
       {result ? (
         <ProvisionResultCard

@@ -4,7 +4,16 @@ import * as httpProfileApi from './httpProfileApi'
 import * as mockProfileApi from './mockProfileApi'
 
 /** Điểm vào duy nhất của feature. Công tắc: `VITE_API_MODE`. */
-export const { fetchProfile, fetchSummary, fetchResults, updateMyProfile } = pickApi(
-  httpProfileApi,
-  mockProfileApi,
-)
+export const {
+  fetchProfile,
+  fetchResults,
+  fetchSummary,
+  fetchTeacherProfile,
+  fetchUnreadCount,
+  removeAvatar,
+  removeTeacherAvatar,
+  updateMyProfile,
+  updateMyTeacherProfile,
+  uploadAvatar,
+  uploadTeacherAvatar,
+} = pickApi<typeof httpProfileApi>(httpProfileApi, mockProfileApi)

@@ -5,9 +5,14 @@ import * as mockDirectoryApi from './mockDirectoryApi'
 
 /** Điểm vào duy nhất của feature. Công tắc: `VITE_API_MODE`. */
 export const {
+  changeAccountEmail,
   changeStatus,
   createStudent,
   createTeacher,
+  fetchCampuses,
+  fetchFaculties,
+  fetchPrograms,
+  forcePasswordReset,
   listAccounts,
   reissueActivationCode,
   resetDemo,

@@ -201,6 +201,24 @@ public class AccountRepository {
         return jdbc.update(SET_INITIAL_PASSWORD, passwordHash, username);
     }
 
+    /**
+     * Xoá mật khẩu, đưa tài khoản về trạng thái "chưa kích hoạt".
+     *
+     * <p>Chỉ dùng cho luồng Admin cấp lại mật khẩu. Sau lệnh này tài khoản
+     * KHÔNG đăng nhập được cho tới khi chủ tài khoản tự đặt mật khẩu mới bằng
+     * mã — nhờ vậy {@link #setInitialPassword} giữ nguyên ràng buộc
+     * "chỉ ghi khi chưa có mật khẩu" và không cần một đường ghi thứ hai.
+     *
+     * <p>Chỉ áp cho tài khoản site: Admin Master ở bảng riêng và không cấp lại
+     * mật khẩu qua đường này.
+     *
+     * @return 0 nếu không có tài khoản site tên đó
+     */
+    public int clearPassword(String username) {
+        return jdbc.update("UPDATE dbo.TaiKhoan SET MatKhauHash = NULL WHERE TenDangNhap = ?",
+                username);
+    }
+
     /** @return 0 nếu là Admin Master hoặc trạng thái hiện tại không chuyển được */
     public int updateStatus(String username, String status) {
         return jdbc.update(UPDATE_STATUS, status, username);

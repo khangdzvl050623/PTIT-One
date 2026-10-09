@@ -3,19 +3,36 @@ import { useState } from 'react'
 import { ApiError } from '@/shared/api'
 import { Dialog, Select } from '@/shared/ui'
 
-import { updateMyProfile } from '../api/profileApi'
-import type { StudentProfile, UpdateMyProfileInput } from '../types'
+import type { PersonalProfile, UpdateMyProfileInput } from '../types'
+import { IdPhoto } from './IdPhoto'
 import styles from './ProfileEditDialog.module.scss'
 
-export interface ProfileEditDialogProps {
+/** Khớp `spring.servlet.multipart.max-file-size` của API. */
+const MAX_MB = 5
+
+/** Năm định dạng `ImageKind` của API nhận; trình duyệt nào cũng hiện được. */
+const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,image/bmp'
+
+export interface ProfileEditDialogProps<T extends PersonalProfile> {
   open: boolean
   onClose: () => void
-  profile: StudentProfile
+  profile: T
   /** Gọi sau khi lưu xong, kèm hồ sơ server vừa trả — cha dùng để hiện ngay. */
-  onSaved: (profile: StudentProfile) => void
+  onSaved: (profile: T) => void
+  /**
+   * Ba thao tác lưu, do cha truyền vào.
+   *
+   * Nhờ vậy hộp thoại không biết mình đang sửa hồ sơ sinh viên hay giảng viên:
+   * hai vai gọi hai endpoint khác nhau nhưng nhận cùng bộ ô và trả cùng phần
+   * lý lịch. Để component tự chọn endpoint theo vai trò thì nó phải import
+   * `auth`, và mỗi vai mới lại phải sửa vào đây.
+   */
+  save: (input: UpdateMyProfileInput) => Promise<T>
+  upload: (file: File) => Promise<T>
+  remove: () => Promise<T>
 }
 
-/** Chín ô lý lịch, đúng thân của `PUT /api/me/profile`. */
+/** Tám ô lý lịch, đúng thân của `PUT /api/me/profile`. */
 type Form = { [K in keyof UpdateMyProfileInput]: string }
 
 const GIOI_TINH = [
@@ -25,40 +42,95 @@ const GIOI_TINH = [
 ]
 
 /**
- * Biểu mẫu sinh viên tự điền phần lý lịch và ảnh đại diện.
+ * Biểu mẫu tự điền phần lý lịch và ảnh đại diện — dùng chung cho sinh viên và
+ * giảng viên.
  *
- * Chỉ chín ô server nhận: họ tên, ngày sinh, cơ sở, chương trình và trạng thái
- * do Phòng Đào tạo quản nên **không** xuất hiện ở đây — đặt chúng vào form chỉ
- * để disabled sẽ khiến người dùng tưởng là sửa được ở đâu đó.
+ * Chỉ tám ô server nhận: họ tên, ngày sinh, cơ sở, chương trình, học vị và
+ * trạng thái do Phòng Đào tạo quản nên **không** xuất hiện ở đây — đặt chúng
+ * vào form chỉ để disabled sẽ khiến người dùng tưởng là sửa được ở đâu đó.
  *
- * Form gửi lại **cả chín ô** mỗi lần lưu vì endpoint thay toàn bộ phần lý lịch.
+ * Form gửi lại **cả tám ô** mỗi lần lưu vì endpoint thay toàn bộ phần lý lịch.
  * Xoá nội dung một ô rồi lưu là cách xoá dữ liệu cũ.
  *
  * ⚠️ Cha chỉ **mount** component này khi đang mở. Nhờ vậy state form khởi tạo
  * lại từ hồ sơ mới nhất mỗi lần mở, không cần effect đồng bộ — mà effect đó
  * cũng dễ reset form ngay giữa lúc người dùng đang gõ.
  */
-export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEditDialogProps) {
+export function ProfileEditDialog<T extends PersonalProfile>({
+  open,
+  onClose,
+  profile,
+  onSaved,
+  save: saveProfile,
+  upload,
+  remove,
+}: ProfileEditDialogProps<T>) {
   const [form, setForm] = useState<Form>(() => toForm(profile))
+  const [anh, setAnh] = useState<string | null>(profile.anhDaiDien)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function set<K extends keyof Form>(field: K, value: string) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  function fail(cause: unknown) {
+    setError(
+      cause instanceof ApiError ? cause.message : 'Không kết nối được tới máy chủ. Thử lại sau.',
+    )
+  }
+
+  /**
+   * Ảnh lưu NGAY khi chọn, không đợi bấm "Lưu thông tin": nó đi qua endpoint
+   * riêng, và giữ file trong bộ nhớ chờ bấm Lưu sẽ khiến hai phần của cùng một
+   * hộp thoại lưu ở hai thời điểm khác nhau — người dùng không đoán được.
+   */
+  async function pickFile(file: File) {
+    setError(null)
+    if (!file.type.startsWith('image/')) {
+      setError('Tệp đã chọn không phải ảnh.')
+      return
+    }
+    // Chặn sớm ở client cho đỡ phải tải lên rồi mới biết; server vẫn kiểm lại.
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setError(`Ảnh quá lớn (${(file.size / 1024 / 1024).toFixed(1)}MB). Tối đa ${MAX_MB}MB.`)
+      return
+    }
+    setUploading(true)
+    try {
+      const saved = await upload(file)
+      setAnh(saved.anhDaiDien)
+      onSaved(saved)
+    } catch (cause) {
+      fail(cause)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function dropFile() {
+    setError(null)
+    setUploading(true)
+    try {
+      const saved = await remove()
+      setAnh(saved.anhDaiDien)
+      onSaved(saved)
+    } catch (cause) {
+      fail(cause)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function save() {
     setSaving(true)
     setError(null)
     try {
-      onSaved(await updateMyProfile(toInput(form)))
+      onSaved(await saveProfile(toInput(form)))
       onClose()
     } catch (cause) {
-      setError(
-        cause instanceof ApiError
-          ? cause.message
-          : 'Không kết nối được tới máy chủ. Thử lại sau.',
-      )
+      fail(cause)
     } finally {
       setSaving(false)
     }
@@ -171,19 +243,43 @@ export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEd
           />
         </label>
 
-        <label>
-          Ảnh đại diện — dán liên kết ảnh
-          <input
-            type="url"
-            value={form.anhDaiDien}
-            onChange={(event) => set('anhDaiDien', event.target.value)}
-            placeholder="https://…"
-          />
-        </label>
-        {/* Hệ thống không nhận file ảnh: ảnh nằm ở dịch vụ ngoài, DB chỉ lưu URL. */}
-        <p className={styles.note}>
-          Tải ảnh lên một dịch vụ lưu ảnh rồi dán liên kết <b>https</b> vào đây.
-        </p>
+        <div className={styles.avatar}>
+          <IdPhoto src={anh} hoTen={profile.hoTen} />
+          <div className={styles.avatarActions}>
+            <span className={styles.avatarLabel}>Ảnh đại diện</span>
+            {/* Nút thật là <label>: input file gốc rất khó tạo kiểu, nên ẩn nó
+                đi và để nhãn đóng vai nút — bấm vào nhãn vẫn mở hộp chọn file. */}
+            <label className={styles.ghost}>
+              {uploading ? 'Đang tải ảnh…' : 'Chọn ảnh…'}
+              <input
+                type="file"
+                className={styles.fileInput}
+                accept={ACCEPT}
+                disabled={uploading || saving}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  // Xoá giá trị để chọn LẠI đúng file vừa chọn vẫn kích hoạt onChange.
+                  event.target.value = ''
+                  if (file) void pickFile(file)
+                }}
+              />
+            </label>
+            {anh ? (
+              <button
+                type="button"
+                className={styles.ghost}
+                onClick={() => void dropFile()}
+                disabled={uploading || saving}
+              >
+                Gỡ ảnh
+              </button>
+            ) : null}
+            <p className={styles.note}>
+              JPEG, PNG, GIF, WEBP hoặc BMP, tối đa {MAX_MB}MB. Ảnh lưu trên dịch vụ
+              ảnh ngoài; hệ thống chỉ giữ liên kết.
+            </p>
+          </div>
+        </div>
 
         {error ? (
           <p className={styles.formError} role="alert">
@@ -196,7 +292,7 @@ export function ProfileEditDialog({ open, onClose, profile, onSaved }: ProfileEd
 }
 
 /** `null` → `''`: ô trống của HTML là chuỗi rỗng, không có khái niệm null. */
-function toForm(profile: StudentProfile): Form {
+function toForm(profile: PersonalProfile): Form {
   return {
     gioiTinh: profile.gioiTinh ?? '',
     dienThoai: profile.dienThoai ?? '',
@@ -206,7 +302,6 @@ function toForm(profile: StudentProfile): Form {
     danToc: profile.danToc ?? '',
     tonGiao: profile.tonGiao ?? '',
     hoKhau: profile.hoKhau ?? '',
-    anhDaiDien: profile.anhDaiDien ?? '',
   }
 }
 
@@ -225,6 +320,5 @@ function toInput(form: Form): UpdateMyProfileInput {
     danToc: value(form.danToc),
     tonGiao: value(form.tonGiao),
     hoKhau: value(form.hoKhau),
-    anhDaiDien: value(form.anhDaiDien),
   }
 }

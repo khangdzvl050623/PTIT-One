@@ -25,6 +25,18 @@ export const DEMO_TEACHER: TeacherProfile = {
   maCoSo: 'HCM',
   tenCoSo: 'Cơ sở TP. Hồ Chí Minh',
   email: 'vietdq@ptithcm.edu.vn',
+
+  /* Lý lịch để trống ĐÚNG CHỦ Ý, giống hồ sơ giảng viên thật trong DB: để thấy
+     giao diện xử lý ô rỗng và để thử được luồng tự điền. */
+  gioiTinh: null,
+  dienThoai: null,
+  soCCCD: null,
+  emailCaNhan: null,
+  noiSinh: null,
+  danToc: null,
+  tonGiao: null,
+  hoKhau: null,
+  anhDaiDien: null,
 }
 
 /**
@@ -40,20 +52,22 @@ export const DEMO_TEACHING: readonly TeachingClass[] = [
     maMonHoc: 'INT1339',
     tenMonHoc: 'Ngôn ngữ lập trình C++',
     soTinChi: 3,
+    maHocKy: '2026-1',
     soLuongDaDangKy: 57,
     soLuongToiDa: 60,
-    lich: 'T2 (1–4) · 2B34',
-    trangThaiDiem: 'NHAP',
+    trangThai: 'MO',
+    hinhThucHoc: 'TRUC_TIEP',
   },
   {
     maLopHP: 'INT1340-2026-1-HCM01',
     maMonHoc: 'INT1340',
     tenMonHoc: 'Nhập môn công nghệ phần mềm',
     soTinChi: 3,
+    maHocKy: '2026-1',
     soLuongDaDangKy: 71,
     soLuongToiDa: 80,
-    lich: 'T5 (6–9) · Trực tuyến',
-    trangThaiDiem: 'NHAP',
+    trangThai: 'MO',
+    hinhThucHoc: 'TRUC_TUYEN',
   },
 ]
 

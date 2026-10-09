@@ -95,6 +95,7 @@ người dùng và đổi được bất cứ lúc nào.
 | POST · PUT | `/api/courses` · `/{maMonHoc}` · `/{maMonHoc}/prerequisites` | `ADMIN_MASTER` |
 | DELETE | `/api/courses/{maMonHoc}` | `ADMIN_MASTER` |
 | GET | `/api/faculties` · `/api/terms` · `/api/teachers` · `/api/prerequisites` · `/api/campuses` | — |
+| GET | `/api/health/media` | — *(cần đăng nhập; không lộ khoá, chỉ `cloudName`)* |
 | GET | `/api/schedules?maHocKy=` | — *(phạm vi cơ sở như `/api/classes`)* |
 | GET | `/api/programs` · `/api/programs/{maCTDT}` | — |
 | GET | `/api/classes` · `/api/classes/{maLopHP}` | — |
@@ -110,12 +111,17 @@ người dùng và đổi được bất cứ lúc nào.
 | POST · PUT | `/api/enrollment-periods` · `/{maDot}` | `ADMIN_CO_SO` |
 | POST | `/api/classes/{maLopHP}/students/{maSinhVien}/remove` | `ADMIN_CO_SO` *(cơ sở của lớp)* |
 | GET | `/api/me/teaching-classes` · `/api/me/teaching-schedule` | `GIANG_VIEN` |
+| GET | `/api/me/teacher-profile` | `GIANG_VIEN` |
+| PUT · POST · DELETE | `/api/me/teacher-profile` · `/avatar` | `GIANG_VIEN` **đã xác minh email** |
 | GET | `/api/me/grades` · `/api/me/transcript` · `/api/me/timetable` · `/api/me/enrollments` · `/api/me/profile` | `SINH_VIEN` |
 | PUT | `/api/me/profile` | `SINH_VIEN` **đã xác minh email** |
+| POST · DELETE | `/api/me/profile/avatar` | `SINH_VIEN` **đã xác minh email** |
 | POST · DELETE | `/api/me/enrollments` · `/api/me/enrollments/{maLopHP}` | `SINH_VIEN` |
 | GET | `/api/reports/summary` · `/api/reports/courses` | `ADMIN_CO_SO` (cơ sở mình) · `ADMIN_MASTER` |
 | GET · POST | `/api/me/notifications` · `/unread-count` · `/{id}/read` · `/read-all` | `SINH_VIEN` · `GIANG_VIEN` |
 | GET · POST · PUT · DELETE | `/api/notifications` · `/preview` · `/{id}` · `/{id}/send` | `ADMIN_MASTER` · `ADMIN_CO_SO` · `GIANG_VIEN` — chỉ bản **mình soạn** |
+| PUT | `/api/accounts/{tenDangNhap}/email` | `ADMIN_MASTER` |
+| POST | `/api/accounts/{tenDangNhap}/password-reset` | `ADMIN_MASTER` |
 
 ### Hai quy tắc phạm vi
 
@@ -350,10 +356,54 @@ bị từ chối.
   trắng — kể cả ở những ô có định dạng, nên UI **không cần** tự đổi `""` thành
   `null` trước khi gửi.
 - `gioiTinh` ∈ `NAM` · `NU`. `soCCCD` 9 hoặc 12 chữ số và **unique toàn trường**
-  (index filtered, bỏ qua `NULL`). `anhDaiDien` phải là URL `https://` — ảnh
-  `http://` nhúng vào trang `https` là nội dung hỗn hợp, trình duyệt chặn.
-- API **không nhận file**: `anhDaiDien` là URL do client tự tải lên dịch vụ ảnh.
-  Phần 1 không có endpoint upload.
+  (index filtered, bỏ qua `NULL`).
+
+### Ảnh đại diện
+
+- **Không đặt bằng URL.** `anhDaiDien` không nằm trong `PUT /api/me/profile`;
+  nhận URL từ client thì sinh viên trỏ ảnh sang địa chỉ bất kỳ trên internet
+  được, và cột `AnhDaiDien` sẽ có hai đường ghi.
+- `POST /api/me/profile/avatar` nhận **file thật**, `multipart/form-data`,
+  trường `file`. Server đẩy lên Cloudinary rồi tự ghi URL trả về vào hồ sơ;
+  response là hồ sơ đầy đủ như `GET`.
+- Định dạng xét theo **byte đầu file**, không theo `Content-Type` hay đuôi tên —
+  cả hai do client đặt. Nhận JPEG · PNG · GIF · WEBP · BMP, sai thì
+  `400 IMAGE_FORMAT_INVALID`. HEIC của iPhone **không** nhận: Chrome và Firefox
+  không hiện được.
+- Trần 5MB (`spring.servlet.multipart.max-file-size`); vượt thì
+  `413 FILE_TOO_LARGE`.
+- `DELETE /api/me/profile/avatar` gỡ ảnh. **Chạy được cả khi chưa cấu hình
+  Cloudinary** — kết quả mong muốn là "không còn ảnh", mà kho tắt thì điều đó
+  vốn đã đúng. Ngược lại, `POST` khi chưa cấu hình trả `503 UPLOAD_DISABLED`.
+- Tải ảnh hỏng theo **hai kiểu rất khác nhau** mà người dùng chỉ thấy một mã
+  `503`. Phân biệt bằng `code`, và `GET /api/health/media` trả lời vế đầu mà
+  không phải đọc log máy chủ:
+  - `UPLOAD_DISABLED` — API **không thấy cấu hình**. Hay gặp nhất là chạy API
+    bằng `mvnw spring-boot:run` thay vì `.\scripts\dev-api.ps1`: chỉ script đó
+    nạp `apps/api/.env`, Spring không tự đọc tệp này.
+  - `UPLOAD_FAILED` — Cloudinary từ chối. Lý do thật (`Invalid Signature`,
+    `Invalid cloud_name`…) nằm ở log API, dòng `Cloudinary từ chối`.
+- DB chỉ lưu URL (`SinhVien.AnhDaiDien`, `V8`), không lưu byte: ảnh đại diện
+  không phải dữ liệu nghiệp vụ, và Phần 2 phân mảnh `SinhVien` nên cột nhị phân
+  sẽ làm phình mọi snapshot nhân bản.
+- Mỗi sinh viên dùng **một `public_id` cố định** (`<folder>/<MaSinhVien>`), nên
+  tải ảnh mới là ghi đè ảnh cũ — không tích ảnh mồ côi. URL vẫn đổi sau mỗi lần
+  tải vì Cloudinary chèn số phiên bản, nhờ đó trình duyệt không hiện ảnh cache.
+- URL có thể chết (ảnh bị xoá ngoài hệ thống). UI phải có đường lui — `IdPhoto`
+  quay về khung mặc định thay vì để trình duyệt hiện icon ảnh lỗi.
+
+### Hồ sơ giảng viên tự sửa
+
+- `/api/me/teacher-profile` **song song** với `/api/me/profile` của sinh viên:
+  cùng tám ô lý lịch, cùng cổng chặn email đã xác minh, cùng quy tắc "thay toàn
+  bộ", cùng cách tải và gỡ ảnh. Đường riêng vì hai vai trả hai hình dạng khác
+  nhau — gộp một đường sẽ buộc client tự đoán kiểu theo vai trò.
+- Phần hành chính của giảng viên là `hoTen`, `hocVi`, `maKhoa`, `maCoSo` —
+  Phòng Đào tạo quản, không nằm trong request. Gửi kèm thì bị **bỏ qua**.
+- Cột lý lịch ở `GiangVien` do `V9` thêm, đúng bộ cột `V8` đã thêm cho
+  `SinhVien`. `UQ_GiangVien_SoCCCD` chỉ unique trong bảng này — không chặn một
+  số CCCD vừa nằm ở `SinhVien` vừa ở `GiangVien`, vì đồ án không có bảng người
+  dùng chung.
 
 ### Thống kê
 
@@ -442,6 +492,11 @@ bị từ chối.
   Khoá thu hồi mọi phiên và tăng phiên bản trong cùng giao dịch — access token
   cũ bị từ chối ngay. Không khoá được Admin Master.
 - `GET /api/accounts?maCoSo=&loaiNguoiDung=` liệt kê danh bạ, có `daKichHoat`.
+- **Email tài khoản KHÔNG unique.** Nhiều tài khoản gắn được cùng một địa chỉ.
+  Cố ý: email không phải định danh đăng nhập, và `forgot-password` nhận
+  `{tenDangNhap, email}` — email chỉ để **đối chiếu**, mã bay tới địa chỉ đã
+  lưu của đúng tài khoản đó. Cái giá: ai nắm hòm thư dùng chung thì khôi phục
+  được mọi tài khoản gắn nó.
 
 ### Email, đổi mật khẩu, quên mật khẩu (A1)
 
@@ -470,6 +525,38 @@ bị từ chối.
   nhớ): đăng nhập sai 10 lần/tài khoản hoặc 50 lần/IP; xin mã khôi phục 3
   lần/tài khoản hoặc 20 lần/IP; nhập sai mã khôi phục 20 lần/IP; sai mật khẩu
   hiện tại 10 lần/tài khoản. Chỉ lần **sai** mới bị đếm khi đăng nhập.
+
+### Khi người dùng mất cả mật khẩu lẫn hòm thư
+
+Ba đường tự phục vụ đều tắc trong ca này: `forgot-password` chỉ gửi mã tới email
+**đã xác minh**, `PUT /api/auth/email` đòi **mật khẩu hiện tại**, và
+`activation-code` từ chối tài khoản **đã kích hoạt**. Lối thoát là hai thao tác
+của Admin Master, **tách riêng có chủ ý**:
+
+1. `PUT /api/accounts/{u}/email` `{email}` — đặt email mới, **chưa xác minh**.
+   Admin không bấm "đã xác minh" hộ: một lỗi gõ sai sẽ tạo ra địa chỉ được hệ
+   thống tin tưởng mà không ai sở hữu. Không đụng tới mật khẩu.
+   **Gửi được mã xác minh thì gửi luôn** tới địa chỉ mới; chưa bật máy chủ thư
+   thì bỏ qua và thao tác vẫn thành công — nó tồn tại cho ca mất hòm thư nên
+   không được phụ thuộc vào thư.
+2. `POST /api/accounts/{u}/password-reset` → `201` — thu hồi mọi phiên, thu hồi
+   mã còn sống, **xoá mật khẩu**, cấp mã dùng một lần. Có email thì mã chỉ đi
+   qua thư; không có thì mã hiện **một lần** để Admin trao tay.
+
+Chủ tài khoản đặt mật khẩu mới ở màn **kích hoạt** (`POST /api/auth/activate`),
+và nếu mã tới qua thư thì email mới **tự thành đã xác minh** — dùng được mã
+trong thư là đã chứng minh sở hữu hòm thư.
+
+**Admin không bao giờ nhập mật khẩu hộ.** Tính chất "không ai ngoài chủ tài
+khoản biết mật khẩu của họ" được giữ nguyên.
+
+Hai lưu ý khi vận hành:
+
+- Sau bước 2 tài khoản **không đăng nhập được** cho tới khi đặt mật khẩu mới.
+  Đó là ý nghĩa của "cấp lại", không phải tác dụng phụ.
+- Đây là **công cụ chiếm tài khoản**: Admin cấp mã cho bất kỳ ai và có thể tự
+  dùng mã đó. `MaKichHoat.NguoiCap` (`V10`) ghi lại ai cấp — tách hai thao tác
+  cũng để nhật ký phân biệt được "sửa email gõ nhầm" với "chiếm tài khoản".
 
 ### Phiên đăng nhập
 
@@ -561,7 +648,11 @@ bị từ chối.
 | `MAIL_DISABLED` | 503 | Chưa cấu hình gửi thư |
 | `EMAIL_NOT_SET` | 409 | Gửi lại mã xác minh khi chưa có email |
 | `EMAIL_ALREADY_VERIFIED` | 409 | Gửi lại mã xác minh khi email đã xác minh |
-| `EMAIL_NOT_VERIFIED` | 409 | Sửa hồ sơ khi email chưa xác minh |
+| `EMAIL_NOT_VERIFIED` | 409 | Sửa hồ sơ hoặc đổi ảnh khi email chưa xác minh |
+| `IMAGE_FORMAT_INVALID` | 400 | File tải lên không phải JPEG/PNG/GIF/WEBP/BMP |
+| `FILE_TOO_LARGE` | 413 | Ảnh vượt 5MB |
+| `UPLOAD_DISABLED` | 503 | Chưa cấu hình Cloudinary |
+| `UPLOAD_FAILED` | 503 | Cloudinary lỗi hoặc không trả URL |
 | `AUTH_TOO_MANY_ATTEMPTS` | 429 | Vượt giới hạn tần suất; đợi rồi thử lại |
 | `CLASS_CANCELLED` | 409 | Sửa lớp đã huỷ |
 | `CLASS_HAS_GRADES` | 409 | Huỷ lớp đã có SV có điểm |
@@ -640,6 +731,14 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Cấp SV với CTĐT không có | `400 PROGRAM_NOT_FOUND`, không còn hồ sơ hay danh bạ mồ côi | ✓ |
 | Nhập sai mã 5 lần rồi nhập đúng | `400` — mã đã bị thu hồi | ✓ |
 | Cấp lại mã | mã trước mất hiệu lực, mã mới dùng được | ✓ |
+| Admin đặt email mới | `200`, `daXacMinh: false`, có mã chờ cho địa chỉ mới, mật khẩu không đổi | ✓ |
+| Admin đặt email sai định dạng | `400 VALIDATION_ERROR` | ✓ |
+| Admin cấp lại mật khẩu | `201` kèm mã, mật khẩu cũ bị xoá, đăng nhập `401` | ✓ |
+| Dùng mã đó đặt mật khẩu mới | vào được bằng mật khẩu mới, mật khẩu cũ chết | ✓ |
+| Cấp lại hai lần | mã lần một `400 ACTIVATION_INVALID` | ✓ |
+| Cấp lại cho Admin Master | `409 ACCOUNT_NOT_MANAGEABLE` | ✓ |
+| `MaKichHoat.NguoiCap` sau khi Admin cấp | ghi đúng tên Admin | ✓ |
+| Admin cơ sở / GV / SV gọi hai đường này | `403` | ✓ |
 | Khoá tài khoản đang có phiên | phiên cũ `401` ngay; đăng nhập lại `401`; mở lại thì vào được | ✓ |
 | Cấp hồ sơ có email | mã chỉ đi qua thư; kích hoạt xong email đã xác minh | ✓ |
 | Quên mật khẩu với email gõ sai | `202`, không có thư nào | ✓ |
@@ -698,7 +797,18 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Sửa hồ sơ, bỏ bớt một ô khỏi request | ô đó về `null` — thay toàn bộ, không vá | ✓ |
 | Gửi ô trống kiểu `""` cho cả 9 ô | `200`, xoá sạch — không `400` ở ô có định dạng | ✓ |
 | Ô toàn khoảng trắng | lưu `NULL`, không lưu `''` | ✓ |
-| `gioiTinh` lạ · CCCD 3 số · email sai · ảnh `http://` | `400 VALIDATION_ERROR`, nêu đúng tên ô | ✓ |
+| `gioiTinh` lạ · CCCD 3 số · email sai · điện thoại chữ | `400 VALIDATION_ERROR`, nêu đúng tên ô | ✓ |
+| Gửi `anhDaiDien` kèm biểu mẫu lý lịch | bị bỏ qua, ảnh đang có giữ nguyên | ✓ |
+| Tải "ảnh" thật ra là file chữ, khai `image/png`, tên `.png` | `400 IMAGE_FORMAT_INVALID` | ✓ |
+| Nhận dạng 5 định dạng · RIFF không phải WEBP · file thực thi đổi tên | đúng loại / từ chối | ✓ |
+| Đổi ảnh khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED` | ✓ |
+| Gỡ ảnh khi chưa cấu hình Cloudinary | `200`, cột về `NULL` | ✓ |
+| GV / admin tải hoặc gỡ ảnh đại diện của sinh viên | `403` | ✓ |
+| GV xem và sửa hồ sơ giảng viên của mình | `200`, các ô lưu đúng | ✓ |
+| GV gửi kèm `hocVi` / `maKhoa` / `hoTen` | bị bỏ qua, dữ liệu hành chính giữ nguyên | ✓ |
+| GV sửa hồ sơ khi email chưa xác minh | `409 EMAIL_NOT_VERIFIED`, không ghi gì | ✓ |
+| GV tải "ảnh" là file chữ · gỡ ảnh khi kho tắt | `400 IMAGE_FORMAT_INVALID` · `200` | ✓ |
+| SV / admin gọi `/api/me/teacher-profile` | `403` | ✓ |
 | GV / admin cơ sở / Master xem hoặc sửa `/api/me/profile` | `403` | ✓ |
 | Thống kê: 2 lượt của 1 SV | `luotDangKy 2`, `soSinhVien 1` | ✓ |
 | Thống kê: lớp chưa công bố điểm | `chuaCoKetQua`, không tính trượt | ✓ |

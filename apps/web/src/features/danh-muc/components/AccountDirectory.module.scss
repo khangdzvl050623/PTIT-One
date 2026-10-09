@@ -193,6 +193,32 @@
   border: 1px solid var(--tile-brand-border);
 }
 
+/* Ô nhập trong hộp thoại xác nhận — chỉ màn đổi email dùng tới. */
+.dialogField {
+  display: grid;
+  gap: tokens.$space-xs;
+  font-size: tokens.$font-size-xs;
+  font-weight: 600;
+  color: var(--notice-text);
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: tokens.$space-sm tokens.$space-md;
+    font: inherit;
+    font-size: tokens.$font-size-sm;
+    color: var(--notice-text);
+    background: var(--panel-bg);
+    border: 1px solid var(--field-border);
+    border-radius: tokens.$radius-sm;
+  }
+
+  input:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 1px;
+  }
+}
+
 .hintBox {
   padding: tokens.$space-md tokens.$space-lg;
   font-size: tokens.$font-size-sm;
