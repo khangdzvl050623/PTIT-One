@@ -1,6 +1,7 @@
 import { apiFetch } from '@/shared/api'
 
 import type {
+  AccountEmailState,
   AccountSummary,
   ActivationCode,
   CreateStudentInput,
@@ -44,6 +45,39 @@ export function reissueActivationCode(
 ): Promise<ActivationCode> {
   return apiFetch<ActivationCode>(
     `/api/accounts/${encodeURIComponent(tenDangNhap)}/activation-code?guiEmail=${guiEmail}`,
+    { method: 'POST' },
+  )
+}
+
+/**
+ * Admin đặt email mới cho tài khoản — dùng khi người dùng mất quyền vào hòm
+ * thư cũ nên không tự đổi được (tự đổi cần mật khẩu hiện tại).
+ *
+ * Email mới luôn ở trạng thái **chưa xác minh**; nó tự thành đã xác minh khi
+ * chủ tài khoản dùng được mã của lần cấp lại mật khẩu gửi tới đó.
+ */
+export function changeAccountEmail(
+  tenDangNhap: string,
+  email: string,
+): Promise<AccountEmailState> {
+  return apiFetch<AccountEmailState>(
+    `/api/accounts/${encodeURIComponent(tenDangNhap)}/email`,
+    { method: 'PUT', json: { email } },
+  )
+}
+
+/**
+ * Cấp lại mật khẩu: thu hồi mọi phiên, xoá mật khẩu, cấp mã dùng một lần.
+ *
+ * Admin **không** đặt mật khẩu hộ — chủ tài khoản tự đặt ở màn kích hoạt. Sau
+ * thao tác này tài khoản KHÔNG đăng nhập được cho tới lúc đó.
+ *
+ * Có email đã lưu thì mã chỉ đi qua thư (`maKichHoat = null`); không thì mã
+ * hiện một lần để trao tay.
+ */
+export function forcePasswordReset(tenDangNhap: string): Promise<ActivationCode> {
+  return apiFetch<ActivationCode>(
+    `/api/accounts/${encodeURIComponent(tenDangNhap)}/password-reset`,
     { method: 'POST' },
   )
 }
