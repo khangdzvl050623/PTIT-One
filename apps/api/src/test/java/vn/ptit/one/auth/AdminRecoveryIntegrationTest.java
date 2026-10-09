@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +19,12 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import vn.ptit.one.shared.mail.Mailer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 /**
  * Lối thoát khi người dùng quên mật khẩu VÀ mất hòm thư: Admin đặt email mới,
@@ -48,6 +53,21 @@ class AdminRecoveryIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    /**
+     * Mock để nhánh "có bật thư" chạy mà KHÔNG có thư nào bay ra thật.
+     *
+     * `adminSetEmail` gửi mã khi `mailer.enabled()`, nên không mock thì mỗi
+     * lần chạy test lại bắn một thư tới địa chỉ bịa qua Brevo — tốn hạn mức và
+     * hại uy tín người gửi. Cùng cách `CredentialIntegrationTest` đang làm.
+     */
+    @MockitoBean
+    private Mailer mailer;
+
+    @BeforeEach
+    void batGuiThu() {
+        when(mailer.enabled()).thenReturn(true);
+    }
 
     @AfterEach
     void restore() {
@@ -83,6 +103,14 @@ class AdminRecoveryIntegrationTest {
         assertThat(row.get("Email")).isEqualTo("moi@gmail.com");
         assertThat(row.get("EmailDaXacMinh")).isEqualTo(false);
         assertThat(row.get("ThoiDiemXacMinhEmail")).isNull();
+
+        /* Phải có mã chờ sẵn cho địa chỉ MỚI. Không gửi gì thì người dùng mở
+           màn Email ra chỉ thấy một ô "nhập mã" không có mã nào. */
+        assertThat(jdbc.queryForObject("""
+                SELECT Email FROM dbo.MaXacThuc
+                 WHERE TenDangNhap = ? AND MucDich = 'XAC_MINH_EMAIL'
+                   AND ThoiDiemDaDung IS NULL AND ThoiDiemThuHoi IS NULL
+                """, String.class, SV)).isEqualTo("moi@gmail.com");
     }
 
     /** Đổi email KHÔNG đụng tới mật khẩu — hai thao tác tách riêng. */

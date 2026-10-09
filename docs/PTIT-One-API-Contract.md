@@ -535,7 +535,10 @@ của Admin Master, **tách riêng có chủ ý**:
 
 1. `PUT /api/accounts/{u}/email` `{email}` — đặt email mới, **chưa xác minh**.
    Admin không bấm "đã xác minh" hộ: một lỗi gõ sai sẽ tạo ra địa chỉ được hệ
-   thống tin tưởng mà không ai sở hữu. Không đụng tới mật khẩu, không gửi thư.
+   thống tin tưởng mà không ai sở hữu. Không đụng tới mật khẩu.
+   **Gửi được mã xác minh thì gửi luôn** tới địa chỉ mới; chưa bật máy chủ thư
+   thì bỏ qua và thao tác vẫn thành công — nó tồn tại cho ca mất hòm thư nên
+   không được phụ thuộc vào thư.
 2. `POST /api/accounts/{u}/password-reset` → `201` — thu hồi mọi phiên, thu hồi
    mã còn sống, **xoá mật khẩu**, cấp mã dùng một lần. Có email thì mã chỉ đi
    qua thư; không có thì mã hiện **một lần** để Admin trao tay.
@@ -728,7 +731,7 @@ Mỗi dòng là một ca phải xanh. **✓ = đã có test tự động; ✗ = 
 | Cấp SV với CTĐT không có | `400 PROGRAM_NOT_FOUND`, không còn hồ sơ hay danh bạ mồ côi | ✓ |
 | Nhập sai mã 5 lần rồi nhập đúng | `400` — mã đã bị thu hồi | ✓ |
 | Cấp lại mã | mã trước mất hiệu lực, mã mới dùng được | ✓ |
-| Admin đặt email mới | `200`, `daXacMinh: false`, mật khẩu không đổi | ✓ |
+| Admin đặt email mới | `200`, `daXacMinh: false`, có mã chờ cho địa chỉ mới, mật khẩu không đổi | ✓ |
 | Admin đặt email sai định dạng | `400 VALIDATION_ERROR` | ✓ |
 | Admin cấp lại mật khẩu | `201` kèm mã, mật khẩu cũ bị xoá, đăng nhập `401` | ✓ |
 | Dùng mã đó đặt mật khẩu mới | vào được bằng mật khẩu mới, mật khẩu cũ chết | ✓ |
