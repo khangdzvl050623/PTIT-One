@@ -3,10 +3,43 @@
 .page {
   display: flex;
   justify-content: center;
-  padding-block: tokens.$space-xl;
+  align-items: flex-start;
+  padding-block: tokens.$space-2xl tokens.$space-3xl;
 }
 
 .card {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
+  animation: cardIn 0.32s ease-out;
+  /* Bóng đổ sâu hơn cho thẻ auth nổi khỏi nền portal. */
+  & > section {
+    box-shadow:
+      0 12px 32px rgba(127, 29, 29, 0.18),
+      0 2px 6px rgba(0, 0, 0, 0.08);
+    border-radius: tokens.$radius-md tokens.$radius-md tokens.$radius-sm tokens.$radius-sm;
+  }
+}
+
+/* Banner flash nằm gọn trong chiều rộng card, cách panel một nhịp. */
+.flash {
+  margin-bottom: tokens.$space-lg;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+
+@media (max-width: tokens.$breakpoint-mobile) {
+  .page {
+    padding-block: tokens.$space-lg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
 }

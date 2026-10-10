@@ -46,6 +46,28 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ['SINH_VIEN'],
     feature: 'F09',
   },
+  /* Một path ba menu: mục ẩn gộp guard đứng TRƯỚC để router khớp nó đầu tiên
+     (đảo lại là một vai rơi vào guard vai kia → 403, bug 10/2026). Menu lọc
+     theo `inMenu` nên navbar mỗi vai vẫn hiện đúng một mục. */
+  {
+    path: ROUTES.thongBao,
+    label: 'Thông báo',
+    roles: ['SINH_VIEN', 'GIANG_VIEN'],
+    feature: 'Thông báo',
+    inMenu: false,
+  },
+  {
+    path: ROUTES.thongBao,
+    label: 'Thông báo',
+    roles: ['GIANG_VIEN'],
+    feature: 'Thông báo',
+  },
+  {
+    path: ROUTES.thongBao,
+    label: 'Thông báo',
+    roles: ['SINH_VIEN'],
+    feature: 'Thông báo',
+  },
   {
     path: ROUTES.gvLopPhuTrach,
     label: 'Lớp phụ trách',
@@ -89,15 +111,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ['ADMIN_MASTER'],
     feature: 'F03',
   },
+  {
+    path: ROUTES.qtThongBao,
+    label: 'Thông báo',
+    roles: ['ADMIN_CO_SO', 'ADMIN_MASTER'],
+    feature: 'Thông báo',
+  },
 
   // --- Ngoài menu: lối tắt ở trang Thông tin ---------------------------
-  {
-    path: ROUTES.thongBao,
-    label: 'Thông báo',
-    roles: ['SINH_VIEN', 'GIANG_VIEN'],
-    feature: 'Thông báo',
-    inMenu: false,
-  },
+  // (Mục /thong-bao nằm chung ở trên cùng GV để router khỏi trùng path.)
   {
     path: ROUTES.svLichHocHocKy,
     label: 'Thời khoá biểu dạng học kỳ',

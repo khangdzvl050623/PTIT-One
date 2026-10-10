@@ -1,4 +1,5 @@
 export * from './Dialog'
+export * from './Flash'
 export * from './Icon'
 export * from './Logo'
 export * from './Panel'

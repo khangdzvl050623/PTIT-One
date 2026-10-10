@@ -1,11 +1,13 @@
 // Barrel export cho feature "auth" — đăng nhập, phiên, chặn tuyến và A1.
 export { ActivateForm } from './components/ActivateForm'
+export { AuthConfirmDialog, AuthInfoDialog } from './components/AuthDialog'
 export { ChangePasswordForm } from './components/ChangePasswordForm'
 export { EmailNotice } from './components/EmailNotice'
 export { EmailPanel } from './components/EmailPanel'
 export { ForgotPasswordForm } from './components/ForgotPasswordForm'
 export { LoginForm } from './components/LoginForm'
 export type { LoginCredentials, LoginFormProps } from './components/LoginForm'
+export { PasswordField } from './components/PasswordField'
 export { LoginPanel } from './components/LoginPanel'
 export type { LoginPanelProps } from './components/LoginPanel'
 export { RequireAuth } from './components/RequireAuth'

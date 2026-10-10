@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { ApiError } from '@/shared/api'
 import { LABELS, ROUTES } from '@/shared/constants'
-import { Icon, Panel } from '@/shared/ui'
+import { Icon, Panel, type Flash } from '@/shared/ui'
 
 import { API_MODE } from '@/shared/api'
 import { MOCK_ACCOUNTS } from '../api/mockAuthApi'
@@ -27,13 +27,15 @@ export interface LoginPanelProps {
    * `navigation → features/auth → LoginPanel → navigation`.
    */
   redirectTo?: (role: Role) => string
+  /** Tin một lần mang tiếp sang trang đích (trang nào đọc thì hiện). */
+  flash?: Flash | null
 }
 
 /**
  * Ô đăng nhập của cổng thông tin. Đã đăng nhập thì đổi thành thẻ danh tính —
  * giữ nguyên biểu mẫu lúc đó sẽ khiến người dùng tưởng mình chưa vào được.
  */
-export function LoginPanel({ redirectTo }: LoginPanelProps) {
+export function LoginPanel({ redirectTo, flash }: LoginPanelProps) {
   const { status, user, signIn, signOut } = useAuth()
   const navigate = useNavigate()
   const [pending, setPending] = useState(false)
@@ -45,7 +47,10 @@ export function LoginPanel({ redirectTo }: LoginPanelProps) {
     try {
       const signedIn = await signIn(username, password)
       // Tính đích SAU khi biết vai trò — xem ghi chú ở `redirectTo`.
-      if (redirectTo) navigate(redirectTo(signedIn.role), { replace: true })
+      if (redirectTo) {
+        const to = redirectTo(signedIn.role)
+        navigate(to, flash ? { replace: true, state: { flash } } : { replace: true })
+      }
     } catch (cause) {
       /* Backend cố tình trả cùng một thông báo cho sai mật khẩu, tài khoản
          chưa kích hoạt và tài khoản bị ngừng — để form này không trở thành
