@@ -1,0 +1,136 @@
+@use '@/styles/tokens' as tokens;
+
+.banner {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: tokens.$space-md;
+  margin: 0;
+  padding: tokens.$space-md tokens.$space-lg;
+  overflow: hidden;
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  line-height: 1.55;
+  letter-spacing: 0.1px;
+  border-radius: tokens.$radius-md;
+  animation: rise 0.26s ease-out;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.success {
+  color: var(--ok-text, #1a7f44);
+  background: linear-gradient(to bottom, #f0fdf4, #dcfce7);
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid var(--ok-text, #1a7f44);
+  box-shadow: 0 4px 14px rgba(26, 127, 68, 0.16);
+
+  .icon {
+    color: #fff;
+    background: linear-gradient(to bottom, #22c55e, #15803d);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.4);
+  }
+}
+
+.info {
+  color: #1e40af;
+  background: linear-gradient(to bottom, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.14);
+
+  .icon {
+    color: #fff;
+    background: linear-gradient(to bottom, #60a5fa, #2563eb);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+  }
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  border-radius: 50%;
+}
+
+.x {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity tokens.$transition-fast,
+    background tokens.$transition-fast,
+    transform tokens.$transition-fast;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.06);
+    transform: scale(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Thanh đếm ngược dưới đáy banner: co từ đầy sang hết đúng bằng thời gian
+   tồn tại (truyền qua `animation-duration` nội tuyến). */
+.progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.45;
+  transform-origin: left;
+  animation: shrink 3s linear forwards;
+  pointer-events: none;
+}
+
+@keyframes shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+
+  .progress {
+    display: none;
+  }
+
+  .x {
+    transition: none;
+  }
+}

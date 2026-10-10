@@ -79,27 +79,84 @@
   flex-wrap: wrap;
   gap: tokens.$space-xs tokens.$space-lg;
   justify-content: space-between;
-  margin: tokens.$space-md 0 0;
+  margin: tokens.$space-lg 0 0;
   font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  letter-spacing: 0.15px;
 
   a {
+    position: relative;
+    padding-block: tokens.$space-2xs;
     color: var(--notice-text);
     text-decoration: none;
+    transition: color tokens.$transition-fast;
+
+    /* Gạch chân trượt ra khi hover — nhẹ hơn underline đột ngột. */
+    &::after {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--accent-red);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform tokens.$transition-fast;
+      content: '';
+    }
 
     &:hover {
       color: var(--accent-red);
-      text-decoration: underline;
+
+      &::after {
+        transform: scaleX(1);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--callout-border);
+      outline-offset: 2px;
+      border-radius: tokens.$radius-sm;
     }
   }
 }
 
 .mockHint {
-  margin: tokens.$space-sm 0 0;
+  margin: tokens.$space-lg 0 0;
+  padding: tokens.$space-sm tokens.$space-md;
   font-size: tokens.$font-size-xs;
+  line-height: 1.6;
+  letter-spacing: 0.1px;
   color: var(--notice-meta);
+  background: var(--field-icon-bg);
+  border: 1px dashed var(--field-border);
+  border-radius: tokens.$radius-sm;
 }
 
 .loading {
-  font-size: tokens.$font-size-xs;
+  font-size: tokens.$font-size-sm;
+  letter-spacing: 0.15px;
   color: var(--notice-meta);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading {
+    animation: none;
+  }
+
+  .helpLinks a::after {
+    transition: none;
+  }
 }

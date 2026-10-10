@@ -1,19 +1,23 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 
 import { API_MODE, ApiError } from '@/shared/api'
-import { ROUTES } from '@/shared/constants'
 import { Icon } from '@/shared/ui'
 
 import { forgotPassword, resetPassword } from '../api/credentialApi'
 import { MA_DEMO } from '../api/mockCredentialStore'
+import { AuthConfirmDialog, AuthInfoDialog } from './AuthDialog'
+import dialogStyles from './AuthDialog.module.scss'
+import { PasswordField } from './PasswordField'
 import styles from './AuthForms.module.scss'
 
 const NETWORK = 'Không kết nối được máy chủ. Vui lòng thử lại.'
 
+/** Kết quả lần đặt lại gần nhất — một box duy nhất, thành công hoặc thất bại. */
+type Result = { ok: true; username: string } | { ok: false; message: string }
+
 /**
- * Quên mật khẩu, hai bước trên cùng một màn.
+ * Quên mật khẩu, hai bước trên cùng một màn — và vẫn một màn sau khi xong.
  *
  * Bước 1 **luôn báo thành công**, kể cả khi tài khoản không có, email gõ sai
  * hay chưa xác minh — nếu phân biệt được ba trường hợp đó thì form này thành
@@ -22,6 +26,9 @@ const NETWORK = 'Không kết nối được máy chủ. Vui lòng thử lại.'
  *
  * Email gõ ở bước 1 chỉ để **đối chiếu**; mã bay tới địa chỉ đã xác minh của
  * tài khoản, không tới địa chỉ vừa gõ.
+ *
+ * Đặt lại xong, box xanh hiện ngay dưới nút bấm, form tự khoá; đường về đăng
+ * nhập chỉ có một — nút viên thuốc ở chân trang.
  */
 export function ForgotPasswordForm() {
   const [tenDangNhap, setTenDangNhap] = useState('')
@@ -30,17 +37,21 @@ export function ForgotPasswordForm() {
   const [matKhau, setMatKhau] = useState('')
   const [nhapLai, setNhapLai] = useState('')
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<Result | null>(null)
   const [daGui, setDaGui] = useState(false)
-  const [xong, setXong] = useState(false)
+  const [thongBaoMa, setThongBaoMa] = useState(false)
+  const [xacNhanDatLai, setXacNhanDatLai] = useState(false)
+
+  const succeeded = result?.ok === true
+  const locked = pending || succeeded
 
   async function run(action: () => Promise<void>) {
     setPending(true)
-    setError(null)
+    setResult(null)
     try {
       await action()
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : NETWORK)
+      setResult({ ok: false, message: cause instanceof ApiError ? cause.message : NETWORK })
     } finally {
       setPending(false)
     }
@@ -51,38 +62,37 @@ export function ForgotPasswordForm() {
     void run(async () => {
       await forgotPassword(tenDangNhap.trim(), email.trim())
       setDaGui(true)
+      /* Bước 1 luôn báo thành công để không lộ tài khoản nào có thật — hộp
+         thông báo nhắc kiểm tra thư thay vì hứa chắc "đã gửi tới bạn". */
+      setThongBaoMa(true)
     })
   }
 
   function handleReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (matKhau !== nhapLai) {
-      setError('Hai lần nhập mật khẩu mới không giống nhau.')
+      setResult({ ok: false, message: 'Hai lần nhập mật khẩu mới không giống nhau.' })
       return
     }
-    void run(async () => {
-      await resetPassword(tenDangNhap.trim(), ma.trim(), matKhau)
-      setXong(true)
-    })
+    /* Đặt lại sẽ thu hồi mọi phiên đang mở — cho xác nhận lại tên đăng nhập
+       và hệ quả trước khi gửi mã 6 số dùng một lần đi. */
+    setResult(null)
+    setXacNhanDatLai(true)
   }
 
-  if (xong) {
-    return (
-      <div className={styles.form}>
-        <p className={`${styles.message} ${styles.success}`} role="status">
-          Đã đặt lại mật khẩu cho <b>{tenDangNhap.trim()}</b>.
-        </p>
-        <p className={styles.hint}>
-          Mọi phiên đang mở đã bị thu hồi. Đăng nhập lại bằng mật khẩu mới.
-        </p>
-        <div className={styles.actions}>
-          <Link className={styles.primary} to={ROUTES.login}>
-            <Icon name="signIn" size="15px" />
-            Tới trang đăng nhập
-          </Link>
-        </div>
-      </div>
-    )
+  async function doReset() {
+    setPending(true)
+    setResult(null)
+    try {
+      await resetPassword(tenDangNhap.trim(), ma.trim(), matKhau)
+      setXacNhanDatLai(false)
+      setResult({ ok: true, username: tenDangNhap.trim() })
+    } catch (cause) {
+      setXacNhanDatLai(false)
+      setResult({ ok: false, message: cause instanceof ApiError ? cause.message : NETWORK })
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -98,7 +108,7 @@ export function ForgotPasswordForm() {
             onChange={(event) => setTenDangNhap(event.target.value)}
             placeholder="Mã sinh viên hoặc mã giảng viên"
             autoComplete="username"
-            disabled={pending}
+            disabled={locked}
             required
           />
         </label>
@@ -112,7 +122,7 @@ export function ForgotPasswordForm() {
             onChange={(event) => setEmail(event.target.value)}
             placeholder="vidu@gmail.com"
             autoComplete="email"
-            disabled={pending}
+            disabled={locked}
             required
           />
         </label>
@@ -123,14 +133,14 @@ export function ForgotPasswordForm() {
         </p>
 
         <div className={styles.actions}>
-          <button className={styles.primary} type="submit" disabled={pending}>
+          <button className={styles.primary} type="submit" disabled={locked}>
             <Icon name="bell" size="15px" />
             {pending ? 'Đang gửi…' : 'Gửi mã khôi phục'}
           </button>
         </div>
 
-        {daGui ? (
-          <p className={styles.hint} role="status">
+        {daGui && !succeeded ? (
+          <p className={styles.hintBox} role="status">
             Nếu thông tin khớp một tài khoản có email đã xác minh, mã 6 số đã được gửi
             tới địa chỉ đó. Mã có hạn 10 phút. Chưa từng xác minh email thì liên hệ
             Phòng Đào tạo để được cấp lại.
@@ -152,44 +162,34 @@ export function ForgotPasswordForm() {
             maxLength={6}
             autoComplete="one-time-code"
             placeholder="000000"
-            disabled={pending}
+            disabled={locked}
             required
           />
         </label>
 
-        <label className={styles.field}>
-          Mật khẩu mới
-          <input
-            className={styles.input}
-            type="password"
-            value={matKhau}
-            onChange={(event) => setMatKhau(event.target.value)}
-            placeholder="Ít nhất 8 ký tự"
-            autoComplete="new-password"
-            minLength={8}
-            maxLength={128}
-            disabled={pending}
-            required
-          />
-        </label>
+        <PasswordField
+          label="Mật khẩu mới"
+          value={matKhau}
+          onChange={setMatKhau}
+          placeholder="Ít nhất 8 ký tự"
+          autoComplete="new-password"
+          minLength={8}
+          maxLength={128}
+          disabled={locked}
+        />
 
-        <label className={styles.field}>
-          Nhập lại mật khẩu mới
-          <input
-            className={styles.input}
-            type="password"
-            value={nhapLai}
-            onChange={(event) => setNhapLai(event.target.value)}
-            autoComplete="new-password"
-            disabled={pending}
-            required
-          />
-        </label>
+        <PasswordField
+          label="Nhập lại mật khẩu mới"
+          value={nhapLai}
+          onChange={setNhapLai}
+          autoComplete="new-password"
+          disabled={locked}
+        />
 
         <div className={styles.actions}>
-          <button className={styles.primary} type="submit" disabled={pending}>
+          <button className={styles.primary} type="submit" disabled={locked}>
             <Icon name="lock" size="15px" />
-            {pending ? 'Đang đặt lại…' : 'Đặt lại mật khẩu'}
+            {pending ? 'Đang đặt lại…' : succeeded ? 'Đã đặt lại' : 'Đặt lại mật khẩu'}
           </button>
         </div>
 
@@ -198,11 +198,63 @@ export function ForgotPasswordForm() {
         ) : null}
       </form>
 
-      {error ? (
-        <p className={`${styles.message} ${styles.error}`} role="alert">
-          {error}
+      {result?.ok ? (
+        <p className={`${styles.message} ${styles.success}`} role="status">
+          <span className={styles.successIcon}>
+            <Icon name="check" size="15px" />
+          </span>
+          <span>
+            Đã đặt lại mật khẩu cho <b>{result.username}</b>. Mọi phiên đang mở đã bị
+            thu hồi — đăng nhập lại bằng mật khẩu mới ở nút dưới chân trang.
+          </span>
         </p>
       ) : null}
+
+      {result && !result.ok ? (
+        <p key={result.message} className={`${styles.message} ${styles.error}`} role="alert">
+          {result.message}
+        </p>
+      ) : null}
+
+      <AuthInfoDialog
+        open={thongBaoMa}
+        title="Kiểm tra hộp thư của bạn"
+        actionLabel="Đã hiểu, nhập mã ở bước 2"
+        onClose={() => setThongBaoMa(false)}
+      >
+        <p>
+          Nếu thông tin khớp một tài khoản có email đã xác minh, mã 6 số đã được gửi
+          tới địa chỉ đó và có hạn <b>10 phút</b>.
+        </p>
+        <p>
+          Không thấy thư? Kiểm tra cả <b>thư rác (spam)</b>. Chưa từng xác minh email
+          thì liên hệ Phòng Đào tạo để được hỗ trợ.
+        </p>
+      </AuthInfoDialog>
+
+      <AuthConfirmDialog
+        open={xacNhanDatLai}
+        title={`Đặt lại mật khẩu cho ${tenDangNhap.trim() || '…'}`}
+        confirmLabel="Xác nhận đặt lại"
+        danger
+        pending={pending}
+        onClose={() => {
+          if (!pending) setXacNhanDatLai(false)
+        }}
+        onConfirm={() => void doReset()}
+      >
+        <p className={dialogStyles.account}>
+          Tên đăng nhập: <b>{tenDangNhap.trim() || '—'}</b>
+        </p>
+        <p>
+          Mã khôi phục <b>chỉ dùng một lần, hạn 10 phút</b>. Đặt lại xong, mọi phiên
+          đang mở trên mọi thiết bị sẽ <b>bị đăng xuất</b> và phải vào lại bằng mật
+          khẩu mới.
+        </p>
+        <p className={dialogStyles.warn}>
+          Kiểm tra kỹ mã 6 số và hai ô mật khẩu mới khớp nhau trước khi xác nhận.
+        </p>
+      </AuthConfirmDialog>
     </>
   )
 }

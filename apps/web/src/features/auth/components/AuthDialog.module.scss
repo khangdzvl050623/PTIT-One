@@ -1,0 +1,128 @@
+@use '@/styles/tokens' as tokens;
+
+.title {
+  margin: 0;
+  font-size: tokens.$font-size-md;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.45;
+  color: var(--notice-text);
+}
+
+.body {
+  display: grid;
+  gap: tokens.$space-md;
+  padding-block: tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.65;
+  letter-spacing: 0.1px;
+  color: var(--notice-text);
+
+  p {
+    margin: 0;
+  }
+
+  b {
+    color: var(--text-h);
+  }
+
+  code {
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+}
+
+.account {
+  padding: tokens.$space-sm tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  background: var(--field-icon-bg);
+  border: 1px dashed var(--field-border);
+  border-radius: tokens.$radius-sm;
+
+  b {
+    letter-spacing: 0.3px;
+  }
+}
+
+.warn {
+  margin: 0;
+  padding: tokens.$space-md tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.6;
+  color: var(--tile-warm-text);
+  background: var(--tile-warm-bg);
+  border: 1px solid var(--tile-warm-border);
+  border-left: 4px solid var(--tile-warm-text);
+  border-radius: tokens.$radius-sm;
+}
+
+.primary,
+.ghost,
+.danger {
+  display: inline-flex;
+  gap: tokens.$space-sm;
+  align-items: center;
+  justify-content: center;
+  padding: tokens.$space-sm tokens.$space-xl;
+  font: inherit;
+  font-size: tokens.$font-size-sm;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border-radius: tokens.$radius-sm;
+  cursor: pointer;
+  transition:
+    transform tokens.$transition-fast,
+    filter tokens.$transition-fast;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--tile-brand-border);
+    outline-offset: 2px;
+  }
+}
+
+.primary {
+  color: var(--ptit-on-brand);
+  background: linear-gradient(to bottom, var(--panel-header-from), var(--panel-header-to));
+  border: 1px solid var(--ptit-red-border);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+}
+
+.danger {
+  color: var(--ptit-on-brand);
+  background: linear-gradient(to bottom, #dc2626, #991b1b);
+  border: 1px solid #7f1d1d;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+}
+
+.ghost {
+  color: var(--notice-text);
+  background: var(--panel-bg);
+  border: 1px solid var(--field-border);
+
+  &:hover:not(:disabled) {
+    border-color: var(--notice-meta);
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary,
+  .ghost,
+  .danger {
+    transition: none;
+  }
+}
