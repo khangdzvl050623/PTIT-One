@@ -1,0 +1,60 @@
+@use '@/styles/tokens' as tokens;
+
+.dialogTitle {
+  margin: 0;
+  font-size: tokens.$font-size-md;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--notice-text);
+}
+
+.detail {
+  display: grid;
+  gap: tokens.$space-md;
+  margin: 0;
+  padding-block: tokens.$space-lg;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.65;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: tokens.$space-md;
+
+  dt {
+    color: var(--notice-meta);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--notice-text);
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Ba class nội dung cho hàng chi tiết — màn gọi import module này để bọc. */
+.strong {
+  font-weight: 700;
+}
+
+.body {
+  white-space: pre-line;
+}
+
+.innerLink {
+  font-weight: 600;
+  color: var(--accent-red);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: tokens.$breakpoint-mobile) {
+  .line {
+    grid-template-columns: 1fr;
+    gap: tokens.$space-2xs;
+  }
+}

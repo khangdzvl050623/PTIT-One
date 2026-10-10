@@ -18,7 +18,9 @@ import {
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { GradeEntryPage } from '@/pages/GradeEntryPage'
 import { GradesPage } from '@/pages/GradesPage'
+import { AdminNoticePage } from '@/pages/AdminNoticePage'
 import { HomePage } from '@/pages/HomePage'
+import { InboxPage } from '@/pages/InboxPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PeriodPage } from '@/pages/PeriodPage'
@@ -47,6 +49,7 @@ import { NAV_ITEMS } from './navigation'
 const SCREENS: Partial<Record<string, ReactNode>> = {
   [ROUTES.doiMatKhau]: <ChangePasswordPage />,
   [ROUTES.email]: <EmailPage />,
+  [ROUTES.thongBao]: <InboxPage />,
   [ROUTES.gvLopPhuTrach]: <TeachingClassesPage />,
   [ROUTES.gvNhapDiem]: <GradeEntryPage />,
   [ROUTES.qtTongQuan]: <AdminDashboardPage />,
@@ -54,6 +57,7 @@ const SCREENS: Partial<Record<string, ReactNode>> = {
   [ROUTES.qtDangKy]: <AdminRegistrationPage />,
   [ROUTES.qtLopHocPhan]: <AdminClassesPage />,
   [ROUTES.qtDanhMuc]: <CatalogAdminPage />,
+  [ROUTES.qtThongBao]: <AdminNoticePage />,
   [ROUTES.svDangKy]: <RegistrationPage />,
   [ROUTES.svDotDangKy]: <PeriodPage />,
   [ROUTES.svMonHoc]: <PrerequisitePage />,
@@ -81,7 +85,12 @@ export function AppRoutes() {
         </Route>
 
         {NAV_ITEMS.map((item) => (
-          <Route key={item.path} element={<RequireAuth roles={item.roles} />}>
+          /* Khoá gồm cả vai trò: một path có thể xuất hiện hai lần với menu
+             khác nhau (ví dụ /thong-bao: navbar của GV, lối tắt của SV). */
+          <Route
+            key={`${item.path}:${item.roles.join(',')}`}
+            element={<RequireAuth roles={item.roles} />}
+          >
             <Route
               path={item.path}
               element={

@@ -35,6 +35,8 @@ export const ROUTES = {
 
   // Quản trị danh mục (ADMIN_MASTER) — F03
   qtDanhMuc: '/quan-tri/danh-muc',
+  /** Soạn tin cho SV/GV trong phạm vi của mình. */
+  qtThongBao: '/quan-tri/thong-bao',
 
   forbidden: '/khong-du-quyen',
   notFound: '*',

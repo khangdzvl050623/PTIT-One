@@ -1,0 +1,34 @@
+@use '@/styles/tokens' as tokens;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: tokens.$space-md;
+}
+
+.field {
+  display: grid;
+  gap: tokens.$space-xs;
+  font-size: tokens.$font-size-xs;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--notice-meta);
+}
+
+.hint {
+  margin: tokens.$space-md 0 0;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.6;
+  color: var(--notice-meta);
+
+  b {
+    color: var(--accent-red);
+  }
+}

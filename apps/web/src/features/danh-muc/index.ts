@@ -7,6 +7,8 @@ export type { AccountDirectoryProps } from './components/AccountDirectory'
 export { ProvisionPanel } from './components/ProvisionPanel'
 export type { ProvisionPanelProps } from './components/ProvisionPanel'
 
+export { fetchCampuses } from './api/directoryApi'
+
 export { CAMPUSES, FACULTIES, PROGRAMS } from './data/demo'
 export type {
   AccountSummary,

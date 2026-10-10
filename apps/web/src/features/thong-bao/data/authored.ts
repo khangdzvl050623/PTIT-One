@@ -1,0 +1,93 @@
+import type { AuthoredNotice } from '../api/authoredTypes'
+
+/**
+ * Bản đã soạn mẫu: đủ ba phạm vi (`TOAN_TRUONG`, `CO_SO`, `LOP_HOC_PHAN`),
+ * lẫn nháp và đã gửi, một bản quan trọng, một bản có liên kết nội bộ. Ngày
+ * giờ cố định để ảnh chụp và review ổn định.
+ */
+export const AUTHORED_MOCK: readonly AuthoredNotice[] = [
+  {
+    maThongBao: '11111111-1111-1111-1111-111111111111',
+    trangThai: 'DA_GUI',
+    mucDo: 'QUAN_TRONG',
+    tieuDe: 'Kết thúc học phần và chuẩn bị thi cuối kỳ',
+    noiDung:
+      'Lớp Cơ sở dữ liệu (INT1313) kết thúc học phần vào tuần 15. Sinh viên ôn tập theo đề cương đã phát và mang thẻ sinh viên khi dự thi.',
+    lienKet: null,
+    phamVi: 'LOP_HOC_PHAN',
+    maCoSo: null,
+    maLopHP: 'INT1313-2026-1-HCM01',
+    doiTuong: 'SINH_VIEN',
+    ngayTao: '2025-11-27T08:00:00Z',
+    ngayGui: '2025-11-28T02:00:00Z',
+    nguoiNhan: { soSinhVien: 58, soGiangVien: 0 },
+    soDaDoc: 41,
+  },
+  {
+    maThongBao: '22222222-2222-2222-2222-222222222222',
+    trangThai: 'DA_GUI',
+    mucDo: 'THONG_THUONG',
+    tieuDe: 'Nhóm Zalo học phần Nhập môn công nghệ phần mềm',
+    noiDung:
+      'Mời cả lớp tham gia nhóm Zalo học phần để tiện trao đổi và nhận thông báo. Mọi hoạt động của lớp đều công khai trong nhóm.',
+    lienKet: null,
+    phamVi: 'LOP_HOC_PHAN',
+    maCoSo: null,
+    maLopHP: 'SOF1313-2026-1-HCM01',
+    doiTuong: 'SINH_VIEN',
+    ngayTao: '2026-01-12T08:00:00Z',
+    ngayGui: '2026-01-13T02:00:00Z',
+    nguoiNhan: { soSinhVien: 64, soGiangVien: 0 },
+    soDaDoc: 59,
+  },
+  {
+    maThongBao: '33333333-3333-3333-3333-333333333333',
+    trangThai: 'DA_GUI',
+    mucDo: 'THONG_THUONG',
+    tieuDe: 'Lịch nghỉ Tết và học bù',
+    noiDung:
+      'Toàn trường nghỉ Tết từ 09/02 đến hết 22/02. Các lớp có buổi rơi vào tuần nghỉ sẽ học bù theo lịch của Phòng Đào tạo.',
+    lienKet: '/sinh-vien/lich-hoc-hoc-ky?maHocKy=2026-1',
+    phamVi: 'TOAN_TRUONG',
+    maCoSo: null,
+    maLopHP: null,
+    doiTuong: 'TAT_CA',
+    ngayTao: '2026-01-20T08:00:00Z',
+    ngayGui: '2026-01-20T09:30:00Z',
+    nguoiNhan: { soSinhVien: 15200, soGiangVien: 640 },
+    soDaDoc: 9315,
+  },
+  {
+    maThongBao: '44444444-4444-4444-4444-444444444444',
+    trangThai: 'DA_GUI',
+    mucDo: 'THONG_THUONG',
+    tieuDe: 'Mở đợt đăng ký bổ sung học kỳ 2',
+    noiDung:
+      'Cơ sở mở đợt đăng ký bổ sung từ 01/03 đến 05/03. Sinh viên chưa đủ tín chỉ tranh thủ đăng ký, quá hạn hệ thống không mở thêm.',
+    lienKet: '/sinh-vien/dang-ky',
+    phamVi: 'CO_SO',
+    maCoSo: 'HCM',
+    maLopHP: null,
+    doiTuong: 'SINH_VIEN',
+    ngayTao: '2026-02-25T08:00:00Z',
+    ngayGui: '2026-02-25T10:00:00Z',
+    nguoiNhan: { soSinhVien: 8100, soGiangVien: 0 },
+    soDaDoc: 6230,
+  },
+  {
+    maThongBao: '55555555-5555-5555-5555-555555555555',
+    trangThai: 'NHAP',
+    mucDo: 'THONG_THUONG',
+    tieuDe: 'Dặn dò trước buổi thực hành online',
+    noiDung: 'Bản nháp: nhắc lớp kiểm tra micro và đường truyền trước giờ thực hành.',
+    lienKet: null,
+    phamVi: 'LOP_HOC_PHAN',
+    maCoSo: null,
+    maLopHP: 'INT1313-2026-1-HCM01',
+    doiTuong: 'SINH_VIEN',
+    ngayTao: '2026-03-01T08:00:00Z',
+    ngayGui: null,
+    nguoiNhan: { soSinhVien: 58, soGiangVien: 0 },
+    soDaDoc: 0,
+  },
+]
