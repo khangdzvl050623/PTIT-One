@@ -487,6 +487,55 @@ BEGIN
 END;
 GO
 
+-- ---------------------------------------------------------------------
+-- Bo sung cot cho database DA TON TAI.
+--
+-- Cac khoi CREATE TABLE o tren chi chay khi bang chua co, nen database
+-- dung tu truoc se khong nhan duoc cot moi. Khoi nay bat dung truong hop
+-- do. Database moi thi moi dieu kien duoi day deu sai va khoi nay khong
+-- lam gi ca.
+-- ---------------------------------------------------------------------
+IF COL_LENGTH(N'dbo.SinhVien', N'GioiTinh') IS NULL
+    ALTER TABLE dbo.SinhVien ADD
+    GioiTinh varchar(3) NULL,
+        DienThoai varchar(20) NULL,
+        SoCCCD varchar(20) NULL,
+        EmailCaNhan nvarchar(254) NULL,
+        NoiSinh nvarchar(150) NULL,
+        DanToc nvarchar(50) NULL,
+        TonGiao nvarchar(50) NULL,
+        HoKhau nvarchar(255) NULL,
+        AnhDaiDien varchar(500) NULL;
+GO
+
+IF COL_LENGTH(N'dbo.GiangVien', N'GioiTinh') IS NULL
+    ALTER TABLE dbo.GiangVien ADD
+    GioiTinh varchar(3) NULL,
+        DienThoai varchar(20) NULL,
+        SoCCCD varchar(20) NULL,
+        EmailCaNhan nvarchar(254) NULL,
+        NoiSinh nvarchar(150) NULL,
+        DanToc nvarchar(50) NULL,
+        TonGiao nvarchar(50) NULL,
+        HoKhau nvarchar(255) NULL,
+        AnhDaiDien varchar(500) NULL;
+GO
+
+IF COL_LENGTH(N'dbo.TaiKhoan', N'Email') IS NULL
+    ALTER TABLE dbo.TaiKhoan ADD
+        Email varchar(254) NULL,
+        EmailDaXacMinh bit NOT NULL
+            CONSTRAINT DF_TaiKhoan_EmailDaXacMinh DEFAULT (0),
+        ThoiDiemXacMinhEmail datetime2(3) NULL;
+GO
+
+-- Tai khoan cap xong nhung chua kich hoat thi chua co mat khau nao ca.
+IF EXISTS (SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'dbo.TaiKhoan')
+              AND name = N'MatKhauHash' AND is_nullable = 0)
+    ALTER TABLE dbo.TaiKhoan ALTER COLUMN MatKhauHash varchar(255) NULL;
+GO
+
 COMMIT TRANSACTION;
 GO
 PRINT '  [ok] Schema 21 bang da co. Chay tiep 11-rangbuoc.sql va 12-chimuc.sql.';

@@ -25,6 +25,7 @@ $scripts = @(
     @{ Path = 'master/03-taikhoan-master.sql'; Sites = @('MASTER') }
     @{ Path = 'master/04-seed-danhmuc.sql'; Sites = @('MASTER') }
     @{ Path = 'master/05-phien-dang-nhap.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/06-sp-chuyen-co-so.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/30-distributor.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/31-publication.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/32-subscription.sql'; Sites = @('MASTER') }
