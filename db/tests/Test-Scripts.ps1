@@ -41,6 +41,7 @@ $scripts = @(
     # SSMS khong giu :setvar giua hai lan F5, con qua sqlcmd thi :setvar de
     # len -v — nen bien SQLCMD o day khong doi duoc dich, chi them rac roi.
     @{ Path = 'tests/90-demo-nhan-ban.sql'; Sites = @('HCM') }
+    @{ Path = 'tests/91-demo-chuyen-co-so.sql'; Sites = @('MASTER') }
     # Spike DTC: chay TAI HCM, goi sang HN qua Linked Server. Dung LnkHN/DbHN
     # ma runner da cap san — khong tu dat ten bien moi.
     @{ Path = 'spike/01-kiem-dtc.sql'; Sites = @('HCM') }

@@ -58,3 +58,8 @@ tmp/
 
 # ---- CodeGraph: index cục bộ từng máy, không commit ----
 .codegraph/
+
+# Cau hinh cuc bo cua tung may: ten server, tai khoan SQL cua cac site.
+# config.example.psd1 moi la ban mau duoc commit.
+config.local.psd1
+**/config.local.psd1
