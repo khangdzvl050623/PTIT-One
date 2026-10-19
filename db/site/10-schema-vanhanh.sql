@@ -1,4 +1,4 @@
-/* PTIT One — schema 15 bang tai moi site (C1, C9, I6).
+/* PTIT One — schema 21 bang tai moi site (C1, C9, I6).
    Chay SAU snapshot 32 da ap dung: -Script site\10-schema-vanhanh.sql -On HCM/HN/DN.
    Chi tao bang con thieu; khong sua/xoa du lieu khi chay lai.
    PK/FK o day; CHECK/UNIQUE o 11; chi muc truy van o 12.
@@ -30,6 +30,17 @@ BEGIN
         TrangThai varchar(20) NOT NULL,
         SoTinChiTichLuy smallint NOT NULL CONSTRAINT DF_SinhVien_TinChi DEFAULT (0),
         SoMonLienCoSo smallint NOT NULL CONSTRAINT DF_SinhVien_LienCoSo DEFAULT (0),
+        GioiTinh varchar(3) NULL,
+        DienThoai varchar(20) NULL,
+        SoCCCD varchar(20) NULL,
+        EmailCaNhan nvarchar(254) NULL,
+        NoiSinh nvarchar(150) NULL,
+        DanToc nvarchar(50) NULL,
+        TonGiao nvarchar(50) NULL,
+        HoKhau nvarchar(255) NULL,
+        -- URL anh tren dich vu ngoai (Cloudinary). Khong luu nhi phan: snapshot
+        -- replication se phinh vo ich.
+        AnhDaiDien varchar(500) NULL,
         CONSTRAINT PK_SinhVien PRIMARY KEY CLUSTERED (MaSinhVien),
         CONSTRAINT FK_SinhVien_CoSo FOREIGN KEY (MaCoSoNha) REFERENCES dbo.CoSo (MaCoSo),
         CONSTRAINT FK_SinhVien_CTDT FOREIGN KEY (MaCTDT) REFERENCES dbo.ChuongTrinhDaoTao (MaCTDT)
@@ -46,6 +57,17 @@ BEGIN
         MaCoSo varchar(10) NOT NULL,
         MaKhoa varchar(10) NOT NULL,
         HocVi nvarchar(50) NULL,
+        GioiTinh varchar(3) NULL,
+        DienThoai varchar(20) NULL,
+        SoCCCD varchar(20) NULL,
+        EmailCaNhan nvarchar(254) NULL,
+        NoiSinh nvarchar(150) NULL,
+        DanToc nvarchar(50) NULL,
+        TonGiao nvarchar(50) NULL,
+        HoKhau nvarchar(255) NULL,
+        -- URL anh tren dich vu ngoai (Cloudinary). Khong luu nhi phan: snapshot
+        -- replication se phinh vo ich.
+        AnhDaiDien varchar(500) NULL,
         CONSTRAINT PK_GiangVien PRIMARY KEY CLUSTERED (MaGiangVien),
         CONSTRAINT FK_GiangVien_CoSo FOREIGN KEY (MaCoSo) REFERENCES dbo.CoSo (MaCoSo),
         CONSTRAINT FK_GiangVien_Khoa FOREIGN KEY (MaKhoa) REFERENCES dbo.Khoa (MaKhoa)
@@ -59,10 +81,16 @@ IF OBJECT_ID(N'dbo.TaiKhoan', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.TaiKhoan (
         TenDangNhap varchar(50) NOT NULL,
-        MatKhauHash varchar(255) NOT NULL,
+        -- NULL khi tai khoan cap xong nhung chua kich hoat (F02): chua co
+        -- mat khau nao ca, khong phai mat khau rong.
+        MatKhauHash varchar(255) NULL,
         VaiTro varchar(20) NOT NULL,
         MaThucThe varchar(20) NULL,
         MaCoSo varchar(10) NOT NULL,
+        Email varchar(254) NULL,
+        EmailDaXacMinh bit NOT NULL
+            CONSTRAINT DF_TaiKhoan_EmailDaXacMinh DEFAULT (0),
+        ThoiDiemXacMinhEmail datetime2(3) NULL,
         CONSTRAINT PK_TaiKhoan PRIMARY KEY CLUSTERED (TenDangNhap),
         CONSTRAINT FK_TaiKhoan_CoSo FOREIGN KEY (MaCoSo) REFERENCES dbo.CoSo (MaCoSo)
     );
@@ -318,7 +346,148 @@ BEGIN
 END;
 GO
 
+-- Phien dang nhap dat TAI SITE, canh TaiKhoan cua site do: kiem phien la duong
+-- nong cua moi request, de o Master thi moi request phai di qua VPN va Master
+-- mat ho so "ghi hiem" von la ly do no ton tai.
+-- Admin Master khong thuoc co so nao nen co ban song song o PTITONE_MASTER.
+IF OBJECT_ID(N'dbo.PhienDangNhap', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PhienDangNhap (
+        MaPhien uniqueidentifier NOT NULL,
+        TenDangNhap varchar(50) NOT NULL,
+        PhienBanLucTao int NOT NULL,
+        ThoiDiemTao datetime2(3) NOT NULL,
+        ThoiDiemHetHan datetime2(3) NOT NULL,
+        ThoiDiemThuHoi datetime2(3) NULL,
+        LyDoThuHoi varchar(30) NULL,
+        CONSTRAINT PK_PhienDangNhap PRIMARY KEY NONCLUSTERED (MaPhien),
+        CONSTRAINT FK_PhienDangNhap_TaiKhoan FOREIGN KEY (TenDangNhap)
+            REFERENCES dbo.TaiKhoan (TenDangNhap)
+    );
+    PRINT '  [+] dbo.PhienDangNhap';
+END;
+GO
+
+-- Chi luu SHA-256, khong bao gio luu token goc. Rotate = danh dau da dung roi
+-- cap token moi; dung lai token da dung bi coi la replay va thu hoi ca phien.
+IF OBJECT_ID(N'dbo.TokenLamMoi', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TokenLamMoi (
+        MaToken uniqueidentifier NOT NULL,
+        MaPhien uniqueidentifier NOT NULL,
+        TokenHash binary(32) NOT NULL,
+        ThoiDiemTao datetime2(3) NOT NULL,
+        ThoiDiemHetHan datetime2(3) NOT NULL,
+        ThoiDiemDaDung datetime2(3) NULL,
+        ThoiDiemThuHoi datetime2(3) NULL,
+        CONSTRAINT PK_TokenLamMoi PRIMARY KEY NONCLUSTERED (MaToken),
+        CONSTRAINT FK_TokenLamMoi_Phien FOREIGN KEY (MaPhien)
+            REFERENCES dbo.PhienDangNhap (MaPhien)
+    );
+    PRINT '  [+] dbo.TokenLamMoi';
+END;
+GO
+
+-- Ma kich hoat tai khoan (F02). FK toi TaiKhoan cuc bo, khong toi DanhBa replica.
+IF OBJECT_ID(N'dbo.MaKichHoat', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MaKichHoat (
+        MaKichHoat uniqueidentifier NOT NULL,
+        TenDangNhap varchar(50) NOT NULL,
+        MaHash binary(32) NOT NULL,
+        ThoiDiemTao datetime2(3) NOT NULL,
+        ThoiDiemHetHan datetime2(3) NOT NULL,
+        ThoiDiemDaDung datetime2(3) NULL,
+        -- Cap ma moi, hoac nhap sai qua so lan cho phep.
+        ThoiDiemThuHoi datetime2(3) NULL,
+        SoLanSai tinyint NOT NULL CONSTRAINT DF_MaKichHoat_SoLanSai DEFAULT (0),
+        EmailNhan varchar(254) NULL,
+        -- Ai cap ma nay; de truy vet thao tac khoi phuc cua quan tri.
+        NguoiCap varchar(50) NULL,
+        CONSTRAINT PK_MaKichHoat PRIMARY KEY NONCLUSTERED (MaKichHoat),
+        CONSTRAINT FK_MaKichHoat_TaiKhoan FOREIGN KEY (TenDangNhap)
+            REFERENCES dbo.TaiKhoan (TenDangNhap)
+    );
+    PRINT '  [+] dbo.MaKichHoat';
+END;
+GO
+
+-- Ma 6 so xac minh email / khoi phuc mat khau (A1).
+IF OBJECT_ID(N'dbo.MaXacThuc', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MaXacThuc (
+        MaXacThuc uniqueidentifier NOT NULL,
+        TenDangNhap varchar(50) NOT NULL,
+        MucDich varchar(20) NOT NULL,
+        -- Dia chi da gui ma toi; chi danh dau neu tai khoan van mang dia chi nay.
+        Email varchar(254) NOT NULL,
+        MaHash binary(32) NOT NULL,
+        ThoiDiemTao datetime2(3) NOT NULL,
+        ThoiDiemHetHan datetime2(3) NOT NULL,
+        ThoiDiemDaDung datetime2(3) NULL,
+        ThoiDiemThuHoi datetime2(3) NULL,
+        SoLanSai tinyint NOT NULL CONSTRAINT DF_MaXacThuc_SoLanSai DEFAULT (0),
+        CONSTRAINT PK_MaXacThuc PRIMARY KEY NONCLUSTERED (MaXacThuc),
+        CONSTRAINT FK_MaXacThuc_TaiKhoan FOREIGN KEY (TenDangNhap)
+            REFERENCES dbo.TaiKhoan (TenDangNhap)
+    );
+    PRINT '  [+] dbo.MaXacThuc';
+END;
+GO
+
+-- Thong bao hoc vu. Hai loai: SOAN (quan tri go tay, co nhap) va TU_DONG
+-- (sinh tu su kien nghiep vu, luon DA_GUI). Phat lai cung KhoaSuKien khong
+-- tao ban thu hai.
+IF OBJECT_ID(N'dbo.ThongBao', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ThongBao (
+        MaThongBao uniqueidentifier NOT NULL,
+        Loai varchar(20) NOT NULL,
+        TrangThai varchar(20) NOT NULL,
+        MucDo varchar(20) NOT NULL CONSTRAINT DF_ThongBao_MucDo DEFAULT ('THONG_THUONG'),
+        TieuDe nvarchar(200) NOT NULL,
+        NoiDung nvarchar(4000) NOT NULL,
+        -- Duong dan NOI BO cua web, bat dau bang '/'.
+        LienKet varchar(300) NULL,
+        PhamVi varchar(20) NOT NULL,
+        MaCoSo varchar(10) NULL,
+        MaLopHP varchar(80) NULL,
+        DoiTuong varchar(20) NOT NULL,
+        -- NULL voi thong bao tu sinh.
+        NguoiTao varchar(50) NULL,
+        VaiTroNguoiTao varchar(20) NULL,
+        SuKien varchar(30) NULL,
+        KhoaSuKien varchar(200) NULL,
+        NgayTao datetime2(0) NOT NULL,
+        NgayGui datetime2(0) NULL,
+        CONSTRAINT PK_ThongBao PRIMARY KEY NONCLUSTERED (MaThongBao),
+        CONSTRAINT FK_ThongBao_CoSo FOREIGN KEY (MaCoSo) REFERENCES dbo.CoSo (MaCoSo),
+        CONSTRAINT FK_ThongBao_LopHocPhan FOREIGN KEY (MaLopHP)
+            REFERENCES dbo.LopHocPhan (MaLopHP)
+    );
+    PRINT '  [+] dbo.ThongBao';
+END;
+GO
+
+-- Hop thu theo nguoi nhan: PK bat dau bang nguoi nhan nen doc hop thu chi quet
+-- dung phan cua minh.
+IF OBJECT_ID(N'dbo.ThongBaoNguoiNhan', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ThongBaoNguoiNhan (
+        LoaiNguoiNhan varchar(20) NOT NULL,
+        MaNguoiNhan varchar(20) NOT NULL,
+        MaThongBao uniqueidentifier NOT NULL,
+        NgayDoc datetime2(0) NULL,
+        CONSTRAINT PK_ThongBaoNguoiNhan PRIMARY KEY CLUSTERED
+            (LoaiNguoiNhan, MaNguoiNhan, MaThongBao),
+        CONSTRAINT FK_ThongBaoNguoiNhan_ThongBao FOREIGN KEY (MaThongBao)
+            REFERENCES dbo.ThongBao (MaThongBao)
+    );
+    PRINT '  [+] dbo.ThongBaoNguoiNhan';
+END;
+GO
+
 COMMIT TRANSACTION;
 GO
-PRINT '  [ok] Schema 15 bang da co. Chay tiep 11-rangbuoc.sql va 12-chimuc.sql.';
+PRINT '  [ok] Schema 21 bang da co. Chay tiep 11-rangbuoc.sql va 12-chimuc.sql.';
 GO

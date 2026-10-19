@@ -60,7 +60,22 @@ BEGIN
         NgayTao       DATETIME2(0)  NOT NULL
             CONSTRAINT DF_TaiKhoanMaster_NgayTao DEFAULT (SYSUTCDATETIME()),
 
+        /* Email do trường cấp. Admin Master cũng cần tự khôi phục mật
+           khẩu qua thư, nên cột này KHÔNG phải tuỳ chọn về mặt nghiệp
+           vụ — chỉ NULL được cho tới khi quản trị khai báo. Cấu trúc
+           giữ giống hệt `TaiKhoan` ở site. */
+        Email                VARCHAR(254) NULL,
+        EmailDaXacMinh       BIT          NOT NULL
+            CONSTRAINT DF_TaiKhoanMaster_EmailDaXacMinh DEFAULT (0),
+        ThoiDiemXacMinhEmail DATETIME2(3) NULL,
+
         CONSTRAINT PK_TaiKhoanMaster PRIMARY KEY CLUSTERED (TenDangNhap),
+
+        /* Đánh dấu đã xác minh mà không có địa chỉ và mốc thời gian là
+           trạng thái không giải thích được. */
+        CONSTRAINT CK_TaiKhoanMaster_EmailXacMinh
+            CHECK (EmailDaXacMinh = 0
+                OR (Email IS NOT NULL AND ThoiDiemXacMinhEmail IS NOT NULL)),
 
         CONSTRAINT CK_TaiKhoanMaster_VaiTro
             CHECK (VaiTro = 'ADMIN_MASTER'),

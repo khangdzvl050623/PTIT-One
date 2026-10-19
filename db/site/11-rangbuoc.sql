@@ -16,7 +16,7 @@ SET NUMERIC_ROUNDABORT OFF;
 IF N'$(SiteTarget)' NOT IN (N'HCM', N'HN', N'DN')
    OR DB_NAME() <> N'$(DbTarget)' OR DB_NAME() = N'$(DbMaster)'
     THROW 51100, N'Chi chay tren dung Subscriber (-On HCM/HN/DN).', 1;
-IF EXISTS (SELECT 1 FROM (VALUES (N'SinhVien'), (N'GiangVien'), (N'TaiKhoan'), (N'DotDangKy'), (N'LopHocPhan'), (N'LichHoc'), (N'DangKyHocPhan'), (N'Diem'), (N'SinhVienHocKy'), (N'DangKyMonHoc'), (N'LichHocMirror'), (N'YeuCauHocLienCoSo'), (N'KetQuaXuLyYeuCau'), (N'BangDiemMirror'), (N'OutboxSuKien')
+IF EXISTS (SELECT 1 FROM (VALUES (N'SinhVien'), (N'GiangVien'), (N'TaiKhoan'), (N'DotDangKy'), (N'LopHocPhan'), (N'LichHoc'), (N'DangKyHocPhan'), (N'Diem'), (N'SinhVienHocKy'), (N'DangKyMonHoc'), (N'LichHocMirror'), (N'YeuCauHocLienCoSo'), (N'KetQuaXuLyYeuCau'), (N'BangDiemMirror'), (N'OutboxSuKien'), (N'PhienDangNhap'), (N'TokenLamMoi'), (N'MaKichHoat'), (N'MaXacThuc'), (N'ThongBao'), (N'ThongBaoNguoiNhan')
     ) r(TableName) WHERE OBJECT_ID(N'dbo.' + r.TableName, N'U') IS NULL)
     THROW 51102, N'Chay 10-schema-vanhanh.sql truoc.', 1;
 GO
@@ -183,6 +183,176 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes
     CREATE UNIQUE NONCLUSTERED INDEX UQ_TaiKhoan_MaThucThe
         ON dbo.TaiKhoan (MaThucThe) WHERE MaThucThe IS NOT NULL;
 GO
+-- Ly lich, email va cac bang xac thuc port tu db/central (V4-V10).
+IF OBJECT_ID(N'dbo.CK_SinhVien_GioiTinh', 'C') IS NULL
+    ALTER TABLE dbo.SinhVien WITH CHECK ADD CONSTRAINT CK_SinhVien_GioiTinh
+        CHECK (GioiTinh IS NULL OR GioiTinh IN ('NAM', 'NU'));
+ALTER TABLE dbo.SinhVien WITH CHECK CHECK CONSTRAINT CK_SinhVien_GioiTinh;
+GO
+
+IF OBJECT_ID(N'dbo.CK_GiangVien_GioiTinh', 'C') IS NULL
+    ALTER TABLE dbo.GiangVien WITH CHECK ADD CONSTRAINT CK_GiangVien_GioiTinh
+        CHECK (GioiTinh IS NULL OR GioiTinh IN ('NAM', 'NU'));
+ALTER TABLE dbo.GiangVien WITH CHECK CHECK CONSTRAINT CK_GiangVien_GioiTinh;
+GO
+
+IF OBJECT_ID(N'dbo.CK_TaiKhoan_EmailXacMinh', 'C') IS NULL
+    ALTER TABLE dbo.TaiKhoan WITH CHECK ADD CONSTRAINT CK_TaiKhoan_EmailXacMinh
+        CHECK (EmailDaXacMinh = 0
+             OR (Email IS NOT NULL AND ThoiDiemXacMinhEmail IS NOT NULL));
+ALTER TABLE dbo.TaiKhoan WITH CHECK CHECK CONSTRAINT CK_TaiKhoan_EmailXacMinh;
+GO
+
+IF OBJECT_ID(N'dbo.CK_PhienDangNhap_HetHan', 'C') IS NULL
+    ALTER TABLE dbo.PhienDangNhap WITH CHECK ADD CONSTRAINT CK_PhienDangNhap_HetHan
+        CHECK (ThoiDiemHetHan > ThoiDiemTao);
+ALTER TABLE dbo.PhienDangNhap WITH CHECK CHECK CONSTRAINT CK_PhienDangNhap_HetHan;
+GO
+
+IF OBJECT_ID(N'dbo.CK_PhienDangNhap_LyDo', 'C') IS NULL
+    ALTER TABLE dbo.PhienDangNhap WITH CHECK ADD CONSTRAINT CK_PhienDangNhap_LyDo
+        CHECK (LyDoThuHoi IN ('DANG_XUAT', 'DANG_XUAT_TAT_CA', 'PHAT_HIEN_DUNG_LAI',
+                            'DOI_MAT_KHAU', 'KHOI_PHUC_MAT_KHAU', 'THAY_DOI_TAI_KHOAN'));
+ALTER TABLE dbo.PhienDangNhap WITH CHECK CHECK CONSTRAINT CK_PhienDangNhap_LyDo;
+GO
+
+IF OBJECT_ID(N'dbo.CK_PhienDangNhap_ThuHoi', 'C') IS NULL
+    ALTER TABLE dbo.PhienDangNhap WITH CHECK ADD CONSTRAINT CK_PhienDangNhap_ThuHoi
+        CHECK ((ThoiDiemThuHoi IS NULL AND LyDoThuHoi IS NULL)
+             OR (ThoiDiemThuHoi IS NOT NULL AND LyDoThuHoi IS NOT NULL));
+ALTER TABLE dbo.PhienDangNhap WITH CHECK CHECK CONSTRAINT CK_PhienDangNhap_ThuHoi;
+GO
+
+IF OBJECT_ID(N'dbo.CK_TokenLamMoi_HetHan', 'C') IS NULL
+    ALTER TABLE dbo.TokenLamMoi WITH CHECK ADD CONSTRAINT CK_TokenLamMoi_HetHan
+        CHECK (ThoiDiemHetHan > ThoiDiemTao);
+ALTER TABLE dbo.TokenLamMoi WITH CHECK CHECK CONSTRAINT CK_TokenLamMoi_HetHan;
+GO
+
+IF OBJECT_ID(N'dbo.CK_MaKichHoat_HetHan', 'C') IS NULL
+    ALTER TABLE dbo.MaKichHoat WITH CHECK ADD CONSTRAINT CK_MaKichHoat_HetHan
+        CHECK (ThoiDiemHetHan > ThoiDiemTao);
+ALTER TABLE dbo.MaKichHoat WITH CHECK CHECK CONSTRAINT CK_MaKichHoat_HetHan;
+GO
+
+IF OBJECT_ID(N'dbo.CK_MaKichHoat_KetThuc', 'C') IS NULL
+    ALTER TABLE dbo.MaKichHoat WITH CHECK ADD CONSTRAINT CK_MaKichHoat_KetThuc
+        CHECK (ThoiDiemDaDung IS NULL OR ThoiDiemThuHoi IS NULL);
+ALTER TABLE dbo.MaKichHoat WITH CHECK CHECK CONSTRAINT CK_MaKichHoat_KetThuc;
+GO
+
+IF OBJECT_ID(N'dbo.CK_MaXacThuc_MucDich', 'C') IS NULL
+    ALTER TABLE dbo.MaXacThuc WITH CHECK ADD CONSTRAINT CK_MaXacThuc_MucDich
+        CHECK (MucDich IN ('XAC_MINH_EMAIL', 'KHOI_PHUC_MAT_KHAU'));
+ALTER TABLE dbo.MaXacThuc WITH CHECK CHECK CONSTRAINT CK_MaXacThuc_MucDich;
+GO
+
+IF OBJECT_ID(N'dbo.CK_MaXacThuc_HetHan', 'C') IS NULL
+    ALTER TABLE dbo.MaXacThuc WITH CHECK ADD CONSTRAINT CK_MaXacThuc_HetHan
+        CHECK (ThoiDiemHetHan > ThoiDiemTao);
+ALTER TABLE dbo.MaXacThuc WITH CHECK CHECK CONSTRAINT CK_MaXacThuc_HetHan;
+GO
+
+IF OBJECT_ID(N'dbo.CK_MaXacThuc_KetThuc', 'C') IS NULL
+    ALTER TABLE dbo.MaXacThuc WITH CHECK ADD CONSTRAINT CK_MaXacThuc_KetThuc
+        CHECK (ThoiDiemDaDung IS NULL OR ThoiDiemThuHoi IS NULL);
+ALTER TABLE dbo.MaXacThuc WITH CHECK CHECK CONSTRAINT CK_MaXacThuc_KetThuc;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_Loai', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_Loai
+        CHECK (Loai IN ('SOAN', 'TU_DONG'));
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_Loai;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_TrangThai', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_TrangThai
+        CHECK (TrangThai IN ('NHAP', 'DA_GUI'));
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_TrangThai;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_MucDo', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_MucDo
+        CHECK (MucDo IN ('THONG_THUONG', 'QUAN_TRONG'));
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_MucDo;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_DoiTuong', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_DoiTuong
+        CHECK (DoiTuong IN ('SINH_VIEN', 'GIANG_VIEN', 'TAT_CA'));
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_DoiTuong;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_PhamVi', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_PhamVi
+        CHECK ((PhamVi = 'TOAN_TRUONG'  AND MaCoSo IS NULL     AND MaLopHP IS NULL)
+             OR (PhamVi = 'CO_SO'        AND MaCoSo IS NOT NULL AND MaLopHP IS NULL)
+             OR (PhamVi = 'LOP_HOC_PHAN' AND MaLopHP IS NOT NULL)
+             OR (PhamVi = 'CA_NHAN'));
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_PhamVi;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_TuDong', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_TuDong
+        CHECK (Loai = 'SOAN'
+             OR (TrangThai = 'DA_GUI' AND SuKien IS NOT NULL AND KhoaSuKien IS NOT NULL));
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_TuDong;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_DaGui', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_DaGui
+        CHECK (TrangThai = 'NHAP' OR NgayGui IS NOT NULL);
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_DaGui;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBao_LienKet', 'C') IS NULL
+    ALTER TABLE dbo.ThongBao WITH CHECK ADD CONSTRAINT CK_ThongBao_LienKet
+        CHECK (LienKet IS NULL OR LienKet LIKE '/%');
+ALTER TABLE dbo.ThongBao WITH CHECK CHECK CONSTRAINT CK_ThongBao_LienKet;
+GO
+
+IF OBJECT_ID(N'dbo.CK_ThongBaoNguoiNhan_Loai', 'C') IS NULL
+    ALTER TABLE dbo.ThongBaoNguoiNhan WITH CHECK ADD CONSTRAINT CK_ThongBaoNguoiNhan_Loai
+        CHECK (LoaiNguoiNhan IN ('SINH_VIEN', 'GIANG_VIEN'));
+ALTER TABLE dbo.ThongBaoNguoiNhan WITH CHECK CHECK CONSTRAINT CK_ThongBaoNguoiNhan_Loai;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.SinhVien') AND name = N'UQ_SinhVien_SoCCCD')
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_SinhVien_SoCCCD
+        ON dbo.SinhVien (SoCCCD) WHERE SoCCCD IS NOT NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.GiangVien') AND name = N'UQ_GiangVien_SoCCCD')
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_GiangVien_SoCCCD
+        ON dbo.GiangVien (SoCCCD) WHERE SoCCCD IS NOT NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.TokenLamMoi') AND name = N'UQ_TokenLamMoi_TokenHash')
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_TokenLamMoi_TokenHash
+        ON dbo.TokenLamMoi (TokenHash);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.MaKichHoat') AND name = N'UQ_MaKichHoat_ConSong')
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_MaKichHoat_ConSong
+        ON dbo.MaKichHoat (TenDangNhap) WHERE ThoiDiemDaDung IS NULL AND ThoiDiemThuHoi IS NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.MaXacThuc') AND name = N'UQ_MaXacThuc_ConSong')
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_MaXacThuc_ConSong
+        ON dbo.MaXacThuc (TenDangNhap, MucDich) WHERE ThoiDiemDaDung IS NULL AND ThoiDiemThuHoi IS NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.ThongBao') AND name = N'UQ_ThongBao_KhoaSuKien')
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_ThongBao_KhoaSuKien
+        ON dbo.ThongBao (KhoaSuKien) WHERE KhoaSuKien IS NOT NULL;
+GO
+
 COMMIT TRANSACTION;
 GO
 PRINT '  [ok] Da ap dung CHECK va UNIQUE. Bo dem van phai cap nhat nguyen tu trong nghiep vu.';

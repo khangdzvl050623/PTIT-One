@@ -285,6 +285,7 @@ PRINT '     so tin chi, danh sach mon tien quyet.';
 PRINT '';
 PRINT '  Buoc tiep theo:';
 PRINT '    - Mo khoa muc 3 trong replication\31-publication.sql (8 article)';
+PRINT '    - master-phien-dang-nhap.sql (phien cua Admin Master)';
 PRINT '    - Roi toi db\site\ cho cac CSDL van hanh';
 PRINT '  ------------------------------------------------------------';
 GO
