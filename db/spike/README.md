@@ -67,7 +67,7 @@ lỗi giết nhiều nhóm nhất.
 
 ```powershell
 sqlcmd -S <SRV-HCM> -d PTITONE_HCM -E -N -C -b -I -f 65001 `
-       -v LinkedServer="SRV_HN" RemoteDb="PTITONE_HN" `
+       -v LnkHN="SRV_HN" DbHN="PTITONE_HN" `
        -i db/spike/01-kiem-dtc.sql
 ```
 

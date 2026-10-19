@@ -63,7 +63,11 @@ DECLARE @tao nvarchar(max) = N'
             Nguon  sysname          NOT NULL,
             LucGhi datetime2(3)     NOT NULL
         );';
-EXEC (@tao) AT [$(LnkHN)];
+/* ⚠️ KHÔNG dùng `EXEC (@tao) AT [$(LnkHN)]`: dạng đó chạy trong database MẶC
+   ĐỊNH của login ở đầu xa — thường là `master` — nên bảng sẽ mọc nhầm chỗ,
+   rồi hai lệnh INSERT bên dưới (vốn trỏ đúng [$(DbHN)]) báo "Invalid object
+   name". Gọi sp_executesql theo tên ba phần để ép đúng database. */
+EXEC [$(LnkHN)].[$(DbHN)].sys.sp_executesql @tao;
 GO
 
 /* ---------- Ca 1: COMMIT — hai dòng phải cùng tồn tại ---------- */
