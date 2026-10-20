@@ -120,7 +120,27 @@ $vars = @(
 
 # Script SQL duoc luu UTF-8; chi dinh ma hoa de seed tieng Viet khong bi loi
 # khi Windows dang dung mot code page khac.
-$args = @('-S', $server, '-E', '-b', '-I', '-f', '65001', '-i', $sqlPath)
+# --- Xac thuc -----------------------------------------------------------
+# Windows Authentication (-E) chi dung duoc khi SQL Server nam tren CHINH
+# may nay, hoac cac may cung domain. Bon may cua nhom nam trong workgroup
+# va noi nhau qua Radmin VPN, nen may site PHAI dung SQL Server login.
+#
+# Tai khoan khong bao gio nam trong config.ps1 (file do duoc commit). Chung
+# nam o config.local.psd1 — da bi .gitignore chan. Xem config.local.example.psd1.
+$localCfgPath = Join-Path $here 'config.local.psd1'
+$login = $null
+if (Test-Path $localCfgPath) {
+    $localCfg = Import-PowerShellDataFile $localCfgPath
+    if ($localCfg.Logins -and $localCfg.Logins[$On]) { $login = $localCfg.Logins[$On] }
+}
+
+if ($login) {
+    $args = @('-S', $server, '-U', $login.User, '-P', $login.Password,
+              '-b', '-I', '-f', '65001', '-i', $sqlPath)
+    Write-Host "  Xac thuc : SQL login '$($login.User)'" -ForegroundColor DarkGray
+} else {
+    $args = @('-S', $server, '-E', '-b', '-I', '-f', '65001', '-i', $sqlPath)
+}
 # Script tao database chay trong master; cac script con lai can dung DB
 # ngay luc ket noi (master/ va site/ deu kiem DB_NAME truoc khi tao bang).
 $initialDatabase = if ([IO.Path]::GetFileName($sqlPath) -eq '00-create-databases.sql') {
@@ -147,7 +167,13 @@ if ([IO.Path]::GetFileName($sqlPath) -match 'subscription') {
 Write-Host ""
 
 if ($WhatIf) {
-    Write-Host "sqlcmd $($args -join ' ')" -ForegroundColor DarkGray
+    # Che mat khau: -WhatIf hay duoc chay de dan vao bao cao va chup man hinh.
+    $hienThi = @(); $cheTiepTheo = $false
+    foreach ($a in $args) {
+        if ($cheTiepTheo) { $hienThi += '********'; $cheTiepTheo = $false }
+        else { $hienThi += $a; if ($a -eq '-P') { $cheTiepTheo = $true } }
+    }
+    Write-Host "sqlcmd $($hienThi -join ' ')" -ForegroundColor DarkGray
     return
 }
 
