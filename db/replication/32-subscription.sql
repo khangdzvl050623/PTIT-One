@@ -79,13 +79,22 @@ DECLARE @sub TABLE (
     Ma      VARCHAR(10),
     Srv     SYSNAME,
     Db      SYSNAME,
-    GhiChu  NVARCHAR(50)
+    GhiChu  NVARCHAR(50),
+    Login   SYSNAME       NULL,
+    MatKhau NVARCHAR(128) NULL
 );
 
-INSERT INTO @sub (ThuTu, Ma, Srv, Db, GhiChu) VALUES
-    (1, 'HCM', N'$(SrvHCM)', N'$(DbHCM)', N'cuc bo — cung instance'),
-    (2, 'HN',  N'$(SrvHN)',  N'$(DbHN)',  N'qua VPN'),
-    (3, 'DN',  N'$(SrvDN)',  N'$(DbDN)',  N'qua VPN');
+/* Tai khoan dang nhap toi Subscriber lay tu db/config.local.psd1 qua run.ps1.
+   Site nao khong khai thi hai cot nay rong, va Distribution Agent se dung
+   Windows Authentication nhu truoc — dung cho subscriber CUNG MAY voi
+   Distributor. Xem khoi chu thich "Xac thuc toi Subscriber" o duoi. */
+INSERT INTO @sub (ThuTu, Ma, Srv, Db, GhiChu, Login, MatKhau) VALUES
+    (1, 'HCM', N'$(SrvHCM)', N'$(DbHCM)', N'cuc bo — cung instance',
+        NULLIF(N'$(SubLoginHCM)', N''), NULLIF(N'$(SubPwdHCM)', N'')),
+    (2, 'HN',  N'$(SrvHN)',  N'$(DbHN)',  N'qua VPN',
+        NULLIF(N'$(SubLoginHN)', N''),  NULLIF(N'$(SubPwdHN)', N'')),
+    (3, 'DN',  N'$(SrvDN)',  N'$(DbDN)',  N'qua VPN',
+        NULLIF(N'$(SubLoginDN)', N''),  NULLIF(N'$(SubPwdDN)', N''));
 
 /* ⭐ CHỌN SUBSCRIBER CHO LẦN CHẠY NÀY — mặc định là cả ba.
    run.ps1 -Subscribers HCM  →  chỉ đăng ký subscriber cục bộ.
@@ -103,13 +112,14 @@ BEGIN
     SET NOEXEC ON;
 END
 
-DECLARE @srv SYSNAME, @db SYSNAME, @ghiChu NVARCHAR(50);
+DECLARE @srv SYSNAME, @db SYSNAME, @ghiChu NVARCHAR(50),
+        @login SYSNAME, @matKhau NVARCHAR(128);
 
 DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
-    SELECT Srv, Db, GhiChu FROM @sub ORDER BY ThuTu;
+    SELECT Srv, Db, GhiChu, Login, MatKhau FROM @sub ORDER BY ThuTu;
 
 OPEN cur;
-FETCH NEXT FROM cur INTO @srv, @db, @ghiChu;
+FETCH NEXT FROM cur INTO @srv, @db, @ghiChu, @login, @matKhau;
 WHILE @@FETCH_STATUS = 0
 BEGIN
     IF NOT EXISTS (
@@ -132,21 +142,52 @@ BEGIN
              @update_mode       = N'read only',
              @subscriber_type   = 0;
 
-        /* --- Distribution Agent, chạy liên tục --- */
-        EXEC sp_addpushsubscription_agent
-             @publication              = N'$(PublicationName)',
-             @subscriber               = @srv,
-             @subscriber_db            = @db,
-             @subscriber_security_mode = 1,      -- Windows Authentication
-             @frequency_type           = 64,     -- 64 = tự khởi động khi Agent chạy
-             @enabled_for_syncmgr      = N'False';
+        /* --- Distribution Agent, chạy liên tục ---
 
-        PRINT '  [+] subscription ' + @srv + '.' + @db + '   (' + @ghiChu + ')';
+           ⭐ XÁC THỰC TỚI SUBSCRIBER — vì sao không dùng Windows Auth.
+
+           Bốn máy của nhóm nằm trong workgroup, không có domain. Windows
+           Authentication qua workgroup chỉ đi được bằng mẹo NTLM: tạo một
+           tài khoản Windows TRÙNG username và TRÙNG mật khẩu trên mọi máy,
+           rồi cho SQL Server Agent chạy bằng tài khoản đó. Mẹo đó chạy
+           được, nhưng sai một ký tự là lỗi đăng nhập không chỉ vào đâu cả.
+
+           Vì vậy site ở xa dùng SQL Server login — chính tài khoản
+           `ptitone_admin` mà người giữ máy đã tạo lúc cài đặt. Mật khẩu do
+           SQL Server mã hoá trong metadata distribution, và nằm ngoài git
+           (db/config.local.psd1).
+
+           Subscriber CÙNG MÁY với Distributor thì không khai gì, và rơi về
+           Windows Authentication như cũ — không cần mật khẩu cho chính mình.
+
+           ⚠️ Lệch một dòng so với D1 trong tài liệu thiết kế. Nêu rõ trong
+              báo cáo, mục hạn chế đã nhận diện. */
+        IF @login IS NULL
+            EXEC sp_addpushsubscription_agent
+                 @publication              = N'$(PublicationName)',
+                 @subscriber               = @srv,
+                 @subscriber_db            = @db,
+                 @subscriber_security_mode = 1,      -- Windows Authentication
+                 @frequency_type           = 64,     -- tự khởi động khi Agent chạy
+                 @enabled_for_syncmgr      = N'False';
+        ELSE
+            EXEC sp_addpushsubscription_agent
+                 @publication              = N'$(PublicationName)',
+                 @subscriber               = @srv,
+                 @subscriber_db            = @db,
+                 @subscriber_security_mode = 0,      -- SQL Server Authentication
+                 @subscriber_login         = @login,
+                 @subscriber_password      = @matKhau,
+                 @frequency_type           = 64,
+                 @enabled_for_syncmgr      = N'False';
+
+        PRINT '  [+] subscription ' + @srv + '.' + @db + '   (' + @ghiChu
+              + ISNULL(N' — SQL login ' + @login, N' — Windows Auth') + ')';
     END
     ELSE
         PRINT '  [=] subscription ' + @srv + '.' + @db + ' da ton tai';
 
-    FETCH NEXT FROM cur INTO @srv, @db, @ghiChu;
+    FETCH NEXT FROM cur INTO @srv, @db, @ghiChu, @login, @matKhau;
 END
 CLOSE cur;
 DEALLOCATE cur;

@@ -47,6 +47,11 @@ $cfg  = Import-PowerShellDataFile (Join-Path $here 'config.ps1')
 $sqlPath = Join-Path $here $Script
 if (-not (Test-Path $sqlPath)) { throw "Khong tim thay script: $sqlPath" }
 
+# Cau hinh cuc bo (tai khoan SQL cua tung site). Khong commit — xem
+# config.local.example.psd1.
+$localCfgPath  = Join-Path $here 'config.local.psd1'
+$localCfgEarly = if (Test-Path $localCfgPath) { Import-PowerShellDataFile $localCfgPath } else { $null }
+
 $server = $cfg.Servers[$On]
 if (-not $server) { throw "Khong co cau hinh server cho '$On' trong config.ps1" }
 
@@ -118,6 +123,20 @@ $vars = @(
     "DbList=$dbList"
 )
 
+# --- Tai khoan dang nhap toi tung Subscriber ---------------------------
+# 32-subscription.sql doc $(SubLoginHN)/$(SubPwdHN)... de quyet dinh
+# Distribution Agent dung SQL Auth hay Windows Auth cho tung site.
+# Site khong khai trong config.local.psd1 thi hai bien nay rong, va
+# script roi ve Windows Auth — dung cho subscriber cung may.
+foreach ($ma in @('HCM', 'HN', 'DN')) {
+    $l = $null
+    if ($localCfgEarly -and $localCfgEarly.Logins -and $localCfgEarly.Logins[$ma]) {
+        $l = $localCfgEarly.Logins[$ma]
+    }
+    $vars += @("SubLogin$ma=" + $(if ($l) { $l.User }     else { '' }))
+    $vars += @("SubPwd$ma="   + $(if ($l) { $l.Password } else { '' }))
+}
+
 # Script SQL duoc luu UTF-8; chi dinh ma hoa de seed tieng Viet khong bi loi
 # khi Windows dang dung mot code page khac.
 # --- Xac thuc -----------------------------------------------------------
@@ -127,11 +146,9 @@ $vars = @(
 #
 # Tai khoan khong bao gio nam trong config.ps1 (file do duoc commit). Chung
 # nam o config.local.psd1 — da bi .gitignore chan. Xem config.local.example.psd1.
-$localCfgPath = Join-Path $here 'config.local.psd1'
 $login = $null
-if (Test-Path $localCfgPath) {
-    $localCfg = Import-PowerShellDataFile $localCfgPath
-    if ($localCfg.Logins -and $localCfg.Logins[$On]) { $login = $localCfg.Logins[$On] }
+if ($localCfgEarly -and $localCfgEarly.Logins -and $localCfgEarly.Logins[$On]) {
+    $login = $localCfgEarly.Logins[$On]
 }
 
 if ($login) {
@@ -171,6 +188,7 @@ if ($WhatIf) {
     $hienThi = @(); $cheTiepTheo = $false
     foreach ($a in $args) {
         if ($cheTiepTheo) { $hienThi += '********'; $cheTiepTheo = $false }
+        elseif ($a -match '^SubPwd\w+=.') { $hienThi += ($a -replace '=.*$', '=********') }
         else { $hienThi += $a; if ($a -eq '-P') { $cheTiepTheo = $true } }
     }
     Write-Host "sqlcmd $($hienThi -join ' ')" -ForegroundColor DarkGray
