@@ -90,6 +90,7 @@ $vars = @(
     "SrvDN=$($cfg.Servers.DN)"
 
     "DbMaster=$($cfg.Databases.MASTER)"
+    "DbCentral=$($cfg.Databases.CENTRAL)"
     "DbHCM=$($cfg.Databases.HCM)"
     "DbHN=$($cfg.Databases.HN)"
     "DbDN=$($cfg.Databases.DN)"

@@ -33,6 +33,11 @@
     # Tên database. Tiền tố PTITONE_ theo tên dự án.
     # -----------------------------------------------------------------
     Databases = @{
+        # Nguon de tach du lieu sang topology phan tan (db/migrate). Phai nam
+        # CUNG INSTANCE voi MASTER — script migrate doc no bang ten hai phan.
+        # Sau khi doi soat xong thi backup roi go; xem db/migrate/README.
+        CENTRAL = 'PTITONE_CENTRAL'
+
         MASTER = 'PTITONE_MASTER'
         HCM    = 'PTITONE_HCM'
         HN     = 'PTITONE_HN'
