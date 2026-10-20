@@ -47,8 +47,16 @@ public class RoutingDataSourceConfig {
         bySite.put(SiteContext.MASTER, master);
 
         if (properties.nodes() != null) {
-            properties.nodes().forEach((code, node) ->
-                    bySite.put(code.toUpperCase(), pool(code, node, properties.poolSize())));
+            properties.nodes().forEach((code, node) -> {
+                /* Nút chưa khai thì bỏ qua, không dựng pool rỗng. Các máy của
+                   nhóm lên dần, nên ứng dụng phải chạy được với hai nút hôm
+                   nay và bốn nút tuần sau mà không phải sửa gì. */
+                if (node == null || node.url() == null || node.url().isBlank()) {
+                    log.warn("Bo qua co so {}: chua khai ptitone.sites.nodes.{}.url", code, code);
+                    return;
+                }
+                bySite.put(code.toUpperCase(), pool(code, node, properties.poolSize()));
+            });
         }
 
         if (bySite.size() == 1) {
