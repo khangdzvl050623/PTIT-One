@@ -8,6 +8,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -53,9 +54,32 @@ class RoutingWiringTest {
     @Autowired
     private DataSource dataSource;
 
+    @Autowired
+    private ApplicationContext context;
+
     @Test
     void profilePhanTanDungRoutingDataSource() {
         assertThat(dataSource).isInstanceOf(RoutingDataSource.class);
+    }
+
+    /**
+     * Bật cả hai profile KHÔNG tạo ra hai kết nối song song.
+     *
+     * <p>Đây là chỗ dễ hiểu nhầm nhất: tên profile {@code central} nghe như
+     * "dùng database CENTRAL", nhưng nó chỉ có nghĩa "bật các bean nghiệp vụ".
+     * Việc nối database nào là do DataSource quyết định, và chỉ có MỘT.
+     *
+     * <p>{@code DataSourceAutoConfiguration} của Spring Boot mang điều kiện
+     * {@code @ConditionalOnMissingBean(DataSource.class)}. {@link
+     * RoutingDataSourceConfig} đã khai một bean DataSource, nên auto-config
+     * rút lui hoàn toàn: pool trỏ tới CENTRAL <b>không bao giờ được tạo</b>.
+     * {@code spring.datasource.url} chỉ còn là một chuỗi không ai đọc.
+     */
+    @Test
+    void khongCoDataSourceThuHaiTroToiCentral() {
+        assertThat(context.getBeanNamesForType(DataSource.class))
+                .as("chi duoc co dung mot DataSource, la ban dinh tuyen")
+                .hasSize(1);
     }
 
     /**
