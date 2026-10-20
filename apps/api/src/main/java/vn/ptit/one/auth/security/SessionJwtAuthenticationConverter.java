@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 
 import vn.ptit.one.auth.model.AuthenticatedUser;
+import vn.ptit.one.shared.routing.SiteContext;
 import vn.ptit.one.auth.service.SessionService;
 
 /**
@@ -34,6 +35,22 @@ final class SessionJwtAuthenticationConverter implements Converter<Jwt, Abstract
         }
         UUID sessionId = sessionIdOf(jwt);
         Integer version = versionOf(jwt);
+
+        /* ⭐ Phần 2: phiên nằm ở database của CƠ SỞ người dùng, không ở Master.
+           Phải đặt cơ sở TRƯỚC khi hỏi, nếu không câu kiểm phiên chạy nhầm
+           database và mọi request đều bị từ chối.
+
+           Đặt ở đây chứ không ở SiteContextFilter vì filter đó chạy SAU chuỗi
+           lọc bảo mật — tới lúc nó chạy thì việc kiểm phiên đã xong từ lâu.
+
+           Claim `campus` dùng được vì tới bước này chữ ký JWT đã được xác
+           minh; nó không phải dữ liệu client tự khai. Dù vậy nó cũng chỉ
+           quyết định HỎI Ở ĐÂU: phiên có hợp lệ hay không vẫn do DB trả lời. */
+        String campus = jwt.getClaimAsString(AccessTokenIssuer.CLAIM_CAMPUS);
+        if (campus != null && !campus.isBlank()) {
+            SiteContext.set(campus);
+        }
+
         AuthenticatedUser user;
         try {
             user = service.verify(sessionId, jwt.getSubject(), version)

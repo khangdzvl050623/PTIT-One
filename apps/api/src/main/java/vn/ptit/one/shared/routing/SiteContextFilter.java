@@ -5,8 +5,6 @@ import java.io.IOException;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -14,47 +12,36 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import vn.ptit.one.auth.model.AuthenticatedUser;
 
 /**
- * Đặt {@link SiteContext} cho mỗi request, lấy từ phiên đã xác thực.
+ * Dọn {@link SiteContext} sau mỗi request.
  *
- * <p>Chạy SAU chuỗi lọc của Spring Security (đăng ký ở độ ưu tiên thấp nhất)
- * nên lúc này principal đã có. Cơ sở đọc từ {@code AuthenticatedUser.homeCampus()},
- * vốn lấy từ DB lúc kiểm phiên — <b>không</b> từ tham số client.
+ * <p>Việc ĐẶT cơ sở không nằm ở đây — nó nằm ở {@code SessionJwtAuthenticationConverter},
+ * vì phiên đăng nhập được kiểm bên trong chuỗi lọc bảo mật, sớm hơn mọi filter
+ * thường. Filter này chỉ lo phần còn lại, và phần đó quan trọng không kém.
  *
- * <p>Ba trường hợp rơi về {@link SiteContext#MASTER}:
- * <ul>
- *   <li>chưa đăng nhập — đăng nhập phải tra danh bạ ở Master mới biết cơ sở;</li>
- *   <li>Admin Master — không thuộc cơ sở nào, và việc của họ là danh mục;</li>
- *   <li>tài khoản không có cơ sở vì lý do nào khác.</li>
- * </ul>
+ * <p>Chạy <b>trước</b> chuỗi bảo mật, có chủ đích. Nếu đặt sau, một request bị
+ * từ chối 401 sẽ không bao giờ đi tới đây, nên {@code finally} không chạy và
+ * giá trị cơ sở sót lại trên thread. Servlet container tái sử dụng thread, nên
+ * request kế tiếp — có thể của người khác, ở cơ sở khác — sẽ đọc nhầm database.
+ * Lỗi kiểu đó không ném exception và chỉ lộ ra khi đối soát dữ liệu.
  *
- * <p>Xoá trong {@code finally} là bắt buộc: thread được tái sử dụng cho request
- * sau, để sót giá trị là request của người khác đọc nhầm database.
+ * <p>Chưa đặt thì {@link SiteContext#current()} trả về {@code MASTER}, đúng cho
+ * đăng nhập (phải tra danh bạ) và cho Admin Master (không thuộc cơ sở nào).
  */
 @Component
 @Profile("distributed")
-@Order(Ordered.LOWEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class SiteContextFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {
         try {
-            SiteContext.set(resolveSite());
+            SiteContext.clear();
             chain.doFilter(request, response);
         } finally {
             SiteContext.clear();
         }
-    }
-
-    private static String resolveSite() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user
-                && user.homeCampus() != null) {
-            return user.homeCampus();
-        }
-        return SiteContext.MASTER;
     }
 }

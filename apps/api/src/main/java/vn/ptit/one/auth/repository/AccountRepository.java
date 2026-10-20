@@ -53,6 +53,12 @@ public class AccountRepository {
              WHERE TenDangNhap = ?
             """;
 
+    /* CHI doc danh ba. Dung o Phan 2 de biet nguoi dung thuoc co so nao
+       TRUOC khi dinh tuyen toi database cua co so do. */
+    private static final String FIND_CAMPUS = """
+            SELECT MaCoSo FROM dbo.DanhBaNguoiDung WHERE TenDangNhap = ?
+            """;
+
     private static final String INSERT_DIRECTORY = """
             INSERT INTO dbo.DanhBaNguoiDung (TenDangNhap, MaCoSo, LoaiNguoiDung, MaThucThe, TrangThai)
             VALUES (?, ?, ?, ?, ?)
@@ -108,6 +114,27 @@ public class AccountRepository {
 
     public Optional<AccountRecord> findByUsername(String username) {
         return jdbc.query(FIND_BY_USERNAME, (rs, rowNum) -> map(rs), username).stream().findFirst();
+    }
+
+    /**
+     * Cơ sở của một tài khoản, đọc từ danh bạ và CHỈ từ danh bạ.
+     *
+     * <p>Phần 2 cần câu này trước khi đăng nhập được: {@code TaiKhoan} nằm ở
+     * từng cơ sở, mà lúc nhận tên đăng nhập thì chưa biết cơ sở nào. Danh bạ ở
+     * Master là nơi duy nhất trả lời được.
+     *
+     * <p>Không dùng {@link #findByUsername} cho việc này: câu đó join sang
+     * {@code TaiKhoan}, mà Master không có bảng đó — chạy ở Master là lỗi
+     * "Invalid object name".
+     *
+     * <p>Trả về rỗng khi không tìm thấy, và cũng rỗng với Admin Master (cột
+     * {@code MaCoSo} là NULL vì họ không thuộc cơ sở nào). Cả hai trường hợp
+     * đều phải xử lý tại Master, nên gộp lại là đúng chứ không phải mất thông tin.
+     */
+    public Optional<String> findCampusOfUser(String username) {
+        return jdbc.queryForList(FIND_CAMPUS, String.class, username).stream()
+                .filter(campus -> campus != null)
+                .findFirst();
     }
 
     /** Làm mọi JWT đang lưu hành của tài khoản mất hiệu lực ở request kế tiếp. */
