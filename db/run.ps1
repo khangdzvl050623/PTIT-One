@@ -188,7 +188,7 @@ if ($WhatIf) {
     $hienThi = @(); $cheTiepTheo = $false
     foreach ($a in $args) {
         if ($cheTiepTheo) { $hienThi += '********'; $cheTiepTheo = $false }
-        elseif ($a -match '^SubPwd\w+=.') { $hienThi += ($a -replace '=.*$', '=********') }
+        elseif ($a -match '^SubPwd\w+=.') { $hienThi += ($a -replace '=.*$', '="********"') }
         else { $hienThi += $a; if ($a -eq '-P') { $cheTiepTheo = $true } }
     }
     Write-Host "sqlcmd $($hienThi -join ' ')" -ForegroundColor DarkGray
