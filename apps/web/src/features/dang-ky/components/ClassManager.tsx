@@ -66,7 +66,13 @@ export function ClassManager() {
   const [modal, setModal] = useState<Modal | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const reload = useCallback(async () => setClasses(await api.adminClasses(maHocKy)), [maHocKy])
+  /* `useTerms` nạp bất đồng bộ nên lần render đầu `maHocKy` còn rỗng. Không
+     chặn thì effect bắn ngay với `?maHocKy=`, server trả 400 "Không có học
+     kỳ" và ApiError nổi lên console — cùng chỗ `ClassEnrollments` đã chặn. */
+  const reload = useCallback(async () => {
+    if (!maHocKy) return
+    setClasses(await api.adminClasses(maHocKy))
+  }, [maHocKy])
 
   useEffect(() => {
     void reload()
