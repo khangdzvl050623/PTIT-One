@@ -31,6 +31,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles({ "central", "distributed" })
 @TestPropertySource(properties = {
+        /* Flyway KHONG ton trong initialization-fail-timeout: no mo ket noi
+           ngay luc dung context, nen URL gia o day lam ca test chet khi moi
+           truong bat PTITONE_MIGRATE_ON_START. Mot test noi day khong co ly do
+           gi chay migration — tat tuong minh thay vi phu thuoc vao .env. */
+        "spring.flyway.enabled=false",
         /* URL giả, cố tình không trỏ tới đâu cả. */
         "ptitone.sites.master.url=jdbc:sqlserver://localhost;databaseName=khong-ton-tai-master",
         "ptitone.sites.master.username=sa",
