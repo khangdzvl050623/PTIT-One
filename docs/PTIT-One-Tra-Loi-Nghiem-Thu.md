@@ -44,7 +44,7 @@ Mỗi mục tự in `PASS`/`FAIL` của chính nó; script chỉ gom output vào
 - **Outbox** — đồng bộ điểm về cơ sở nhà. Ghi hai site, **không ai chờ**.
   ✅ Xong.
 
-Demo đầu-cuối: `db	ests\94-demo-lien-co-so.ps1` — SV cơ sở HCM đăng ký lớp
+Demo đầu-cuối: `db\tests\94-demo-lien-co-so.ps1` — SV cơ sở HCM đăng ký lớp
 trực tuyến ở HN, giảng viên HN công bố điểm, Outbox trả điểm về HCM. 21 phép
 kiểm, PASS, tự dọn sạch.
 
