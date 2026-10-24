@@ -73,6 +73,16 @@ Trước khi sinh code, đọc mục **0.1b** (năm yêu cầu bắt buộc) và
 | **Thứ tự Outbox** | Upsert vào mirror **TRƯỚC**, đánh dấu `SENT` **SAU**. Đảo thứ tự là mất sự kiện vĩnh viễn |
 | **Outbox chỉ cho sinh viên khách** | Sinh viên có cơ sở nhà trùng site thì điểm đã nằm đúng chỗ, không phát sự kiện |
 
+## Viết ngắn
+
+Chú thích và script dài gấp đôi phần code là lãng phí, không phải cẩn thận.
+
+- Chú thích chỉ giữ **cảnh báo bẫy** và **lý do một quyết định khác thường**.
+  Cắt phần diễn giải lại điều code đã nói rõ
+- Script test/demo: in **kết luận** (`PASS` / `LECH` / số đo), không in tường
+  thuật từng bước. Một script tự khẳng định thắng một script tự thuật lại
+- Không viết thêm tài liệu nếu không được yêu cầu
+
 ## Quy ước đặt tên
 
 - **Bảng và cột: tiếng Việt không dấu** (`SinhVien`, `MaCoSoNha`) — giảng viên đọc lược đồ
