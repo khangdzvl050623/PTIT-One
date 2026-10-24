@@ -15,6 +15,9 @@ secrets/
 *.ldf
 *.ndf
 
+# ---- Output bang chung: sinh lai duoc, khong commit ----
+bang-chung/
+
 # ---- Java / Maven ----
 target/
 *.class
