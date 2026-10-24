@@ -8,7 +8,14 @@
 [CmdletBinding()]
 param(
     [string] $OutDir,
-    [int[]]  $Chi
+    [int[]]  $Chi,
+    # Dua CENTRAL ve dung seed roi tach lai truoc khi do.
+    # CAN sau moi lan chay bo test API: cac test tich hop de lai lop da huy
+    # trong CENTRAL, ma CENTRAL la NGUON cua migrate/50 — doi soat se bao LECH
+    # va trong nhu loi phan manh.
+    [switch] $DongBoLai,
+    [string] $SrvCentral = 'tcp:localhost,14330',
+    [string] $DbCentral = 'PTITONE_CENTRAL'
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -32,6 +39,17 @@ $muc = @(
     @{ So = 5; Ten = 'Truy van phan tan';  Dau = 'TRUY VAN PHAN TAN: PASS'
        Sql = 'tests\92-do-truy-van-phan-tan.sql' }
 )
+
+if ($DongBoLai) {
+    Write-Host 'Dong bo lai: reset fixture -> seed -> tach manh ...'
+    foreach ($f in @('99-reset-fixture.sql', '20-hoc-vu-seed.sql')) {
+        sqlcmd -S $SrvCentral -d $DbCentral -E -C -b -I -i (Join-Path $dbRoot "central/seed/$f") > $null
+        if ($LASTEXITCODE -ne 0) { throw "Loi khi chay $f" }
+    }
+    & powershell -NoProfile -File (Join-Path $dbRoot 'run.ps1') `
+        -Script 'migrate\50-tach-du-lieu.sql' -On MASTER > $null
+    if ($LASTEXITCODE -ne 0) { throw 'Loi khi tach manh.' }
+}
 
 $ketQua = @()
 foreach ($m in $muc) {

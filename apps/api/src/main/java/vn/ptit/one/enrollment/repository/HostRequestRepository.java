@@ -41,8 +41,29 @@ public class HostRequestRepository {
         this.jdbc = jdbc;
     }
 
+    /**
+     * ⚠️ Câu {@code SELECT} mồi là BẮT BUỘC, không phải thừa.
+     *
+     * <p>{@code sp_getapplock @LockOwner = 'Transaction'} đòi
+     * {@code @@TRANCOUNT > 0}, nhưng với autocommit tắt SQL Server chỉ mở giao
+     * dịch ngầm khi gặp {@code SELECT/INSERT/UPDATE/DELETE} — {@code EXEC}
+     * KHÔNG nằm trong danh sách đó. Khoá này là câu ĐẦU TIÊN của giao dịch
+     * Host, nên không có mồi thì {@code sp_getapplock} trả {@code -999} và mọi
+     * yêu cầu đều bị báo "đang xử lý". Các chỗ khoá khác trong dự án may mắn
+     * luôn có lệnh đọc chạy trước nên không lộ ra lỗi này.
+     *
+     * <p>Mồi phải là SELECT GÁN GIÁ TRỊ: {@code SELECT TOP 0 …} trả về một
+     * result set rỗng, và {@code queryForObject} đọc đúng result set đầu tiên
+     * nên ném "expected 1, actual 0".
+     *
+     * <p>Lời giải thích để ở ĐÂY chứ không trong chuỗi SQL: chú thích tiếng
+     * Việt nằm trong câu lệnh gửi xuống driver thì dấu bị mã hoá hỏng và
+     * SQL Server báo lỗi cú pháp ở giữa câu chú thích.
+     */
     public boolean acquireRequestLock(String maYeuCau, int timeoutMillis) {
         Integer ketQua = jdbc.queryForObject("""
+                DECLARE @moi int;
+                SELECT @moi = COUNT(*) FROM sys.objects WHERE 1 = 0;
                 DECLARE @ketQua int;
                 EXEC @ketQua = sp_getapplock @Resource = ?, @LockMode = 'Exclusive',
                      @LockOwner = 'Transaction', @LockTimeout = ?;
