@@ -40,6 +40,7 @@ $scripts = @(
     @{ Path = 'site/10-schema-vanhanh.sql'; Sites = @('HCM','HN','DN') }
     @{ Path = 'site/11-rangbuoc.sql'; Sites = @('HCM','HN','DN') }
     @{ Path = 'site/12-chimuc.sql'; Sites = @('HCM','HN','DN') }
+    @{ Path = 'site/13-bao-ve-subscriber.sql'; Sites = @('HCM','HN','DN') }
     # Demo doc trong SSMS, khong phai buoc cai dat. Van phai bien dich duoc.
     # File nay CO CHU Y ghi thang ten database thay vi dung bien SQLCMD:
     # SSMS khong giu :setvar giua hai lan F5, con qua sqlcmd thi :setvar de

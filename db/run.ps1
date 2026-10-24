@@ -97,6 +97,10 @@ $vars = @(
 
     "Collation=$($cfg.Collation)"
 
+    # Tai khoan UNG DUNG o site. site/13 DENY ghi len bang nhan ban cho
+    # chinh user nay. Khong phai tai khoan chay replication.
+    "AppUser=$(if ($cfg.AppUser) { $cfg.AppUser } else { 'ptitone_api' })"
+
     "SnapshotFolder=$($cfg.Replication.SnapshotFolder)"
     "PublicationName=$($cfg.Replication.PublicationName)"
     "DistRetention=$($cfg.Replication.DistributionRetentionHours)"
