@@ -19,6 +19,10 @@ import vn.ptit.one.auth.model.AuthenticatedUser;
 @Component
 public class AccessTokenIssuer {
 
+    /* Co so cua nguoi dung. Phan 2 dung claim nay de biet phien nam o
+       database nao — xem SessionJwtAuthenticationConverter. */
+    public static final String CLAIM_CAMPUS = "campus";
+
     public static final String CLAIM_SESSION = "sid";
     public static final String CLAIM_VERSION = "ver";
 
@@ -46,7 +50,7 @@ public class AccessTokenIssuer {
                 .claim(CLAIM_VERSION, user.accountVersion())
                 .claim("role", user.role().name());
         if (user.homeCampus() != null) {
-            claims.claim("campus", user.homeCampus());
+            claims.claim(CLAIM_CAMPUS, user.homeCampus());
         }
         String token = encoder.encode(JwtEncoderParameters.from(
                 JwsHeader.with(MacAlgorithm.HS256).build(), claims.build())).getTokenValue();

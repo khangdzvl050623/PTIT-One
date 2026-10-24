@@ -3,12 +3,19 @@ package vn.ptit.one.report.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Thống kê tổng quan của một học kỳ trong phạm vi được xem. */
+/**
+ * Thống kê tổng quan của một học kỳ trong phạm vi được xem.
+ *
+ * @param soCoSoKhongPhanHoi số cơ sở không trả lời khi gom toàn hệ thống. Khác
+ *                           0 nghĩa là các con số bên trên là MỘT PHẦN — luôn
+ *                           là 0 khi phạm vi chỉ một cơ sở
+ */
 public record ReportSummary(
         ReportScope phamVi,
         Registrations dangKy,
         Capacity sucChua,
         GradeProgress tienDoDiem,
+        int soCoSoKhongPhanHoi,
         Instant capNhatLuc) {
 
     /**

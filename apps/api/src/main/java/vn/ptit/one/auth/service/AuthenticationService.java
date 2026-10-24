@@ -6,10 +6,12 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -26,7 +28,9 @@ import vn.ptit.one.auth.security.AccessTokenIssuer.IssuedAccessToken;
 import vn.ptit.one.auth.security.AttemptLimiter;
 import vn.ptit.one.auth.service.SessionService.OpenedSession;
 import vn.ptit.one.auth.service.SessionService.RefreshOutcome;
+import vn.ptit.one.auth.security.LoginSiteResolver;
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.shared.routing.SiteContext;
 
 /** Đăng nhập bằng tài khoản trong CENTRAL. */
 @Service
@@ -56,9 +60,14 @@ public class AuthenticationService {
        tài khoản nào có thật. */
     private final String dummyHash;
 
+    /* Chi co o profile `distributed`. Profile `central` mot database thi khong
+       co bean nay, va moi thu chay y nhu Phan 1 — khong re nhanh nao. */
+    private final ObjectProvider<LoginSiteResolver> siteResolver;
+
     public AuthenticationService(AccountRepository accounts, SessionService sessions,
             PasswordEncoder passwordEncoder, AccessTokenIssuer accessTokens, JwtDecoder jwtDecoder,
-            AttemptLimiter limiter, Clock clock) {
+            AttemptLimiter limiter, Clock clock, ObjectProvider<LoginSiteResolver> siteResolver) {
+        this.siteResolver = siteResolver;
         this.accounts = accounts;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
@@ -79,7 +88,7 @@ public class AuthenticationService {
             throw CredentialService.tooManyAttempts();
         }
         try {
-            LoginResult result = authenticate(username, password);
+            LoginResult result = atUserSite(username, () -> authenticate(username, password));
             limiter.reset(userKey);
             return result;
         } catch (ApiException ex) {
@@ -88,6 +97,39 @@ public class AuthenticationService {
             throw ex;
         }
     }
+
+    /**
+     * Chạy phần đăng nhập trên database của cơ sở mà người dùng thuộc về.
+     *
+     * <p>Ở Phần 2, {@code TaiKhoan} và {@code PhienDangNhap} nằm tại từng cơ
+     * sở, nên phải tra danh bạ ở Master trước mới biết hỏi database nào. Ở
+     * Phần 1 không có bean phân giải, và hàm này gọi thẳng — cùng một đường
+     * chạy, không rẽ nhánh theo profile ở nơi khác.
+     *
+     * <p>Gọi ở ĐÂY chứ không ở trong {@link #authenticate}: việc đổi cơ sở
+     * phải nằm ngoài mọi giao dịch, mà {@code SessionService.open} thì mở
+     * giao dịch bên trong.
+     */
+    private LoginResult atUserSite(String username, Supplier<LoginResult> body) {
+        LoginSiteResolver resolver = siteResolver.getIfAvailable();
+        if (resolver == null) {
+            /* Phần 1: một database, không có gì để định tuyến. */
+            return body.get();
+        }
+        String site = resolver.resolve(username.trim());
+        LoginResult result = SiteContext.runAt(site, body);
+
+        /* ⚠️ GIỮ cơ sở cho phần còn lại của request, không trả về Master.
+           `runAt` khôi phục nguyên trạng khi xong, mà controller còn gọi tiếp
+           `credentials.currentEmail(...)` để dựng response — lúc đó context đã
+           về Master và câu đó hỏi nhầm nút.
+
+           Đã đăng nhập xong thì cơ sở của request là xác định, nên giữ luôn là
+           đúng chứ không phải mẹo vặt. SiteContextFilter dọn ở cuối request. */
+        SiteContext.set(site);
+        return result;
+    }
+
 
     private LoginResult authenticate(String username, String password) {
         Optional<AccountRecord> found = accounts.findByUsername(username.trim());

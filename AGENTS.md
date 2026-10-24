@@ -27,8 +27,12 @@ repository nội bộ của module khác; không phụ thuộc vòng. `shared` k
 import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
 API đã nối `PTITONE_CENTRAL` qua profile `central` (một DataSource); profile
 mặc định không nối DB. Đã có schema `V1`–`V4`, xác thực A0 và API nghiệp vụ
-Phần 1 (F03–F09, thống kê, thông báo); còn thiếu F02 — trạng thái thật ở
+Phần 1 (F02–F09, thống kê, thông báo) — trạng thái thật ở
 `docs/PTIT-One-Backend-Khoi-Dong.md`.
+⚠️ F02 chạy đúng ở Phần 1 nhưng **gãy ở chế độ phân tán**: Admin Master đứng
+ở `MASTER`, nơi không có `SinhVien`/`GiangVien`/`TaiKhoan`, nên cấp hồ sơ trả
+503 `Invalid object name 'dbo.SinhVien'`. Lời giải theo thiết kế là luồng
+Outbox *Vòng đời sinh viên* (mục C2), chưa cài.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.
 
@@ -72,6 +76,18 @@ Trước khi sinh code, đọc mục **0.1b** (năm yêu cầu bắt buộc) và
 | **`initialization-fail-timeout: -1`** | Bắt buộc, để ứng dụng vẫn khởi động khi một site đang tắt. Thiếu nó là hỏng kịch bản demo tắt site |
 | **Thứ tự Outbox** | Upsert vào mirror **TRƯỚC**, đánh dấu `SENT` **SAU**. Đảo thứ tự là mất sự kiện vĩnh viễn |
 | **Outbox chỉ cho sinh viên khách** | Sinh viên có cơ sở nhà trùng site thì điểm đã nằm đúng chỗ, không phát sự kiện |
+
+## Viết ngắn
+
+Chú thích và script dài gấp đôi phần code là lãng phí, không phải cẩn thận.
+
+- Chú thích chỉ giữ **cảnh báo bẫy** và **lý do một quyết định khác thường**.
+  Cắt phần diễn giải lại điều code đã nói rõ
+- Script test/demo: in **kết luận** (`PASS` / `LECH` / số đo), không in tường
+  thuật từng bước. Một script tự khẳng định thắng một script tự thuật lại
+- Tài liệu: bảng và số đo thay cho đoạn văn. Mỗi ý một lần, không nhắc lại ở
+  phần kết
+- Không viết thêm tài liệu nếu không được yêu cầu
 
 ## Quy ước đặt tên
 

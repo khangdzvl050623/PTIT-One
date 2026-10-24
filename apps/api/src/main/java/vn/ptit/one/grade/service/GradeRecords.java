@@ -1,5 +1,7 @@
 package vn.ptit.one.grade.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,6 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import vn.ptit.one.grade.policy.GradePolicy;
+import vn.ptit.one.grade.repository.GradeMirrorRepository;
 import vn.ptit.one.grade.repository.GradeRepository;
 
 /**
@@ -20,11 +23,27 @@ import vn.ptit.one.grade.repository.GradeRepository;
 public class GradeRecords {
 
     private final GradeRepository grades;
+    private final GradeMirrorRepository mirror;
     private final GradePolicy policy;
 
-    public GradeRecords(GradeRepository grades, GradePolicy policy) {
+    public GradeRecords(GradeRepository grades, GradeMirrorRepository mirror, GradePolicy policy) {
         this.grades = grades;
+        this.mirror = mirror;
         this.policy = policy;
+    }
+
+    /**
+     * Ghi điểm liên cơ sở vào read model tại cơ sở NHÀ của sinh viên.
+     *
+     * <p>API cho {@code OutboxWorker}. Idempotent theo {@code version}, nên gửi
+     * lại cùng một sự kiện là vô hại — đó là thứ làm at-least-once delivery
+     * cộng upsert idempotent thành effectively-once.
+     *
+     * @return {@code false} nếu cơ sở nhà chưa có dòng đăng ký môn tương ứng
+     */
+    public boolean mirrorGrade(String maSinhVien, String maLopHP, BigDecimal diemTongKet,
+            long version, LocalDateTime now) {
+        return mirror.upsert(maSinhVien, maLopHP, diemTongKet, version, now);
     }
 
     /**

@@ -240,15 +240,30 @@ SELECT 'admin.master', NULL, 'ADMIN_MASTER', NULL, 'HOAT_DONG'
  WHERE NOT EXISTS (SELECT 1 FROM dbo.DanhBaNguoiDung
                     WHERE TenDangNhap = 'admin.master');
 
+/* ⚠️ MatKhauHash = NULL, KHÔNG phải một hash mẫu.
+
+   Bản trước đặt sẵn '$2a$10$N9qo8uLOick…' — đó là BCrypt của chuỗi
+   "password", một hash hay gặp trong tài liệu ví dụ, và nó còn thiếu tiền tố
+   '{argon2id-v1}' nên DelegatingPasswordEncoder không nhận ra nổi thuật toán.
+   Hệ quả: Admin Master KHÔNG bao giờ đăng nhập được, mà lỗi trả về chỉ là
+   "sai tên đăng nhập hoặc mật khẩu" — không ai lần ra nguyên nhân.
+
+   NULL thì đúng nghĩa hơn: tài khoản đã cấp nhưng CHƯA kích hoạt, đúng trạng
+   thái của một Master vừa dựng. Mô hình tài khoản đã hiểu NULL theo đúng nghĩa
+   đó và từ chối đăng nhập với lý do rõ ràng thay vì một phép so hash thất bại
+   bí ẩn.
+
+   Có CENTRAL thì db/migrate/50 chép hash thật từ đó sang. Dựng mới hoàn toàn
+   thì đặt mật khẩu qua luồng kích hoạt (F02). */
 INSERT INTO dbo.TaiKhoanMaster (TenDangNhap, MatKhauHash, VaiTro, HoTen)
 SELECT 'admin.master',
-       '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+       NULL,
        'ADMIN_MASTER',
        N'Phòng đào tạo trung tâm'
  WHERE NOT EXISTS (SELECT 1 FROM dbo.TaiKhoanMaster
                     WHERE TenDangNhap = 'admin.master');
 
-PRINT '  [+] Tai khoan admin.master  (mat khau mau: ChangeMe!2026 — DOI NGAY)';
+PRINT '  [+] Tai khoan admin.master  (CHUA co mat khau — kich hoat hoac chay db/migrate)';
 GO
 
 /* =====================================================================
@@ -285,6 +300,7 @@ PRINT '     so tin chi, danh sach mon tien quyet.';
 PRINT '';
 PRINT '  Buoc tiep theo:';
 PRINT '    - Mo khoa muc 3 trong replication\31-publication.sql (8 article)';
+PRINT '    - master-phien-dang-nhap.sql (phien cua Admin Master)';
 PRINT '    - Roi toi db\site\ cho cac CSDL van hanh';
 PRINT '  ------------------------------------------------------------';
 GO

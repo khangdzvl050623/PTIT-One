@@ -31,7 +31,16 @@ public class ClassSectionService {
     /** Thử lại khi hai admin cùng tạo lớp và đua số thứ tự. */
     private static final int MAX_CODE_ATTEMPTS = 3;
 
-    private static final List<String> HINH_THUC_HOC = List.of("TRUC_TIEP", "TRUC_TUYEN", "KET_HOP");
+    /**
+     * Hình thức học duy nhất được phép đăng ký liên cơ sở ở v1 (quyết định D18).
+     *
+     * <p>Hằng số công khai vì Host phải TỰ kiểm lại điều kiện này khi nhận một
+     * yêu cầu liên cơ sở: Home đã kiểm rồi, nhưng Host mới là nơi sở hữu lớp —
+     * phòng thủ nhiều lớp, không tin đầu vào từ site khác.
+     */
+    public static final String TRUC_TUYEN = "TRUC_TUYEN";
+
+    private static final List<String> HINH_THUC_HOC = List.of("TRUC_TIEP", TRUC_TUYEN, "KET_HOP");
     public static final String MO = "MO";
     public static final String DA_KHOA = "DA_KHOA";
     public static final String DA_HUY = "DA_HUY";
@@ -274,7 +283,7 @@ public class ClassSectionService {
         }
         /* Quyết định D18: v1 chỉ cho đăng ký liên cơ sở với lớp trực tuyến —
            kiểm "không trùng tiết" là vô nghĩa khi hai điểm cách nhau 1.700 km. */
-        if (choPhepLienCoSo && !"TRUC_TUYEN".equals(hinhThucHoc)) {
+        if (choPhepLienCoSo && !TRUC_TUYEN.equals(hinhThucHoc)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "CROSS_CAMPUS_REQUIRES_ONLINE",
                     "Chỉ lớp trực tuyến mới cho phép đăng ký liên cơ sở.");
         }

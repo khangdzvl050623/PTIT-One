@@ -47,6 +47,11 @@ $cfg  = Import-PowerShellDataFile (Join-Path $here 'config.ps1')
 $sqlPath = Join-Path $here $Script
 if (-not (Test-Path $sqlPath)) { throw "Khong tim thay script: $sqlPath" }
 
+# Cau hinh cuc bo (tai khoan SQL cua tung site). Khong commit — xem
+# config.local.example.psd1.
+$localCfgPath  = Join-Path $here 'config.local.psd1'
+$localCfgEarly = if (Test-Path $localCfgPath) { Import-PowerShellDataFile $localCfgPath } else { $null }
+
 $server = $cfg.Servers[$On]
 if (-not $server) { throw "Khong co cau hinh server cho '$On' trong config.ps1" }
 
@@ -85,11 +90,16 @@ $vars = @(
     "SrvDN=$($cfg.Servers.DN)"
 
     "DbMaster=$($cfg.Databases.MASTER)"
+    "DbCentral=$($cfg.Databases.CENTRAL)"
     "DbHCM=$($cfg.Databases.HCM)"
     "DbHN=$($cfg.Databases.HN)"
     "DbDN=$($cfg.Databases.DN)"
 
     "Collation=$($cfg.Collation)"
+
+    # Tai khoan UNG DUNG o site. site/13 DENY ghi len bang nhan ban cho
+    # chinh user nay. Khong phai tai khoan chay replication.
+    "AppUser=$(if ($cfg.AppUser) { $cfg.AppUser } else { 'ptitone_api' })"
 
     "SnapshotFolder=$($cfg.Replication.SnapshotFolder)"
     "PublicationName=$($cfg.Replication.PublicationName)"
@@ -118,9 +128,41 @@ $vars = @(
     "DbList=$dbList"
 )
 
+# --- Tai khoan dang nhap toi tung Subscriber ---------------------------
+# 32-subscription.sql doc $(SubLoginHN)/$(SubPwdHN)... de quyet dinh
+# Distribution Agent dung SQL Auth hay Windows Auth cho tung site.
+# Site khong khai trong config.local.psd1 thi hai bien nay rong, va
+# script roi ve Windows Auth — dung cho subscriber cung may.
+foreach ($ma in @('HCM', 'HN', 'DN')) {
+    $l = $null
+    if ($localCfgEarly -and $localCfgEarly.Logins -and $localCfgEarly.Logins[$ma]) {
+        $l = $localCfgEarly.Logins[$ma]
+    }
+    $vars += @("SubLogin$ma=" + $(if ($l) { $l.User }     else { '' }))
+    $vars += @("SubPwd$ma="   + $(if ($l) { $l.Password } else { '' }))
+}
+
 # Script SQL duoc luu UTF-8; chi dinh ma hoa de seed tieng Viet khong bi loi
 # khi Windows dang dung mot code page khac.
-$args = @('-S', $server, '-E', '-b', '-I', '-f', '65001', '-i', $sqlPath)
+# --- Xac thuc -----------------------------------------------------------
+# Windows Authentication (-E) chi dung duoc khi SQL Server nam tren CHINH
+# may nay, hoac cac may cung domain. Bon may cua nhom nam trong workgroup
+# va noi nhau qua Radmin VPN, nen may site PHAI dung SQL Server login.
+#
+# Tai khoan khong bao gio nam trong config.ps1 (file do duoc commit). Chung
+# nam o config.local.psd1 — da bi .gitignore chan. Xem config.local.example.psd1.
+$login = $null
+if ($localCfgEarly -and $localCfgEarly.Logins -and $localCfgEarly.Logins[$On]) {
+    $login = $localCfgEarly.Logins[$On]
+}
+
+if ($login) {
+    $args = @('-S', $server, '-U', $login.User, '-P', $login.Password,
+              '-b', '-I', '-f', '65001', '-i', $sqlPath)
+    Write-Host "  Xac thuc : SQL login '$($login.User)'" -ForegroundColor DarkGray
+} else {
+    $args = @('-S', $server, '-E', '-b', '-I', '-f', '65001', '-i', $sqlPath)
+}
 # Script tao database chay trong master; cac script con lai can dung DB
 # ngay luc ket noi (master/ va site/ deu kiem DB_NAME truoc khi tao bang).
 $initialDatabase = if ([IO.Path]::GetFileName($sqlPath) -eq '00-create-databases.sql') {
@@ -147,7 +189,14 @@ if ([IO.Path]::GetFileName($sqlPath) -match 'subscription') {
 Write-Host ""
 
 if ($WhatIf) {
-    Write-Host "sqlcmd $($args -join ' ')" -ForegroundColor DarkGray
+    # Che mat khau: -WhatIf hay duoc chay de dan vao bao cao va chup man hinh.
+    $hienThi = @(); $cheTiepTheo = $false
+    foreach ($a in $args) {
+        if ($cheTiepTheo) { $hienThi += '********'; $cheTiepTheo = $false }
+        elseif ($a -match '^SubPwd\w+=.') { $hienThi += ($a -replace '=.*$', '="********"') }
+        else { $hienThi += $a; if ($a -eq '-P') { $cheTiepTheo = $true } }
+    }
+    Write-Host "sqlcmd $($hienThi -join ' ')" -ForegroundColor DarkGray
     return
 }
 

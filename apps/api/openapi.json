@@ -1050,6 +1050,10 @@
           "phamVi" : {
             "$ref" : "#/components/schemas/ReportScope"
           },
+          "soCoSoKhongPhanHoi" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "sucChua" : {
             "$ref" : "#/components/schemas/Capacity"
           },
