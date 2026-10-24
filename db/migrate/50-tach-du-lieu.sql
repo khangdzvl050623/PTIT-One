@@ -154,12 +154,22 @@ SELECT tk.TenDangNhap,
        tk.MaCoSo,
        tk.VaiTro,
        tk.MaThucThe,
-       /* Tài khoản chưa có mật khẩu là tài khoản đã cấp nhưng chưa kích
-          hoạt (F02). Bất biến của danh bạ: chỉ HOAT_DONG mới đăng nhập
-          được, nên trạng thái phải phản ánh đúng điều đó. */
-       CASE WHEN tk.MatKhauHash IS NULL THEN 'CHO_KICH_HOAT' ELSE 'HOAT_DONG' END,
+       /* ⚠️ TrangThai phải CHÉP từ danh bạ CENTRAL, không được suy ra.
+          Bản trước suy `CASE WHEN MatKhauHash IS NULL THEN 'CHO_KICH_HOAT'
+          ELSE 'HOAT_DONG' END`, và điều đó MỞ ĐĂNG NHẬP cho mọi tài khoản
+          bị khoá: `NGUNG` và `CHO_KICH_HOAT` đều có hash (đã từng đặt mật
+          khẩu, rồi bị dừng) nên cùng thành `HOAT_DONG`.
+          `canSignIn()` đọc đúng cột này, nên đó là lỗ xác thực im lặng —
+          không có lỗi nào báo, chỉ có hai tài khoản lẽ ra bị chặn thì vào
+          được. Bắt được bằng cách thử đăng nhập B26DCCN003/004.
+
+          COALESCE chỉ đỡ trường hợp có dòng trong TaiKhoan mà thiếu trong
+          danh bạ CENTRAL; lúc đó "chưa kích hoạt" là mặc định an toàn. */
+       COALESCE(db.TrangThai,
+                CASE WHEN tk.MatKhauHash IS NULL THEN 'CHO_KICH_HOAT' ELSE 'HOAT_DONG' END),
        1
-  FROM [$(DbCentral)].dbo.TaiKhoan tk;
+  FROM [$(DbCentral)].dbo.TaiKhoan tk
+  LEFT JOIN [$(DbCentral)].dbo.DanhBaNguoiDung db ON db.TenDangNhap = tk.TenDangNhap;
 
 PRINT '  [+] DanhBaNguoiDung: ' + CONVERT(VARCHAR(10), @@ROWCOUNT) + ' dong';
 
