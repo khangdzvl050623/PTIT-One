@@ -28,6 +28,7 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [capsOn, setCapsOn] = useState(false)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -73,6 +74,9 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
           name="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          onKeyUp={(event) =>
+            setCapsOn(event.getModifierState ? event.getModifierState('CapsLock') : false)
+          }
           placeholder={LABELS.password}
           autoComplete="current-password"
           disabled={pending}
@@ -96,9 +100,16 @@ export function LoginForm({ onSubmit, pending = false, errorMessage = null }: Lo
         <span>{pending ? LABELS.loginSubmitting : LABELS.loginSubmit}</span>
       </button>
 
+      {capsOn && !pending ? (
+        <p className={styles.caps} role="status">
+          Đang bật Caps Lock — kiểm tra lại trước khi bấm đăng nhập.
+        </p>
+      ) : null}
+
       {/* aria-live để trình đọc màn hình đọc lỗi mà không cần chuyển focus. */}
       {notice ? (
         <p
+          key={notice}
           className={errorMessage ? `${styles.message} ${styles.error}` : styles.message}
           role={errorMessage ? 'alert' : undefined}
           aria-live="polite"

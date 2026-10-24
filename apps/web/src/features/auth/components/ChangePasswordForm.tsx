@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { ApiError } from '@/shared/api'
-import { Icon } from '@/shared/ui'
+import { ROUTES } from '@/shared/constants'
+import { Icon, setPendingFlash } from '@/shared/ui'
+import type { Flash } from '@/shared/ui'
 
 import { changePassword } from '../api/credentialApi'
 import { useAuth } from '../model/AuthContext'
+import { PasswordField } from './PasswordField'
 import styles from './AuthForms.module.scss'
 
 const NETWORK = 'Không kết nối được máy chủ. Vui lòng thử lại.'
@@ -20,6 +24,7 @@ const NETWORK = 'Không kết nối được máy chủ. Vui lòng thử lại.'
  */
 export function ChangePasswordForm() {
   const { signOut } = useAuth()
+  const navigate = useNavigate()
   const [hienTai, setHienTai] = useState('')
   const [moi, setMoi] = useState('')
   const [nhapLai, setNhapLai] = useState('')
@@ -37,6 +42,15 @@ export function ChangePasswordForm() {
     try {
       await changePassword(hienTai, moi)
       await signOut()
+      /* Server đã thu hồi mọi phiên nên không còn gì để hiển thị ở đây: sang
+         login kèm tin một lần, trang đó hiện banner xanh. Gửi qua cả state lẫn
+         kho dự phòng — người gác tuyến có thể ghi đè entry giữa đường. */
+      const flash: Flash = {
+        kind: 'success',
+        text: 'Đã đổi mật khẩu. Mọi thiết bị đã bị đăng xuất — đăng nhập lại bằng mật khẩu mới.',
+      }
+      setPendingFlash(flash)
+      navigate(ROUTES.login, { replace: true, state: { flash } })
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : NETWORK)
       setPending(false)
@@ -45,47 +59,32 @@ export function ChangePasswordForm() {
 
   return (
     <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
-      <label className={styles.field}>
-        Mật khẩu hiện tại
-        <input
-          className={styles.input}
-          type="password"
-          value={hienTai}
-          onChange={(event) => setHienTai(event.target.value)}
-          autoComplete="current-password"
-          disabled={pending}
-          required
-        />
-      </label>
+      <PasswordField
+        label="Mật khẩu hiện tại"
+        value={hienTai}
+        onChange={setHienTai}
+        autoComplete="current-password"
+        disabled={pending}
+      />
 
-      <label className={styles.field}>
-        Mật khẩu mới
-        <input
-          className={styles.input}
-          type="password"
-          value={moi}
-          onChange={(event) => setMoi(event.target.value)}
-          placeholder="Ít nhất 8 ký tự"
-          autoComplete="new-password"
-          minLength={8}
-          maxLength={128}
-          disabled={pending}
-          required
-        />
-      </label>
+      <PasswordField
+        label="Mật khẩu mới"
+        value={moi}
+        onChange={setMoi}
+        placeholder="Ít nhất 8 ký tự"
+        autoComplete="new-password"
+        minLength={8}
+        maxLength={128}
+        disabled={pending}
+      />
 
-      <label className={styles.field}>
-        Nhập lại mật khẩu mới
-        <input
-          className={styles.input}
-          type="password"
-          value={nhapLai}
-          onChange={(event) => setNhapLai(event.target.value)}
-          autoComplete="new-password"
-          disabled={pending}
-          required
-        />
-      </label>
+      <PasswordField
+        label="Nhập lại mật khẩu mới"
+        value={nhapLai}
+        onChange={setNhapLai}
+        autoComplete="new-password"
+        disabled={pending}
+      />
 
       <p className={styles.hint}>
         Đổi xong, <b>mọi thiết bị đang đăng nhập đều bị đăng xuất</b>, kể cả máy này.
@@ -100,7 +99,7 @@ export function ChangePasswordForm() {
       </div>
 
       {error ? (
-        <p className={`${styles.message} ${styles.error}`} role="alert">
+        <p key={error} className={`${styles.message} ${styles.error}`} role="alert">
           {error}
         </p>
       ) : null}

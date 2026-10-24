@@ -33,3 +33,11 @@
     background: var(--notice-hover-bg);
   }
 }
+
+/* Nội dung thêm sau nhãn (chấm đỏ) đẩy sát lề phải của hàng. */
+.after {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: tokens.$space-md;
+}

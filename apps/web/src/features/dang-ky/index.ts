@@ -29,6 +29,7 @@ export type {
   StudyRecord,
 } from './types'
 export {
+  adminClasses,
   cancel,
   courseCatalog,
   currentPeriod,
