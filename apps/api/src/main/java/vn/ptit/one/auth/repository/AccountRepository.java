@@ -18,6 +18,7 @@ import vn.ptit.one.auth.model.AccountSummary;
 import vn.ptit.one.auth.model.AccountRecord.Credential;
 import vn.ptit.one.auth.model.AccountRecord.Source;
 import vn.ptit.one.auth.model.Role;
+import vn.ptit.one.shared.routing.SiteContext;
 
 /**
  * Danh bạ + tài khoản: đọc để đăng nhập, ghi khi cấp/kích hoạt/khoá (F02).
@@ -32,7 +33,7 @@ public class AccountRepository {
 
     /* LEFT JOIN cả hai bảng tài khoản: có dòng ở cả hai (dữ liệu hỏng) thì
        model thấy Source.BOTH và từ chối, thay vì SQL tự chọn một bên. */
-    private static final String FIND_BY_USERNAME = """
+    private static final String FIND_BY_USERNAME_MAU = """
             SELECT d.TenDangNhap, d.MaCoSo, d.LoaiNguoiDung, d.MaThucThe,
                    d.TrangThai, d.PhienBanTaiKhoan,
                    t.MatKhauHash AS HashCoSo, t.VaiTro AS VaiTroCoSo,
@@ -40,8 +41,8 @@ public class AccountRepository {
                    m.MatKhauHash AS HashMaster, m.VaiTro AS VaiTroMaster,
                    m.DangHoatDong AS MasterHoatDong
               FROM dbo.DanhBaNguoiDung d
-              LEFT JOIN dbo.TaiKhoan       t ON t.TenDangNhap = d.TenDangNhap
-              LEFT JOIN dbo.TaiKhoanMaster m ON m.TenDangNhap = d.TenDangNhap
+%s
+%s
              WHERE d.TenDangNhap = ?
             """;
 
@@ -85,26 +86,88 @@ public class AccountRepository {
                AND TrangThai IN ('HOAT_DONG', 'NGUNG')
             """;
 
-    private static final String SUMMARY = """
+    private static final String SUMMARY_MAU = """
             SELECT d.TenDangNhap, d.LoaiNguoiDung, d.MaCoSo, d.MaThucThe, d.TrangThai,
                    CASE WHEN t.MatKhauHash IS NOT NULL OR m.MatKhauHash IS NOT NULL
                         THEN 1 ELSE 0 END AS DaKichHoat
               FROM dbo.DanhBaNguoiDung d
-              LEFT JOIN dbo.TaiKhoan       t ON t.TenDangNhap = d.TenDangNhap
-              LEFT JOIN dbo.TaiKhoanMaster m ON m.TenDangNhap = d.TenDangNhap
+%s
+%s
             """;
 
-    private static final String FIND_CONTACT = """
+    private static final String FIND_CONTACT_MAU = """
             SELECT d.TenDangNhap, d.TrangThai,
                    CASE WHEN t.TenDangNhap IS NOT NULL THEN 'SITE' ELSE 'MASTER' END AS Nguon,
                    COALESCE(t.MatKhauHash, m.MatKhauHash) AS MatKhauHash,
                    COALESCE(t.Email, m.Email) AS Email,
                    COALESCE(t.EmailDaXacMinh, m.EmailDaXacMinh) AS EmailDaXacMinh
               FROM dbo.DanhBaNguoiDung d
-              LEFT JOIN dbo.TaiKhoan       t ON t.TenDangNhap = d.TenDangNhap
-              LEFT JOIN dbo.TaiKhoanMaster m ON m.TenDangNhap = d.TenDangNhap
+%s
+%s
              WHERE d.TenDangNhap = ? AND (t.TenDangNhap IS NOT NULL OR m.TenDangNhap IS NOT NULL)
             """;
+
+    /* ---------------------------------------------------------------------
+       HAI BẢNG TÀI KHOẢN, VÀ KHÔNG NÚT NÀO CÓ ĐỦ CẢ HAI
+
+         PTITONE_MASTER : DanhBaNguoiDung + TaiKhoanMaster, KHÔNG có TaiKhoan
+         PTITONE_<site> : DanhBaNguoiDung + TaiKhoan, KHÔNG có TaiKhoanMaster
+         PTITONE_CENTRAL: có cả ba (Phần 1)
+
+       Ba câu ở trên join cả hai bảng và COALESCE giữa chúng, nên ở Phần 2
+       chúng hỏng tại CẢ HAI nút với lỗi "Invalid object name" — trả về 503
+       chung chung, không chỉ ra được thiếu bảng nào.
+
+       Thay vì tách tay mỗi câu thành hai bản (và bẫy lại người viết câu kế
+       tiếp), bảng vắng mặt được thay bằng một bảng dẫn xuất RỖNG có cùng
+       danh sách cột. Hình dạng câu truy vấn không đổi, mọi tham chiếu cột
+       vẫn phân giải được, và `WHERE 1 = 0` làm nó rỗng một cách KIỂM CHỨNG
+       ĐƯỢC — khác hẳn việc tạo một bảng thật rỗng ở nút đó, vốn sẽ biến lỗi
+       "thiếu bảng" thành "có bảng nhưng không có dòng", tức đổi một lỗi ồn
+       ào lấy một kết quả sai lặng lẽ.
+       --------------------------------------------------------------------- */
+
+    private static final String JOIN_TAIKHOAN =
+            "              LEFT JOIN dbo.TaiKhoan       t ON t.TenDangNhap = d.TenDangNhap";
+
+    private static final String JOIN_TAIKHOAN_MASTER =
+            "              LEFT JOIN dbo.TaiKhoanMaster m ON m.TenDangNhap = d.TenDangNhap";
+
+    private static final String JOIN_TAIKHOAN_RONG = """
+                  LEFT JOIN (SELECT CAST(NULL AS varchar(50))  AS TenDangNhap,
+                                    CAST(NULL AS varchar(255)) AS MatKhauHash,
+                                    CAST(NULL AS varchar(20))  AS VaiTro,
+                                    CAST(NULL AS varchar(10))  AS MaCoSo,
+                                    CAST(NULL AS varchar(20))  AS MaThucThe,
+                                    CAST(NULL AS varchar(254)) AS Email,
+                                    CAST(NULL AS bit)          AS EmailDaXacMinh
+                              WHERE 1 = 0) t ON 1 = 0""";
+
+    private static final String JOIN_TAIKHOAN_MASTER_RONG = """
+                  LEFT JOIN (SELECT CAST(NULL AS varchar(50))  AS TenDangNhap,
+                                    CAST(NULL AS varchar(255)) AS MatKhauHash,
+                                    CAST(NULL AS varchar(20))  AS VaiTro,
+                                    CAST(NULL AS bit)          AS DangHoatDong,
+                                    CAST(NULL AS varchar(254)) AS Email,
+                                    CAST(NULL AS bit)          AS EmailDaXacMinh
+                              WHERE 1 = 0) m ON 1 = 0""";
+
+    /**
+     * Ghép câu truy vấn hợp với nút đang đứng.
+     *
+     * <p>{@code SiteContext.explicit()} trả {@code null} ở Phần 1 — nơi không
+     * ai đặt cơ sở bao giờ vì chỉ có một database, và database đó có đủ cả ba
+     * bảng. Vì vậy phân biệt "null" với "MASTER" là cần thiết, không phải vẽ vời.
+     */
+    private static String sql(String mau) {
+        String site = SiteContext.explicit();
+        if (site == null) {
+            return mau.formatted(JOIN_TAIKHOAN, JOIN_TAIKHOAN_MASTER);
+        }
+        return SiteContext.MASTER.equals(site)
+                ? mau.formatted(JOIN_TAIKHOAN_RONG, JOIN_TAIKHOAN_MASTER)
+                : mau.formatted(JOIN_TAIKHOAN, JOIN_TAIKHOAN_MASTER_RONG);
+    }
 
     private final JdbcTemplate jdbc;
 
@@ -113,7 +176,7 @@ public class AccountRepository {
     }
 
     public Optional<AccountRecord> findByUsername(String username) {
-        return jdbc.query(FIND_BY_USERNAME, (rs, rowNum) -> map(rs), username).stream().findFirst();
+        return jdbc.query(sql(FIND_BY_USERNAME_MAU), (rs, rowNum) -> map(rs), username).stream().findFirst();
     }
 
     /**
@@ -131,6 +194,8 @@ public class AccountRepository {
      * {@code MaCoSo} là NULL vì họ không thuộc cơ sở nào). Cả hai trường hợp
      * đều phải xử lý tại Master, nên gộp lại là đúng chứ không phải mất thông tin.
      */
+
+
     public Optional<String> findCampusOfUser(String username) {
         return jdbc.queryForList(FIND_CAMPUS, String.class, username).stream()
                 .filter(campus -> campus != null)
@@ -184,7 +249,7 @@ public class AccountRepository {
     }
 
     public Optional<AccountContact> findContact(String username) {
-        return jdbc.query(FIND_CONTACT, (rs, rowNum) -> new AccountContact(
+        return jdbc.query(sql(FIND_CONTACT_MAU), (rs, rowNum) -> new AccountContact(
                         rs.getString("TenDangNhap"),
                         Source.valueOf(rs.getString("Nguon")),
                         rs.getString("TrangThai"),
@@ -252,13 +317,13 @@ public class AccountRepository {
     }
 
     public Optional<AccountSummary> findSummary(String username) {
-        return jdbc.query(SUMMARY + " WHERE d.TenDangNhap = ?", (rs, rowNum) -> mapSummary(rs), username)
+        return jdbc.query(sql(SUMMARY_MAU) + " WHERE d.TenDangNhap = ?", (rs, rowNum) -> mapSummary(rs), username)
                 .stream().findFirst();
     }
 
     /** {@code maCoSo}/{@code role} null nghĩa là không lọc theo tiêu chí đó. */
     public List<AccountSummary> search(String maCoSo, Role role) {
-        StringBuilder sql = new StringBuilder(SUMMARY).append(" WHERE 1 = 1");
+        StringBuilder sql = new StringBuilder(sql(SUMMARY_MAU)).append(" WHERE 1 = 1");
         List<Object> args = new ArrayList<>();
         if (maCoSo != null) {
             sql.append(" AND d.MaCoSo = ?");

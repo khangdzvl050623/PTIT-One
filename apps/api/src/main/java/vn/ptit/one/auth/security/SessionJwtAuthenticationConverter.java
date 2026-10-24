@@ -47,9 +47,11 @@ final class SessionJwtAuthenticationConverter implements Converter<Jwt, Abstract
            minh; nó không phải dữ liệu client tự khai. Dù vậy nó cũng chỉ
            quyết định HỎI Ở ĐÂU: phiên có hợp lệ hay không vẫn do DB trả lời. */
         String campus = jwt.getClaimAsString(AccessTokenIssuer.CLAIM_CAMPUS);
-        if (campus != null && !campus.isBlank()) {
-            SiteContext.set(campus);
-        }
+        /* Không có claim nghĩa là Admin Master — họ không thuộc cơ sở nào, và
+           tài khoản của họ nằm ở Master. Đặt TƯỜNG MINH chứ không để trống:
+           tầng dưới phân biệt "ở Master" với "chưa biết cơ sở", vì hai trạng
+           thái đó cần hai câu truy vấn khác nhau. */
+        SiteContext.set(campus != null && !campus.isBlank() ? campus : SiteContext.MASTER);
 
         AuthenticatedUser user;
         try {

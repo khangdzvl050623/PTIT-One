@@ -31,6 +31,17 @@ public final class SiteContext {
         return site != null ? site : MASTER;
     }
 
+    /**
+     * Cơ sở đã được đặt tường minh, hoặc {@code null} nếu chưa ai đặt.
+     *
+     * <p>Khác {@link #current()} ở chỗ KHÔNG rơi về Master. Dùng khi cần phân
+     * biệt "đang ở Master" với "chưa biết cơ sở" — tức phân biệt Phần 2 với
+     * Phần 1, nơi không ai đặt cơ sở bao giờ vì chỉ có một database.
+     */
+    public static String explicit() {
+        return CURRENT.get();
+    }
+
     public static void set(String maCoSo) {
         CURRENT.set(maCoSo);
     }

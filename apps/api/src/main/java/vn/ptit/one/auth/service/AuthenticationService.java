@@ -113,10 +113,23 @@ public class AuthenticationService {
     private LoginResult atUserSite(String username, Supplier<LoginResult> body) {
         LoginSiteResolver resolver = siteResolver.getIfAvailable();
         if (resolver == null) {
+            /* Phần 1: một database, không có gì để định tuyến. */
             return body.get();
         }
-        return SiteContext.runAt(resolver.resolve(username.trim()), body);
+        String site = resolver.resolve(username.trim());
+        LoginResult result = SiteContext.runAt(site, body);
+
+        /* ⚠️ GIỮ cơ sở cho phần còn lại của request, không trả về Master.
+           `runAt` khôi phục nguyên trạng khi xong, mà controller còn gọi tiếp
+           `credentials.currentEmail(...)` để dựng response — lúc đó context đã
+           về Master và câu đó hỏi nhầm nút.
+
+           Đã đăng nhập xong thì cơ sở của request là xác định, nên giữ luôn là
+           đúng chứ không phải mẹo vặt. SiteContextFilter dọn ở cuối request. */
+        SiteContext.set(site);
+        return result;
     }
+
 
     private LoginResult authenticate(String username, String password) {
         Optional<AccountRecord> found = accounts.findByUsername(username.trim());
