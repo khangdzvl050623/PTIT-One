@@ -93,6 +93,34 @@ ELSE PRINT '  [=] dbo.TaiKhoanMaster';
 GO
 
 /* =====================================================================
+   BÙ CỘT CHO BẢNG ĐÃ TỒN TẠI
+   ---------------------------------------------------------------------
+   `IF OBJECT_ID(...) IS NULL CREATE TABLE` ở trên BỎ QUA hoàn toàn nếu
+   bảng đã có từ lần chạy trước — nên mọi cột thêm vào `CREATE TABLE` sau
+   đó sẽ không bao giờ được áp. Ba cột email là đúng trường hợp đó: script
+   đọc thì có, database thật thì không, và lỗi chỉ hiện ra lúc đăng nhập
+   dưới dạng `Invalid column name 'Email'` — một thông báo không hề chỉ về
+   phía script schema.
+
+   Đây là cùng một cái bẫy đã bù ở `db/site/10-schema-vanhanh.sql`. Thêm
+   cột mới vào `CREATE TABLE` ở trên thì phải thêm vào đây.
+   ===================================================================== */
+IF COL_LENGTH(N'dbo.TaiKhoanMaster', N'Email') IS NULL
+BEGIN
+    ALTER TABLE dbo.TaiKhoanMaster ADD
+        Email                VARCHAR(254) NULL,
+        EmailDaXacMinh       BIT          NOT NULL
+            CONSTRAINT DF_TaiKhoanMaster_EmailDaXacMinh DEFAULT (0),
+        ThoiDiemXacMinhEmail DATETIME2(3) NULL,
+        CONSTRAINT CK_TaiKhoanMaster_EmailXacMinh
+            CHECK (EmailDaXacMinh = 0
+                OR (Email IS NOT NULL AND ThoiDiemXacMinhEmail IS NOT NULL));
+    PRINT '  [+] TaiKhoanMaster: bu 3 cot email';
+END
+ELSE PRINT '  [=] TaiKhoanMaster: du cot';
+GO
+
+/* =====================================================================
    KIỂM CHỨNG — nhắc lại rằng bảng này KHÔNG được nhân bản
    ===================================================================== */
 PRINT '';

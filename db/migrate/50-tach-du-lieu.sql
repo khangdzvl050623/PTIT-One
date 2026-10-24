@@ -163,6 +163,38 @@ SELECT tk.TenDangNhap,
 
 PRINT '  [+] DanhBaNguoiDung: ' + CONVERT(VARCHAR(10), @@ROWCOUNT) + ' dong';
 
+/* Tài khoản Admin Master cũng lấy từ CENTRAL, cùng lý do với danh bạ: CENTRAL
+   là nguồn sự thật cho dữ liệu Phần 1, còn master/04 chỉ seed được một tài
+   khoản CHƯA có mật khẩu. Không có bước này thì Admin Master đăng nhập vào
+   Master là hỏng, và lỗi trả về chỉ là "sai mật khẩu". */
+UPDATE m
+   SET m.MatKhauHash          = c.MatKhauHash,
+       m.HoTen                = c.HoTen,
+       /* Email đi CÙNG hash, không phải chi tiết trang trí: Admin Master
+          khôi phục mật khẩu qua thư, nên bỏ nó lại là lấy mất đường về của
+          đúng tài khoản không ai cấp lại hộ được. */
+       m.Email                = c.Email,
+       m.EmailDaXacMinh       = c.EmailDaXacMinh,
+       m.ThoiDiemXacMinhEmail = c.ThoiDiemXacMinhEmail
+  FROM dbo.TaiKhoanMaster m
+  JOIN [$(DbCentral)].dbo.TaiKhoanMaster c ON c.TenDangNhap = m.TenDangNhap
+ WHERE m.MatKhauHash IS NULL
+    OR m.MatKhauHash <> c.MatKhauHash
+    OR ISNULL(m.Email, '') <> ISNULL(c.Email, '')
+    OR m.EmailDaXacMinh <> c.EmailDaXacMinh;
+
+PRINT '  [+] TaiKhoanMaster: dong bo ' + CONVERT(VARCHAR(10), @@ROWCOUNT) + ' dong tu CENTRAL';
+
+INSERT INTO dbo.TaiKhoanMaster (TenDangNhap, MatKhauHash, VaiTro, HoTen,
+                                Email, EmailDaXacMinh, ThoiDiemXacMinhEmail)
+SELECT c.TenDangNhap, c.MatKhauHash, 'ADMIN_MASTER', c.HoTen,
+       c.Email, c.EmailDaXacMinh, c.ThoiDiemXacMinhEmail
+  FROM [$(DbCentral)].dbo.TaiKhoanMaster c
+ WHERE NOT EXISTS (SELECT 1 FROM dbo.TaiKhoanMaster m WHERE m.TenDangNhap = c.TenDangNhap)
+   AND EXISTS (SELECT 1 FROM dbo.DanhBaNguoiDung d WHERE d.TenDangNhap = c.TenDangNhap);
+
+PRINT '  [+] TaiKhoanMaster: them ' + CONVERT(VARCHAR(10), @@ROWCOUNT) + ' tai khoan thieu';
+
 COMMIT TRANSACTION;
 GO
 
@@ -213,6 +245,21 @@ BEGIN
 
     BEGIN TRY
         DECLARE @ten SYSNAME, @dk NVARCHAR(1000), @sql NVARCHAR(MAX), @cols NVARCHAR(MAX);
+
+        /* --- Dọn các bảng KHÔNG chuyển nhưng PHẢI xoá ---
+           Phiên đăng nhập và mã xác thực không đi theo dữ liệu (xem đầu file),
+           nhưng chúng trỏ khoá ngoại vào TaiKhoan. Không xoá trước thì
+           DELETE TaiKhoan bị chặn bởi FK_PhienDangNhap_TaiKhoan — và vì mỗi
+           lần ai đó đăng nhập thử là lại sinh một dòng phiên, lỗi này chỉ xuất
+           hiện ở lần chạy lại THỨ HAI, lúc đã quên mất vì sao.
+           Xoá phiên là đúng nghiệp vụ: dữ liệu vừa đổi chỗ thì mọi phiên cũ
+           phải mất hiệu lực. */
+        SET @sql = N'
+            DELETE FROM ' + @pre + N'dbo.TokenLamMoi;
+            DELETE FROM ' + @pre + N'dbo.PhienDangNhap;
+            DELETE FROM ' + @pre + N'dbo.MaXacThuc;
+            DELETE FROM ' + @pre + N'dbo.MaKichHoat;';
+        EXEC sp_executesql @sql;
 
         /* --- Dọn theo chiều NGƯỢC khoá ngoại --- */
         DECLARE xoa CURSOR LOCAL FAST_FORWARD FOR
