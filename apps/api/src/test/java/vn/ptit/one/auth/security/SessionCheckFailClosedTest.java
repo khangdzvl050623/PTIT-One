@@ -36,6 +36,9 @@ class SessionCheckFailClosedTest {
                 .thenThrow(new DataAccessResourceFailureException("CENTRAL không phản hồi"));
         ObjectProvider<SessionService> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(sessions);
+        /* Không có LoginSiteResolver = Phần 1: converter không đụng SiteContext. */
+        ObjectProvider<LoginSiteResolver> khongDinhTuyen = mock(ObjectProvider.class);
+        when(khongDinhTuyen.getIfAvailable()).thenReturn(null);
 
         Jwt jwt = Jwt.withTokenValue("chu-ky-hop-le").header("alg", "HS256")
                 .subject("B26DCCN001")
@@ -43,7 +46,7 @@ class SessionCheckFailClosedTest {
                 .claim(AccessTokenIssuer.CLAIM_VERSION, 1)
                 .build();
 
-        Throwable thrown = catchThrowable(() -> new SessionJwtAuthenticationConverter(provider).convert(jwt));
+        Throwable thrown = catchThrowable(() -> new SessionJwtAuthenticationConverter(provider, khongDinhTuyen).convert(jwt));
         assertThat(thrown).isInstanceOf(SessionCheckUnavailableException.class);
 
         MockHttpServletResponse response = new MockHttpServletResponse();

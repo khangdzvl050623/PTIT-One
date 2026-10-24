@@ -40,7 +40,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain apiSecurity(HttpSecurity http, CsrfTokenRepository csrfTokenRepository,
-            ObjectProvider<SessionService> sessions, ApiErrorWriter errorWriter) throws Exception {
+            ObjectProvider<SessionService> sessions, ObjectProvider<LoginSiteResolver> siteResolver,
+            ApiErrorWriter errorWriter) throws Exception {
         JsonAuthErrorHandler errors = new JsonAuthErrorHandler(errorWriter);
         /* Handler không che (XOR) token: SPA đọc thẳng giá trị cookie, và
            token trả ở GET /api/auth/csrf trùng với cookie. */
@@ -84,7 +85,7 @@ public class SecurityConfig {
                 .bearerTokenResolver(new CookieBearerTokenResolver())
                 .authenticationEntryPoint(errors)
                 .accessDeniedHandler(errors)
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(new SessionJwtAuthenticationConverter(sessions))))
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(new SessionJwtAuthenticationConverter(sessions, siteResolver))))
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(errors)
                 .accessDeniedHandler(errors));
