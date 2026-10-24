@@ -81,6 +81,8 @@ Chú thích và script dài gấp đôi phần code là lãng phí, không phả
   Cắt phần diễn giải lại điều code đã nói rõ
 - Script test/demo: in **kết luận** (`PASS` / `LECH` / số đo), không in tường
   thuật từng bước. Một script tự khẳng định thắng một script tự thuật lại
+- Tài liệu: bảng và số đo thay cho đoạn văn. Mỗi ý một lần, không nhắc lại ở
+  phần kết
 - Không viết thêm tài liệu nếu không được yêu cầu
 
 ## Quy ước đặt tên
