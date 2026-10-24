@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ import vn.ptit.one.shared.exception.ApiException;
 @Profile("central")
 public class ReportService {
 
+    private static final Logger log = LoggerFactory.getLogger(ReportService.class);
+
     private final ReportRepository reports;
     private final CourseService courses;
     private final GradePolicy policy;
@@ -43,6 +48,12 @@ public class ReportService {
     public ReportSummary summary(AuthenticatedUser user, String maHocKy, String maCoSo, String maMonHoc) {
         ReportScope scope = scope(user, maHocKy, maCoSo, maMonHoc);
         SummaryRow row = reports.summary(scope);
+        /* Số liệu thiếu một cơ sở vẫn được trả về — nhưng phải để lại dấu vết,
+           nếu không thì một site tắt máy biến thành "trường ít sinh viên đi". */
+        if (row.soCoSoKhongPhanHoi() > 0) {
+            log.warn("Thong ke hoc ky {}: {} co so khong phan hoi, so lieu la MOT PHAN.",
+                    maHocKy, row.soCoSoKhongPhanHoi());
+        }
         return new ReportSummary(scope,
                 new ReportSummary.Registrations(row.soLop(), row.luotDangKy(), row.soSinhVien()),
                 new ReportSummary.Capacity(row.tongSucChua(), row.tongDaDangKy(),
@@ -50,6 +61,7 @@ public class ReportService {
                         row.soLopDay(), row.soLop() - row.soLopDay()),
                 new ReportSummary.GradeProgress(row.soLop() - row.daCongBo() - row.daKhoa(),
                         row.daCongBo(), row.daKhoa()),
+                row.soCoSoKhongPhanHoi(),
                 clock.instant());
     }
 

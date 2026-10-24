@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import vn.ptit.one.enrollment.model.EnrollmentStatus;
 import vn.ptit.one.report.model.CourseReport.GradeBucket;
 import vn.ptit.one.report.model.ReportScope;
+import vn.ptit.one.shared.routing.SiteContext;
 
 /**
  * Truy vấn tổng hợp chỉ đọc. Mọi số liệu tính trên CÙNG một tập lớp, định nghĩa
@@ -37,7 +38,29 @@ public class ReportRepository {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Admin Master đứng ở database danh mục, nơi KHÔNG có bảng vận hành nào.
+     *
+     * <p>Chạy SQL cục bộ ở đó trả {@code Invalid object name 'dbo.LopHocPhan'}
+     * → 503, và màn Tổng quan trắng trơn. Phạm vi của Admin Master vốn là toàn
+     * hệ thống, nên câu trả lời đúng là gom từ mọi cơ sở qua Linked Server —
+     * {@code EXEC … AT} đẩy phép gom xuống từng site, qua mạng chỉ còn một dòng
+     * mỗi cơ sở.
+     */
+    private static boolean ganMaster() {
+        return SiteContext.MASTER.equals(SiteContext.explicit());
+    }
+
     public SummaryRow summary(ReportScope scope) {
+        if (ganMaster()) {
+            return jdbc.queryForObject(
+                    "EXEC dbo.sp_ThongKeTongQuan @MaHocKy = ?, @MaCoSo = ?, @MaMonHoc = ?",
+                    (rs, rowNum) -> new SummaryRow(
+                            rs.getInt("SoLop"), rs.getInt("LuotDangKy"), rs.getInt("SoSinhVien"),
+                            rs.getInt("TongSucChua"), rs.getInt("TongDaDangKy"), rs.getInt("SoLopDay"),
+                            rs.getInt("DaKhoa"), rs.getInt("DaCongBo"), rs.getInt("SoCoSoLoi")),
+                    scope.maHocKy(), scope.maCoSo(), scope.maMonHoc());
+        }
         Query lop = classSet(scope);
         return jdbc.queryForObject(lop.sql + """
                 , GhiDanh AS (
@@ -62,7 +85,7 @@ public class ReportRepository {
                 """.formatted(GIU_CHO), (rs, rowNum) -> new SummaryRow(
                         rs.getInt("SoLop"), rs.getInt("LuotDangKy"), rs.getInt("SoSinhVien"),
                         rs.getInt("TongSucChua"), rs.getInt("TongDaDangKy"), rs.getInt("SoLopDay"),
-                        rs.getInt("DaKhoa"), rs.getInt("DaCongBo")), lop.args.toArray());
+                        rs.getInt("DaKhoa"), rs.getInt("DaCongBo"), 0), lop.args.toArray());
     }
 
     /**
@@ -70,6 +93,19 @@ public class ReportRepository {
      * nối thẳng lớp × ghi danh × điểm sẽ nhân dòng và đếm sai.
      */
     public List<CourseRow> byCourse(ReportScope scope, BigDecimal nguongDat) {
+        if (ganMaster()) {
+            return jdbc.query("EXEC dbo.sp_ThongKeTheoMon @MaHocKy = ?, @MaCoSo = ?, @NguongDat = ?",
+                    (rs, rowNum) -> new CourseRow(
+                            rs.getString("MaMonHoc"), rs.getString("TenMonHoc"), rs.getInt("SoLop"),
+                            rs.getInt("LuotDangKy"), rs.getInt("TongSucChua"), rs.getInt("TongDaDangKy"),
+                            rs.getInt("Dat"), rs.getInt("Truot"),
+                            List.of(new GradeBucket(KHOANG[0], rs.getInt("K1")),
+                                    new GradeBucket(KHOANG[1], rs.getInt("K2")),
+                                    new GradeBucket(KHOANG[2], rs.getInt("K3")),
+                                    new GradeBucket(KHOANG[3], rs.getInt("K4")),
+                                    new GradeBucket(KHOANG[4], rs.getInt("K5")))),
+                    scope.maHocKy(), scope.maCoSo(), nguongDat);
+        }
         Query lop = classSet(scope);
         List<Object> args = new ArrayList<>(lop.args);
         args.add(nguongDat);
@@ -138,8 +174,14 @@ public class ReportRepository {
     private record Query(String sql, List<Object> args) {
     }
 
+    /**
+     * @param soCoSoKhongPhanHoi chỉ khác 0 ở phạm vi toàn hệ thống. Một cơ sở
+     *                           tắt máy không xoá sổ số liệu các cơ sở còn lại,
+     *                           nhưng con số trả về là MỘT PHẦN — chỗ gọi phải
+     *                           nói ra điều đó thay vì trình bày như đầy đủ
+     */
     public record SummaryRow(int soLop, int luotDangKy, int soSinhVien, int tongSucChua,
-            int tongDaDangKy, int soLopDay, int daKhoa, int daCongBo) {
+            int tongDaDangKy, int soLopDay, int daKhoa, int daCongBo, int soCoSoKhongPhanHoi) {
     }
 
     public record CourseRow(String maMonHoc, String tenMonHoc, int soLop, int luotDangKy,

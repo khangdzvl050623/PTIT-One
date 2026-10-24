@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import vn.ptit.one.course.service.ClassSectionService;
 import vn.ptit.one.grade.dto.SaveGradesRequest;
 import vn.ptit.one.grade.model.GradeEntry;
 import vn.ptit.one.grade.model.GradeSheet;
+import vn.ptit.one.grade.model.GradesPublished;
 import vn.ptit.one.grade.policy.GradePolicy;
 import vn.ptit.one.grade.repository.GradeRepository;
 import vn.ptit.one.grade.repository.GradeRepository.ClassGradeRow;
@@ -52,10 +54,13 @@ public class GradeBookService {
     private final ClassSectionService classes;
     private final GradePolicy policy;
     private final NotificationPublisher notifications;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public GradeBookService(GradeRepository grades, ClassSectionService classes,
-            GradePolicy policy, NotificationPublisher notifications, Clock clock) {
+            GradePolicy policy, NotificationPublisher notifications,
+            ApplicationEventPublisher events, Clock clock) {
+        this.events = events;
         this.grades = grades;
         this.classes = classes;
         this.policy = policy;
@@ -136,6 +141,9 @@ public class GradeBookService {
                 "Đã có điểm %s".formatted(lop.tenMonHoc()),
                 "Điểm lớp %s học kỳ %s đã được công bố.".formatted(maLopHP, lop.maHocKy()),
                 bangDiemLink(lop), maLopHP, moiCongBo));
+        /* Cùng giao dịch với câu công bố: Outbox chỉ đúng khi dòng sự kiện và
+           thay đổi dữ liệu cùng commit hoặc cùng rollback. */
+        events.publishEvent(new GradesPublished(maLopHP, now));
         return sheetOf(lop);
     }
 

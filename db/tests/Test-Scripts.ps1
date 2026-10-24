@@ -24,6 +24,12 @@ $scripts = @(
     @{ Path = 'master/02-danhba-nguoidung.sql'; Sites = @('MASTER') }
     @{ Path = 'master/03-taikhoan-master.sql'; Sites = @('MASTER') }
     @{ Path = 'master/04-seed-danhmuc.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/05-phien-dang-nhap.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/06-sp-chuyen-co-so.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/07-bao-cao-phan-tan.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/08-thong-ke-hoc-vu.sql'; Sites = @('MASTER') }
+    @{ Path = 'migrate/50-tach-du-lieu.sql'; Sites = @('MASTER') }
+    @{ Path = 'migrate/51-doi-soat.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/30-distributor.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/31-publication.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/32-subscription.sql'; Sites = @('MASTER') }
@@ -34,11 +40,18 @@ $scripts = @(
     @{ Path = 'site/10-schema-vanhanh.sql'; Sites = @('HCM','HN','DN') }
     @{ Path = 'site/11-rangbuoc.sql'; Sites = @('HCM','HN','DN') }
     @{ Path = 'site/12-chimuc.sql'; Sites = @('HCM','HN','DN') }
+    @{ Path = 'site/13-bao-ve-subscriber.sql'; Sites = @('HCM','HN','DN') }
     # Demo doc trong SSMS, khong phai buoc cai dat. Van phai bien dich duoc.
     # File nay CO CHU Y ghi thang ten database thay vi dung bien SQLCMD:
     # SSMS khong giu :setvar giua hai lan F5, con qua sqlcmd thi :setvar de
     # len -v — nen bien SQLCMD o day khong doi duoc dich, chi them rac roi.
     @{ Path = 'tests/90-demo-nhan-ban.sql'; Sites = @('HCM') }
+    @{ Path = 'tests/91-demo-chuyen-co-so.sql'; Sites = @('MASTER') }
+    @{ Path = 'tests/92-do-truy-van-phan-tan.sql'; Sites = @('MASTER') }
+    @{ Path = 'tests/93-do-tre-nhan-ban.sql'; Sites = @('MASTER') }
+    # Spike DTC: chay TAI HCM, goi sang HN qua Linked Server. Dung LnkHN/DbHN
+    # ma runner da cap san — khong tu dat ten bien moi.
+    @{ Path = 'spike/01-kiem-dtc.sql'; Sites = @('HCM') }
     @{ Path = 'central/00-create-database.sql'; Sites = @('CENTRAL'); Db = 'master'; CentralAction = 'CreateDatabase' }
     @{ Path = 'central/tests/00-verify-database.sql'; Sites = @('CENTRAL'); Db = 'PTITONE_CENTRAL'; CentralAction = 'VerifyDatabase' }
     # Plain: Flyway hoac sqlcmd goi thang, KHONG co bien SQLCMD va khong qua runner.

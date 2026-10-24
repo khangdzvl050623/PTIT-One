@@ -78,6 +78,46 @@ public class ScheduleService {
     }
 
     /**
+     * Buổi học của một lớp — API công khai, không kiểm quyền, cùng lý do với
+     * {@link #timetable}: chỗ gọi đã quyết định người dùng được xem lớp nào.
+     *
+     * <p>Khác {@link #read} ở chỗ KHÔNG đi qua {@code classes.detail(user, …)}.
+     * Saga liên cơ sở cần đọc lịch lớp của <em>cơ sở khác</em> ở bước 0, nơi
+     * người gọi là chính tiến trình saga chứ không phải một người dùng có
+     * quyền trên lớp đó.
+     */
+    public List<ScheduleSlot> classSlots(String maLopHP) {
+        return schedules.findByClass(maLopHP);
+    }
+
+    /** Buổi học của một tập lớp, gộp làm một danh sách — API công khai như trên. */
+    public List<ScheduleSlot> slotsOfClasses(Collection<String> maLopHP) {
+        return schedules.slotsOf(maLopHP).stream().map(ClashRow::slot).toList();
+    }
+
+    /**
+     * Buổi đầu tiên trong {@code target} chồng giờ với một buổi trong
+     * {@code dangGiu} — cùng thứ, chồng tiết VÀ chồng tuần.
+     *
+     * <p>Tách ra công khai cho saga liên cơ sở: ở đó {@code target} là lịch lớp
+     * <em>của Host</em>, đọc qua mạng ở bước 0, nên không có {@code MaLopHP} nào
+     * ở cơ sở này để tra như {@link #firstClash} vẫn làm. Phép so trùng giờ vẫn
+     * phải ở trong module {@code timetable} — nhân bản nó sang {@code enrollment}
+     * là tạo ra hai định nghĩa "trùng lịch" rồi chờ chúng lệch nhau.
+     */
+    public static Optional<ScheduleSlot> firstOverlap(List<ScheduleSlot> target,
+            List<ScheduleSlot> dangGiu) {
+        for (ScheduleSlot slot : target) {
+            for (ScheduleSlot giu : dangGiu) {
+                if (slot.trungTiet(giu) && slot.trungTuan(giu)) {
+                    return Optional.of(giu);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Lớp đầu tiên trong {@code others} trùng giờ với {@code maLopHP} — cùng thứ,
      * chồng tiết VÀ chồng tuần. Cùng tiết nhưng khác khoảng tuần thì không trùng.
      * Dùng cho F08: sinh viên không học hai lớp cùng lúc.

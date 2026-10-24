@@ -15,6 +15,9 @@ secrets/
 *.ldf
 *.ndf
 
+# ---- Output bang chung: sinh lai duoc, khong commit ----
+bang-chung/
+
 # ---- Java / Maven ----
 target/
 *.class
@@ -58,3 +61,8 @@ tmp/
 
 # ---- CodeGraph: index cục bộ từng máy, không commit ----
 .codegraph/
+
+# Cau hinh cuc bo cua tung may: ten server, tai khoan SQL cua cac site.
+# config.example.psd1 moi la ban mau duoc commit.
+config.local.psd1
+**/config.local.psd1

@@ -18,9 +18,14 @@
     # Plan B — tất cả một máy  : dùng named instance, ví dụ '.\SITE_HN'.
     # -----------------------------------------------------------------
     Servers = @{
+        # Da biet (19/10): may HN do mot thanh vien giu, vao Radmin 26.119.18.135.
+        # Them dong nay vao hosts tren MOI may — replication luu TEN MAY, khong luu IP:
+        #     26.119.18.135   DESKTOP-IDRP0NT
+        #
+        # CHUA biet: may nao nhan HCM va DN. Hai dong duoi con la gia tri tam.
         MASTER = 'DESKTOP-85V5Q0S\PTITONE'
         HCM    = 'DESKTOP-85V5Q0S\PTITONE'
-        HN     = 'SRV-HN'
+        HN     = 'DESKTOP-IDRP0NT'
         DN     = 'SRV-DN'
     }
 
@@ -28,6 +33,11 @@
     # Tên database. Tiền tố PTITONE_ theo tên dự án.
     # -----------------------------------------------------------------
     Databases = @{
+        # Nguon de tach du lieu sang topology phan tan (db/migrate). Phai nam
+        # CUNG INSTANCE voi MASTER — script migrate doc no bang ten hai phan.
+        # Sau khi doi soat xong thi backup roi go; xem db/migrate/README.
+        CENTRAL = 'PTITONE_CENTRAL'
+
         MASTER = 'PTITONE_MASTER'
         HCM    = 'PTITONE_HCM'
         HN     = 'PTITONE_HN'
