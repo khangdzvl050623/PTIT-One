@@ -40,9 +40,13 @@ Mỗi mục tự in `PASS`/`FAIL` của chính nó; script chỉ gom output vào
 **Hai cơ chế thêm**, không nằm trong 5 yêu cầu (tài liệu thiết kế đánh dấu ➕):
 
 - **Saga** — đăng ký lớp ở cơ sở khác. Ghi hai site, **có người đang chờ**.
-  Hiện mới có nền móng: model, hai repository, phép so trùng giờ. Chưa nối.
+  ✅ Xong.
 - **Outbox** — đồng bộ điểm về cơ sở nhà. Ghi hai site, **không ai chờ**.
-  Chưa bắt đầu.
+  ✅ Xong.
+
+Demo đầu-cuối: `db	ests\94-demo-lien-co-so.ps1` — SV cơ sở HCM đăng ký lớp
+trực tuyến ở HN, giảng viên HN công bố điểm, Outbox trả điểm về HCM. 21 phép
+kiểm, PASS, tự dọn sạch.
 
 ---
 
@@ -272,10 +276,20 @@ mà không phải sửa gì.
 
 | Việc | Công sức | Phụ thuộc |
 |---|---|---|
+| **F02 qua Outbox vòng đời SV** | 1 ngày | `OutboxWorker` đã có khung |
 | Ba máy site lên VPN, nhân bản thật | 2 ngày | VPN thông |
-| F02 cấp tài khoản | 1 ngày | — |
-| Saga + Outbox đăng ký liên cơ sở (➕) | 3 ngày | Nền móng đã có |
 | Báo cáo + ảnh chụp | 2 ngày | Chạy xuyên suốt |
+| X-Ray, frontend liên cơ sở (➕) | — | cắt được nếu thiếu giờ |
 
-**Đường găng:** VPN → nhân bản ba site thật → chụp lại bằng chứng #2. Phần ➕
-cắt được nếu thiếu giờ; phần bắt buộc thì **đã xong và đã có số**.
+⚠️ **F02 là việc gấp nhất, không phải việc nhỏ.** Nó chạy đúng ở Phần 1 nhưng
+gãy ở chế độ phân tán: Admin Master đứng ở `MASTER`, nơi không có `SinhVien`,
+nên `POST /api/students` trả 503 `Invalid object name 'dbo.SinhVien'`. Mà
+quyết định 02/10 lại là *chỉ Admin Master được cấp tài khoản* — nên hiện
+**không ai cấp được hồ sơ mới ở Phần 2**.
+
+**Đã xong, không còn trong danh sách:** saga đăng ký liên cơ sở và Outbox trả
+điểm (demo đầu-cuối 21 phép kiểm, PASS), và `DENY` + trigger
+`NOT FOR REPLICATION` làm Subscriber chỉ đọc thật sự.
+
+**Đường găng:** VPN → nhân bản ba site thật → chụp lại bằng chứng #2. Phần bắt
+buộc thì **đã xong và đã có số**.

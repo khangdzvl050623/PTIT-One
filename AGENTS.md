@@ -27,8 +27,12 @@ repository nội bộ của module khác; không phụ thuộc vòng. `shared` k
 import module nghiệp vụ. Không tạo interface chỉ để ghép cặp với mọi class.
 API đã nối `PTITONE_CENTRAL` qua profile `central` (một DataSource); profile
 mặc định không nối DB. Đã có schema `V1`–`V4`, xác thực A0 và API nghiệp vụ
-Phần 1 (F03–F09, thống kê, thông báo); còn thiếu F02 — trạng thái thật ở
+Phần 1 (F02–F09, thống kê, thông báo) — trạng thái thật ở
 `docs/PTIT-One-Backend-Khoi-Dong.md`.
+⚠️ F02 chạy đúng ở Phần 1 nhưng **gãy ở chế độ phân tán**: Admin Master đứng
+ở `MASTER`, nơi không có `SinhVien`/`GiangVien`/`TaiKhoan`, nên cấp hồ sơ trả
+503 `Invalid object name 'dbo.SinhVien'`. Lời giải theo thiết kế là luồng
+Outbox *Vòng đời sinh viên* (mục C2), chưa cài.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.
 
