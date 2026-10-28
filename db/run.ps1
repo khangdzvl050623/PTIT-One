@@ -106,6 +106,7 @@ $vars = @(
     "DistRetention=$($cfg.Replication.DistributionRetentionHours)"
     "SubRetention=$($cfg.Replication.SubscriptionRetentionHours)"
 
+    "LnkHCM=$(if ($cfg.LinkedServers.HCM) { $cfg.LinkedServers.HCM } else { 'SRV_HCM' })"
     "LnkHN=$($cfg.LinkedServers.HN)"
     "LnkDN=$($cfg.LinkedServers.DN)"
 
