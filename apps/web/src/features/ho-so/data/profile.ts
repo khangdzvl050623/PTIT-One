@@ -67,16 +67,19 @@ export const DEMO_RESULTS: readonly TermResults[] = [
  * Lối tắt cột phải — đủ mọi chức năng backend mở cho `SINH_VIEN` (xem bảng
  * quyền trong `docs/PTIT-One-API-Contract.md`). Không thêm mục của cổng gốc mà
  * backend không có (học phí, hoá đơn, lịch thi, nguyện vọng, góp ý).
+ *
+ * Thứ tự bám navbar trái qua phải: mục chỉ có ở sidebar để đầu, nhóm tài
+ * khoản để cuối. Đổi navbar thì đổi ở đây cho khớp.
  */
 export const STUDENT_FEATURES: readonly FeatureLink[] = [
   { label: 'Thông báo từ ban quản trị', href: ROUTES.thongBao }, // /api/me/notifications
+  { label: 'Đăng ký môn học', href: ROUTES.svDangKy }, // /api/me/enrollments
+  { label: 'Xem điểm', href: ROUTES.svBangDiem }, // /api/me/grades
+  { label: 'Thời khoá biểu dạng tuần', href: ROUTES.svLichHoc }, // /api/me/timetable?tuan=
   { label: 'Xem chương trình đào tạo', href: ROUTES.svChuongTrinh }, // /api/programs/{maCTDT}
   { label: 'Xem môn học tiên quyết', href: ROUTES.svMonHoc }, // /api/courses
   { label: 'Lịch đợt đăng ký', href: ROUTES.svDotDangKy }, // /api/enrollment-periods
-  { label: 'Đăng ký môn học', href: ROUTES.svDangKy }, // /api/me/enrollments
-  { label: 'Thời khoá biểu dạng tuần', href: ROUTES.svLichHoc }, // /api/me/timetable?tuan=
   { label: 'Thời khoá biểu dạng học kỳ', href: ROUTES.svLichHocHocKy }, // /api/me/timetable
-  { label: 'Xem điểm', href: ROUTES.svBangDiem }, // /api/me/grades
   { label: 'Đổi mật khẩu', href: ROUTES.doiMatKhau }, // /api/auth/change-password
   { label: 'Email và xác minh', href: ROUTES.email }, // /api/auth/email
   { label: 'Phiên đăng nhập', href: ROUTES.account }, // /api/auth/logout-all

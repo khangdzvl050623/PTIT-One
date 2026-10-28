@@ -189,8 +189,9 @@ const ACCOUNT_LINKS: readonly FeatureLink[] = [
   { label: 'Phiên đăng nhập', href: ROUTES.account },
 ]
 
+/** Lối tắt cột phải theo vai trò — thứ tự bám navbar trái qua phải, nhóm tài khoản để cuối. */
 export const TEACHER_FEATURES: readonly FeatureLink[] = [
-  { label: 'Thông báo', href: ROUTES.thongBao }, // /api/me/notifications
+  { label: 'Thông báo', href: ROUTES.thongBao }, // hộp thư đến + soạn tin, chung một chỗ
   { label: 'Lớp phụ trách', href: ROUTES.gvLopPhuTrach }, // /api/me/teaching-classes
   { label: 'Nhập điểm', href: ROUTES.gvNhapDiem }, // /api/classes/{maLopHP}/grades
   ...ACCOUNT_LINKS,
@@ -200,12 +201,14 @@ export const CAMPUS_ADMIN_FEATURES: readonly FeatureLink[] = [
   { label: 'Tổng quan thống kê', href: ROUTES.qtTongQuan }, // /api/reports/*
   { label: 'Đợt đăng ký và ghi danh', href: ROUTES.qtDangKy }, // /api/enrollment-periods
   { label: 'Lớp học phần', href: ROUTES.qtLopHocPhan }, // /api/classes
+  { label: 'Gửi thông báo', href: ROUTES.qtThongBao }, // /api/notifications
   ...ACCOUNT_LINKS,
 ]
 
 export const MASTER_ADMIN_FEATURES: readonly FeatureLink[] = [
   { label: 'Tổng quan thống kê', href: ROUTES.qtTongQuan }, // /api/reports/*
-  { label: 'Danh mục và tiên quyết', href: ROUTES.qtDanhMuc }, // /api/courses
   { label: 'Hồ sơ và tài khoản', href: ROUTES.qtHoSo }, // /api/students · /api/accounts
+  { label: 'Danh mục và tiên quyết', href: ROUTES.qtDanhMuc }, // /api/courses
+  { label: 'Gửi thông báo', href: ROUTES.qtThongBao }, // /api/notifications
   ...ACCOUNT_LINKS,
 ]

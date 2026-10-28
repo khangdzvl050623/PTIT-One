@@ -28,8 +28,10 @@ export function RequireAuth({ roles }: RequireAuthProps) {
   }
 
   if (status === 'anonymous' || !user) {
-    // Nhớ nơi định tới để đăng nhập xong quay lại đúng chỗ.
-    return <Navigate to={ROUTES.login} state={{ from: location.pathname }} replace />
+    /* Nhớ nơi định tới để đăng nhập xong quay lại đúng chỗ. Giữ nguyên state
+       đang có (ví dụ flash báo đổi mật khẩu) thay vì ghi đè mất. */
+    const incoming = (location.state ?? {}) as Record<string, unknown>
+    return <Navigate to={ROUTES.login} state={{ ...incoming, from: location.pathname }} replace />
   }
 
   if (roles && roles.length > 0 && !roles.includes(user.role)) {

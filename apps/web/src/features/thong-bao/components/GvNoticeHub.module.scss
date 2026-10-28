@@ -1,0 +1,35 @@
+@use '@/styles/tokens' as tokens;
+
+.hub {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}
+
+.send {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$space-lg;
+}
+
+.field {
+  display: grid;
+  gap: tokens.$space-xs;
+  max-width: 560px;
+  font-size: tokens.$font-size-xs;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--notice-meta);
+}
+
+.hint {
+  margin: tokens.$space-md 0 0;
+  font-size: tokens.$font-size-sm;
+  line-height: 1.6;
+  color: var(--notice-meta);
+
+  b {
+    color: var(--accent-red);
+  }
+}

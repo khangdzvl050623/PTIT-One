@@ -1,0 +1,115 @@
+@use '@/styles/tokens' as tokens;
+
+/* Khoảng cách dưới cụm pill lọc dùng chung. */
+.pillWrap {
+  margin-bottom: tokens.$space-lg;
+}
+
+/* Hàng bản soạn: tiêu đề + dòng phạm vi/ngày, đếm đã đọc bên phải. */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: tokens.$space-md;
+  padding: tokens.$space-md tokens.$space-xs;
+  border-bottom: 1px solid var(--notice-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--notice-hover-bg);
+  }
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: tokens.$space-2xs;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: tokens.$radius-sm;
+
+  &:focus-visible {
+    outline: 2px solid var(--callout-border);
+    outline-offset: 2px;
+  }
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: tokens.$space-xs tokens.$space-sm;
+}
+
+.title {
+  font-size: tokens.$font-size-sm;
+  font-weight: 600;
+  line-height: 1.55;
+  letter-spacing: 0.1px;
+  color: var(--notice-text);
+  overflow-wrap: anywhere;
+
+  .main:hover & {
+    color: var(--accent-red);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.urgent {
+  padding: 1px tokens.$space-sm;
+  font-size: tokens.$font-size-2xs;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ptit-on-brand);
+  background: var(--accent-red);
+  border-radius: 999px;
+}
+
+.sub {
+  font-size: tokens.$font-size-xs;
+  font-style: italic;
+  color: var(--notice-meta);
+}
+
+.meta {
+  flex-shrink: 0;
+  padding-left: tokens.$space-md;
+  font-size: tokens.$font-size-xs;
+  color: var(--notice-meta);
+  white-space: nowrap;
+}
+
+.state {
+  margin: 0 0 tokens.$space-md;
+  font-size: tokens.$font-size-sm;
+  color: var(--notice-meta);
+}
+
+@media (max-width: tokens.$breakpoint-mobile) {
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: tokens.$space-2xs;
+  }
+
+  .meta {
+    padding-left: 0;
+  }
+}

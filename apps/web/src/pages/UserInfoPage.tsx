@@ -33,6 +33,7 @@ import type { FeatureLink } from '@/features/ho-so'
 import { StudyProgress, useTerms, useTimetables } from '@/features/lich-hoc'
 import { teachingClasses } from '@/features/nhap-diem'
 import { AccessStats } from '@/features/thong-ke'
+import { UnreadBadge } from '@/features/thong-bao'
 import { ROUTES } from '@/shared/constants'
 import { useAsyncData } from '@/shared/lib'
 import { Panel } from '@/shared/ui'
@@ -111,7 +112,16 @@ function StudentHome({ user }: { user: SessionUser }) {
 
         <aside className={styles.asideColumn}>
           <LoginPanel />
-          <FeatureLinks links={STUDENT_FEATURES} />
+          {/* Trang này tự vẽ cột phải (không qua StudentShell) nên phải gắn
+              huy hiệu ở đây — thiếu là đúng bug "chỉ /thong-tin không có". */}
+          <FeatureLinks
+            links={STUDENT_FEATURES}
+            after={(link) =>
+              link.href === ROUTES.thongBao ? (
+                <UnreadBadge count={summary.data?.thongBaoChuaDoc ?? 0} />
+              ) : null
+            }
+          />
         </aside>
       </div>
 
@@ -135,6 +145,7 @@ function InfoLayout(props: {
   profile: ReactNode
   summary: ReactNode
   features: readonly FeatureLink[]
+  afterLinks?: (link: FeatureLink) => ReactNode
 }) {
   return (
     <div className={styles.page}>
@@ -143,7 +154,7 @@ function InfoLayout(props: {
         <div className={styles.summaryColumn}>{props.summary}</div>
         <aside className={styles.asideColumn}>
           <LoginPanel />
-          <FeatureLinks links={props.features} />
+          <FeatureLinks links={props.features} after={props.afterLinks} />
         </aside>
       </div>
       <div className={styles.stats}>
@@ -173,6 +184,10 @@ function TeacherInfo({ user }: { user: SessionUser }) {
   return (
     <InfoLayout
       features={TEACHER_FEATURES}
+      /* Tile đã tải số chưa đọc — vẽ huy hiệu ké, khỏi gọi API lần nữa. */
+      afterLinks={(link) =>
+        link.href === ROUTES.thongBao ? <UnreadBadge count={unread.data ?? 0} /> : null
+      }
       profile={
         <>
           {profile.loading ? <p>Đang tải hồ sơ…</p> : null}
