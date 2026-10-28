@@ -30,6 +30,7 @@ $scripts = @(
     @{ Path = 'master/08-thong-ke-hoc-vu.sql'; Sites = @('MASTER') }
     @{ Path = 'migrate/50-tach-du-lieu.sql'; Sites = @('MASTER') }
     @{ Path = 'migrate/51-doi-soat.sql'; Sites = @('MASTER') }
+    @{ Path = 'replication/20-linked-server.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/30-distributor.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/31-publication.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/32-subscription.sql'; Sites = @('MASTER') }
