@@ -12,6 +12,7 @@ import vn.ptit.one.enrollment.model.ClassRoster;
 import vn.ptit.one.enrollment.model.RosterEntry;
 import vn.ptit.one.enrollment.repository.EnrollmentRepository;
 import vn.ptit.one.notification.service.ClassRecipients;
+import vn.ptit.one.shared.routing.SiteContext;
 
 /**
  * Danh sách sinh viên và sĩ số của lớp (F05). Cũng là nguồn người nhận khi
@@ -35,7 +36,8 @@ public class RosterService implements ClassRecipients {
      */
     public ClassRoster roster(AuthenticatedUser user, String maLopHP) {
         ClassSection lop = classes.requireStaffAccess(user, maLopHP);
-        return new ClassRoster(lop, enrollments.roster(maLopHP));
+        // Admin Master đọc "mọi site" (B3): ghi danh nằm ở cơ sở mở lớp.
+        return new ClassRoster(lop, SiteContext.readAt(lop.maCoSoHost(), () -> enrollments.roster(maLopHP)));
     }
 
     @Override

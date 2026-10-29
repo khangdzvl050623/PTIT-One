@@ -1,10 +1,19 @@
 package vn.ptit.one.auth.security;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import vn.ptit.one.auth.model.RefreshToken;
 import vn.ptit.one.auth.repository.AccountRepository;
+import vn.ptit.one.auth.repository.RefreshTokenRepository;
 import vn.ptit.one.shared.routing.SiteContext;
+import vn.ptit.one.shared.routing.SiteProperties;
 
 /**
  * Tra danh bạ ở Master để biết một tên đăng nhập thuộc cơ sở nào.
@@ -21,10 +30,38 @@ import vn.ptit.one.shared.routing.SiteContext;
 @Profile("distributed")
 public class LoginSiteResolver {
 
-    private final AccountRepository accounts;
+    private static final Logger log = LoggerFactory.getLogger(LoginSiteResolver.class);
 
-    public LoginSiteResolver(AccountRepository accounts) {
+    private final AccountRepository accounts;
+    private final RefreshTokenRepository refreshTokens;
+    private final SiteProperties sites;
+
+    public LoginSiteResolver(AccountRepository accounts, RefreshTokenRepository refreshTokens, SiteProperties sites) {
         this.accounts = accounts;
+        this.refreshTokens = refreshTokens;
+        this.sites = sites;
+    }
+
+    /**
+     * Nút đang giữ refresh token. Refresh chạy đúng lúc access token đã hết hạn,
+     * nên không còn JWT nào cho biết cơ sở — chỉ còn cách hỏi từng nút. Bốn lượt
+     * tìm theo khoá, mỗi 15 phút một lần cho mỗi người: rẻ.
+     */
+    public String siteOfRefreshToken(String presentedToken) {
+        byte[] hash = RefreshToken.hashOf(presentedToken);
+        List<String> nodes = new ArrayList<>(sites.nodes().keySet());
+        nodes.add(0, SiteContext.MASTER);
+        for (String site : nodes) {
+            try {
+                if (SiteContext.runAt(site, () -> refreshTokens.findByHash(hash).isPresent())) {
+                    return site;
+                }
+            } catch (RuntimeException ex) {
+                /* Một nút tắt không được chặn người dùng ở nút khác gia hạn phiên. */
+                log.warn("Không hỏi được nút {} khi tìm refresh token: {}", site, ex.toString());
+            }
+        }
+        return SiteContext.MASTER;
     }
 
     /**
@@ -41,5 +78,16 @@ public class LoginSiteResolver {
     public String resolve(String username) {
         return SiteContext.runAt(SiteContext.MASTER,
                 () -> accounts.findCampusOfUser(username).orElse(SiteContext.MASTER));
+    }
+
+    /**
+     * Cho luồng CHƯA đăng nhập ngoài login (kích hoạt, khôi phục mật khẩu):
+     * không có JWT để định tuyến nên phải tra danh bạ. Tên không thuộc cơ sở
+     * nào thì trả {@code ifNoSite} ngay — Master không có {@code MaKichHoat}/
+     * {@code MaXacThuc}, chạy ở đó là 503 khác hẳn 400, thành công cụ dò tài khoản.
+     */
+    public <T> T atUserSite(String username, Supplier<T> body, T ifNoSite) {
+        String site = resolve(username);
+        return SiteContext.MASTER.equals(site) ? ifNoSite : SiteContext.runAt(site, body);
     }
 }

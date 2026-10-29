@@ -2,6 +2,8 @@ package vn.ptit.one.auth.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,12 +23,14 @@ import vn.ptit.one.auth.model.AccountSummary;
 import vn.ptit.one.auth.model.ActivationCode;
 import vn.ptit.one.auth.model.ActivationCodeRecord;
 import vn.ptit.one.auth.model.ActivationSecret;
+import vn.ptit.one.auth.model.ReservedAccount;
 import vn.ptit.one.auth.model.Role;
 import vn.ptit.one.auth.repository.AccountRepository;
 import vn.ptit.one.auth.repository.ActivationCodeRepository;
 import vn.ptit.one.auth.security.AuthProperties;
 import vn.ptit.one.shared.exception.ApiException;
 import vn.ptit.one.shared.mail.Mailer;
+import vn.ptit.one.shared.outbox.OutboxStore;
 
 /**
  * Cấp, kích hoạt và khoá tài khoản (F02). API công khai của module auth cho
@@ -43,6 +47,8 @@ public class AccountService {
 
     public static final String HOAT_DONG = AccountRecord.ACTIVE;
     public static final String NGUNG = "NGUNG";
+    /** Danh bạ đã có, hồ sơ ở cơ sở nhà chưa dựng xong (Phần 2) — chưa đăng nhập được. */
+    public static final String CHO_KICH_HOAT = "CHO_KICH_HOAT";
 
     /** Lần sai thứ 5 thu hồi mã. */
     static final int MAX_ACTIVATION_ATTEMPTS = 5;
@@ -56,15 +62,17 @@ public class AccountService {
     private final SessionService sessions;
     private final AuthProperties properties;
     private final Mailer mailer;
+    private final OutboxStore outbox;
     private final Clock clock;
 
     public AccountService(AccountRepository accounts, ActivationCodeRepository codes, SessionService sessions,
-            AuthProperties properties, Mailer mailer, Clock clock) {
+            AuthProperties properties, Mailer mailer, OutboxStore outbox, Clock clock) {
         this.accounts = accounts;
         this.codes = codes;
         this.sessions = sessions;
         this.properties = properties;
         this.mailer = mailer;
+        this.outbox = outbox;
         this.clock = clock;
     }
 
@@ -116,6 +124,56 @@ public class AccountService {
             throw accountExists(entityId);
         }
         return issueCode(entityId, normalizeEmail(email), true, clock.instant(), nguoiCap());
+    }
+
+    /** Mã trả cho Admin + phần đưa vào sự kiện Outbox. */
+    public record Reservation(ActivationCode kichHoat, ReservedAccount taiKhoan) {
+    }
+
+    /**
+     * Phần 2, tại Master — nơi không có {@code TaiKhoan}/{@code MaKichHoat}: chỉ
+     * ghi danh bạ {@code CHO_KICH_HOAT} trong giao dịch của người gọi. Mã được
+     * sinh ngay để trả Admin, nhưng chỉ lưu ở cơ sở nhà khi worker chạy
+     * {@link #materialize} — vài giây đầu kích hoạt sẽ báo sai mã.
+     */
+    @Transactional
+    public Reservation reserve(String entityId, Role role, String campus, String email) {
+        if (role != Role.SINH_VIEN && role != Role.GIANG_VIEN) {
+            throw new IllegalArgumentException("Chỉ cấp tài khoản sinh viên/giảng viên qua hồ sơ: " + role);
+        }
+        String mail = normalizeEmail(email);
+        try {
+            accounts.insertDirectory(entityId, campus, role, entityId, CHO_KICH_HOAT);
+        } catch (DuplicateKeyException ex) {
+            throw accountExists(entityId);
+        }
+        Instant now = clock.instant();
+        NewCode code = newCode(mail, true, now);
+        return new Reservation(deliver(entityId, code), new ReservedAccount(entityId, role, campus, mail,
+                code.id(), code.secret().hash(), now, code.expiresAt(), code.recipient(), nguoiCap()));
+    }
+
+    /** Worker gọi tại cơ sở nhà. Idempotent: gửi lặp sự kiện không sinh dòng thứ hai. */
+    @Transactional
+    public void materialize(ReservedAccount a) {
+        if (!accounts.siteAccountExists(a.username())) {
+            accounts.insertSiteAccount(a.username(), a.role(), a.username(), a.maCoSo(), a.email());
+        }
+        if (!codes.exists(a.codeId())) {
+            codes.insert(a.codeId(), a.username(), a.codeHash(), a.codeCreatedAt(), a.codeExpiresAt(),
+                    a.codeRecipient(), a.nguoiCap());
+        }
+    }
+
+    /**
+     * Worker gọi tại Master SAU khi cơ sở nhà đã có hồ sơ: mở danh bạ và đánh dấu
+     * sự kiện đã gửi trong CÙNG giao dịch. Một chỗ duy nhất cho cả SV lẫn GV, vì
+     * thứ tự "cơ sở nhà trước, SENT sau" là điều làm cho Outbox đúng.
+     */
+    @Transactional
+    public void confirmProvisioned(String username, UUID eventId) {
+        accounts.activateDirectory(username, CHO_KICH_HOAT, HOAT_DONG);
+        outbox.markSent(eventId, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
     }
 
     /**
@@ -295,14 +353,29 @@ public class AccountService {
     /** @param nguoiCap ai gây ra việc cấp mã — xem `V10`; {@code null} nếu không rõ */
     private ActivationCode issueCode(String username, String email, boolean sendByEmail, Instant now,
             String nguoiCap) {
-        ActivationSecret secret = ActivationSecret.generate();
-        Instant expiresAt = now.plus(properties.activationTtl());
+        NewCode code = newCode(email, sendByEmail, now);
+        codes.insert(code.id(), username, code.secret().hash(), now, code.expiresAt(), code.recipient(), nguoiCap);
+        return deliver(username, code);
+    }
+
+    private record NewCode(UUID id, ActivationSecret secret, Instant expiresAt, String recipient) {
+    }
+
+    private NewCode newCode(String email, boolean sendByEmail, Instant now) {
         String recipient = sendByEmail && email != null && mailer.enabled() ? email : null;
-        codes.insert(UUID.randomUUID(), username, secret.hash(), now, expiresAt, recipient, nguoiCap);
+        return new NewCode(UUID.randomUUID(), ActivationSecret.generate(),
+                now.plus(properties.activationTtl()), recipient);
+    }
+
+    /** Có người nhận thì mã CHỈ đi qua thư (gửi sau commit); không thì trả Admin trao tay. */
+    private ActivationCode deliver(String username, NewCode code) {
+        ActivationSecret secret = code.secret();
+        Instant expiresAt = code.expiresAt();
+        String recipient = code.recipient();
         if (recipient == null) {
             return new ActivationCode(username, secret.value(), expiresAt, null);
         }
-        mailer.sendAfterCommit(recipient, "Kích hoạt tài khoản PTIT One", """
+        mailer.sendAfterCommit(recipient,"Kích hoạt tài khoản PTIT One", """
                 Chào bạn,
 
                 Nhà trường đã cấp tài khoản PTIT One cho bạn.

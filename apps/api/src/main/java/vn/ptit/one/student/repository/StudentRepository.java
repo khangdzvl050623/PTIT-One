@@ -48,6 +48,13 @@ public class StudentRepository {
                 """, maSinhVien, hoTen, ngaySinh, maCoSoNha, maCTDT);
     }
 
+    /** {@code ChuongTrinhDaoTao} là bảng nhân bản — có cả ở Master lẫn cơ sở. */
+    public boolean programExists(String maCTDT) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.ChuongTrinhDaoTao WHERE MaCTDT = ?",
+                Integer.class, maCTDT);
+        return count != null && count > 0;
+    }
+
     public boolean exists(String maSinhVien) {
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.SinhVien WHERE MaSinhVien = ?",
                 Integer.class, maSinhVien);

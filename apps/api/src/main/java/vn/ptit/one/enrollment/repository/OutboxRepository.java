@@ -3,8 +3,6 @@ package vn.ptit.one.enrollment.repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
-import java.util.UUID;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,8 +19,6 @@ import org.springframework.stereotype.Repository;
 public class OutboxRepository {
 
     public static final String DIEM_DA_CHOT = "DiemDaChot";
-    private static final String PENDING = "PENDING";
-    private static final String SENT = "SENT";
 
     private final JdbcTemplate jdbc;
 
@@ -64,42 +60,8 @@ public class OutboxRepository {
                 """, DIEM_DA_CHOT, now, maLopHP, maCoSoHost);
     }
 
-    /** Sự kiện còn chờ gửi, cũ trước. */
-    public List<PendingEvent> pending(int limit) {
-        return jdbc.query("""
-                SELECT TOP (?) EventId, KhoaThucThe, NoiDung, Version, SoLanThu
-                  FROM dbo.OutboxSuKien
-                 WHERE TrangThai = ? AND LoaiSuKien = ?
-                 ORDER BY ThoiDiemTao
-                """, (rs, rowNum) -> new PendingEvent(
-                        UUID.fromString(rs.getString("EventId")),
-                        rs.getString("KhoaThucThe"),
-                        rs.getString("NoiDung"),
-                        rs.getLong("Version"),
-                        rs.getInt("SoLanThu")),
-                limit, PENDING, DIEM_DA_CHOT);
-    }
-
-    /** Đánh dấu đã gửi. Làm SAU khi upsert mirror thành công — đảo thứ tự là mất sự kiện. */
-    public int markSent(UUID eventId, LocalDateTime now) {
-        return jdbc.update("""
-                UPDATE dbo.OutboxSuKien SET TrangThai = ?, ThoiDiemXuLy = ?
-                 WHERE EventId = ? AND TrangThai = ?
-                """, SENT, now, eventId.toString(), PENDING);
-    }
-
-    public void recordFailure(UUID eventId) {
-        jdbc.update("UPDATE dbo.OutboxSuKien SET SoLanThu = SoLanThu + 1 WHERE EventId = ?",
-                eventId.toString());
-    }
-
     public static LocalDateTime utc(java.time.Instant now) {
         return LocalDateTime.ofInstant(now, ZoneOffset.UTC);
-    }
-
-    /** @param noiDung JSON thô; worker tự đọc ra. */
-    public record PendingEvent(UUID eventId, String khoaThucThe, String noiDung, long version,
-            int soLanThu) {
     }
 
     /** Nội dung sự kiện {@code DiemDaChot} sau khi đọc JSON. */

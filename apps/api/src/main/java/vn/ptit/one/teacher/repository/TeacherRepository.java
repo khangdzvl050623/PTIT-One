@@ -51,6 +51,13 @@ public class TeacherRepository {
                 """, maGiangVien, hoTen, maCoSo, hocVi, maKhoa);
     }
 
+    /** {@code Khoa} là bảng nhân bản — có cả ở Master lẫn cơ sở. */
+    public boolean facultyExists(String maKhoa) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.Khoa WHERE MaKhoa = ?",
+                Integer.class, maKhoa);
+        return count != null && count > 0;
+    }
+
     public Optional<Teacher> findOne(String maGiangVien) {
         return jdbc.query(COLUMNS + " WHERE MaGiangVien = ?", (rs, rowNum) -> map(rs), maGiangVien)
                 .stream().findFirst();

@@ -27,6 +27,7 @@ import vn.ptit.one.grade.model.GradesPublished;
 import vn.ptit.one.grade.policy.GradePolicy;
 import vn.ptit.one.grade.repository.GradeRepository;
 import vn.ptit.one.grade.repository.GradeRepository.ClassGradeRow;
+import vn.ptit.one.shared.routing.SiteContext;
 import vn.ptit.one.notification.model.AutoNotification;
 import vn.ptit.one.notification.model.NotificationTerms;
 import vn.ptit.one.notification.model.Recipient;
@@ -69,7 +70,9 @@ public class GradeBookService {
     }
 
     public GradeSheet sheet(AuthenticatedUser user, String maLopHP) {
-        return sheetOf(classes.requireStaffAccess(user, maLopHP));
+        ClassSection lop = classes.requireStaffAccess(user, maLopHP);
+        // Admin Master đọc "mọi site" (B3): điểm nằm ở cơ sở mở lớp.
+        return SiteContext.readAt(lop.maCoSoHost(), () -> sheetOf(lop));
     }
 
     /**

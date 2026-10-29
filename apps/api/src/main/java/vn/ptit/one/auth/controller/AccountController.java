@@ -1,7 +1,11 @@
 package vn.ptit.one.auth.controller;
 
 import java.util.List;
+import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,8 +26,11 @@ import vn.ptit.one.auth.model.AccountEmail;
 import vn.ptit.one.auth.model.AccountSummary;
 import vn.ptit.one.auth.model.ActivationCode;
 import vn.ptit.one.auth.model.Role;
+import vn.ptit.one.auth.security.LoginSiteResolver;
 import vn.ptit.one.auth.service.AccountService;
 import vn.ptit.one.auth.service.CredentialService;
+import vn.ptit.one.auth.service.SessionService;
+import vn.ptit.one.shared.routing.SiteContext;
 
 /**
  * Quản trị tài khoản (F02). Chỉ {@code ADMIN_MASTER}: danh bạ là bảng Master
@@ -36,12 +43,29 @@ import vn.ptit.one.auth.service.CredentialService;
 @PreAuthorize("hasRole('ADMIN_MASTER')")
 public class AccountController {
 
+    private static final Logger log = LoggerFactory.getLogger(AccountController.class);
+
     private final AccountService accounts;
     private final CredentialService credentials;
+    private final SessionService sessions;
+    private final ObjectProvider<LoginSiteResolver> siteResolver;
 
-    public AccountController(AccountService accounts, CredentialService credentials) {
+    public AccountController(AccountService accounts, CredentialService credentials, SessionService sessions,
+            ObjectProvider<LoginSiteResolver> siteResolver) {
         this.accounts = accounts;
         this.credentials = credentials;
+        this.sessions = sessions;
+        this.siteResolver = siteResolver;
+    }
+
+    /**
+     * Phần 2: Admin Master đứng ở Master, còn {@code TaiKhoan}/{@code MaKichHoat}
+     * của SV/GV nằm ở cơ sở nhà. Đổi nút ở ĐÂY vì các phương thức service là
+     * {@code @Transactional}, mà không được đổi nút trong giao dịch.
+     */
+    private <T> T atAccountSite(String username, Supplier<T> body) {
+        LoginSiteResolver resolver = siteResolver.getIfAvailable();
+        return resolver == null ? body.get() : SiteContext.runAt(resolver.resolve(username), body);
     }
 
     @GetMapping
@@ -59,13 +83,29 @@ public class AccountController {
     @ResponseStatus(HttpStatus.CREATED)
     public ActivationCode reissueActivationCode(@PathVariable String tenDangNhap,
             @RequestParam(defaultValue = "true") boolean guiEmail) {
-        return accounts.reissueActivationCode(tenDangNhap, guiEmail);
+        return atAccountSite(tenDangNhap, () -> accounts.reissueActivationCode(tenDangNhap, guiEmail));
     }
 
     @PutMapping("/{tenDangNhap}/status")
     public AccountSummary changeStatus(@PathVariable String tenDangNhap,
             @Valid @RequestBody ChangeAccountStatusRequest body) {
-        return accounts.changeStatus(tenDangNhap, body.trangThai());
+        AccountSummary ketQua = accounts.changeStatus(tenDangNhap, body.trangThai());
+        LoginSiteResolver resolver = siteResolver.getIfAvailable();
+        if (resolver != null && AccountService.NGUNG.equals(ketQua.trangThai())) {
+            /* Phần 2: phiên SV/GV nằm ở cơ sở nhà, Master không thu hồi được. Không
+               chờ nhân bản danh bạ — Distribution Agent dừng thì người bị khoá vẫn
+               dùng được mãi. Bước riêng, giao dịch riêng (không trải hai nút). */
+            String site = resolver.resolve(tenDangNhap);
+            if (!SiteContext.MASTER.equals(site)) {
+                try {
+                    SiteContext.runAt(site, () -> sessions.revokeAllForAccountChange(tenDangNhap));
+                } catch (RuntimeException ex) {
+                    // Master đã khoá; cơ sở bật lại thì danh bạ nhân bản chặn tiếp.
+                    log.warn("Khoá {}: chưa thu hồi được phiên ở cơ sở {} — {}", tenDangNhap, site, ex.toString());
+                }
+            }
+        }
+        return ketQua;
     }
 
     /**
@@ -81,7 +121,7 @@ public class AccountController {
     @PutMapping("/{tenDangNhap}/email")
     public AccountEmail changeEmail(@PathVariable String tenDangNhap,
             @Valid @RequestBody AdminChangeEmailRequest body) {
-        return credentials.adminChangeEmail(tenDangNhap, body.email());
+        return atAccountSite(tenDangNhap, () -> credentials.adminChangeEmail(tenDangNhap, body.email()));
     }
 
     /**
@@ -97,6 +137,6 @@ public class AccountController {
     @PostMapping("/{tenDangNhap}/password-reset")
     @ResponseStatus(HttpStatus.CREATED)
     public ActivationCode forcePasswordReset(@PathVariable String tenDangNhap) {
-        return accounts.forcePasswordReset(tenDangNhap);
+        return atAccountSite(tenDangNhap, () -> accounts.forcePasswordReset(tenDangNhap));
     }
 }

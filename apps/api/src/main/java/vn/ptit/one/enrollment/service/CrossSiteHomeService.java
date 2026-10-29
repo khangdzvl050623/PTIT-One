@@ -284,4 +284,14 @@ public class CrossSiteHomeService {
     public Optional<CrossSiteRequest> pending(String maYeuCau) {
         return crossSite.findRequest(maYeuCau).filter(CrossSiteRequest::dangGiuTinChi);
     }
+
+    /**
+     * Dữ liệu gửi lại Host khi retry — đủ như lần đầu. Host chưa từng thấy yêu
+     * cầu thì phải ghi danh, mà ghi danh cần cơ sở nhà và họ tên (NOT NULL).
+     */
+    public Pending resume(CrossSiteRequest yc) {
+        StudentProfile sv = students.require(yc.maSinhVien());
+        return new Pending(yc.maYeuCau(), yc.maLopHP(), sv.maSinhVien(), sv.maCoSoNha(), sv.hoTen(),
+                yc.phienBanLich());
+    }
 }

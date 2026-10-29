@@ -3,6 +3,7 @@ package vn.ptit.one.course.service;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import vn.ptit.one.course.model.ClassSection;
 import vn.ptit.one.course.repository.ClassSectionRepository;
 import vn.ptit.one.course.repository.CourseRepository;
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.shared.routing.CrossSiteQuery;
 import vn.ptit.one.teacher.service.TeacherDirectory;
 
 /**
@@ -49,12 +51,14 @@ public class ClassSectionService {
     private final ClassSectionRepository classes;
     private final CourseRepository courses;
     private final TeacherDirectory teachers;
+    private final ObjectProvider<CrossSiteQuery> crossSite;
 
     public ClassSectionService(ClassSectionRepository classes, CourseRepository courses,
-            TeacherDirectory teachers) {
+            TeacherDirectory teachers, ObjectProvider<CrossSiteQuery> crossSite) {
         this.classes = classes;
         this.courses = courses;
         this.teachers = teachers;
+        this.crossSite = crossSite;
     }
 
     public List<ClassSection> search(AuthenticatedUser user, String maHocKy, String maMonHoc,
@@ -62,6 +66,11 @@ public class ClassSectionService {
         /* Admin Master đọc được mọi cơ sở (B3). Các vai trò khác bị giới hạn
            trong cơ sở của chính mình — lấy từ principal, không nhận từ query. */
         String campusScope = user.role() == Role.ADMIN_MASTER ? null : user.homeCampus();
+        CrossSiteQuery q = crossSite.getIfAvailable();
+        if (q != null && q.atMaster()) {
+            // Phần 2: Master không có LopHocPhan — gộp từ mọi cơ sở.
+            return q.collect(() -> classes.search(maHocKy, maMonHoc, null, maGiangVien));
+        }
         return classes.search(maHocKy, maMonHoc, campusScope, maGiangVien);
     }
 
@@ -271,6 +280,13 @@ public class ClassSectionService {
     }
 
     public ClassSection require(String maLopHP) {
+        CrossSiteQuery q = crossSite.getIfAvailable();
+        if (q != null && q.atMaster()) {
+            // Phần 2: lớp nằm ở cơ sở mở nó; Master phải hỏi.
+            return q.collect(() -> classes.findOne(maLopHP).stream().toList()).stream().findFirst()
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLASS_NOT_FOUND",
+                            "Không tìm thấy lớp học phần %s.".formatted(maLopHP)));
+        }
         return classes.findOne(maLopHP)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CLASS_NOT_FOUND",
                         "Không tìm thấy lớp học phần %s.".formatted(maLopHP)));
