@@ -29,10 +29,9 @@ API đã nối `PTITONE_CENTRAL` qua profile `central` (một DataSource); profi
 mặc định không nối DB. Đã có schema `V1`–`V4`, xác thực A0 và API nghiệp vụ
 Phần 1 (F02–F09, thống kê, thông báo) — trạng thái thật ở
 `docs/PTIT-One-Backend-Khoi-Dong.md`.
-⚠️ F02 chạy đúng ở Phần 1 nhưng **gãy ở chế độ phân tán**: Admin Master đứng
-ở `MASTER`, nơi không có `SinhVien`/`GiangVien`/`TaiKhoan`, nên cấp hồ sơ trả
-503 `Invalid object name 'dbo.SinhVien'`. Lời giải theo thiết kế là luồng
-Outbox *Vòng đời sinh viên* (mục C2), chưa cài.
+F02 ở chế độ phân tán đi qua Outbox *Vòng đời sinh viên* (mục C2): Master ghi
+danh bạ `CHO_KICH_HOAT` + sự kiện, `MasterOutboxWorker` dựng hồ sơ ở cơ sở nhà
+TRƯỚC rồi mới mở danh bạ. Kiểm bằng `db/tests/95-demo-cap-ho-so.ps1`.
 Các ràng buộc phân tán bên dưới áp dụng khi triển khai Phần 2, không phải
 điều kiện để skeleton hoặc Phần 1 khởi động.
 
