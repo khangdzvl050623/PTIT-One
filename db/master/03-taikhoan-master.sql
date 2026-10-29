@@ -48,8 +48,9 @@ BEGIN
         TenDangNhap   VARCHAR(50)   NOT NULL,
 
         /* ⚠️ Băm mật khẩu, KHÔNG BAO GIỜ lưu mật khẩu gốc.
-           Dùng BCrypt/Argon2 ở tầng ứng dụng; cột này chỉ chứa kết quả. */
-        MatKhauHash   VARCHAR(255)  NOT NULL,
+           Dùng BCrypt/Argon2 ở tầng ứng dụng; cột này chỉ chứa kết quả.
+           NULL = chưa có mật khẩu (04 seed như vậy, migrate/50 chép hash sang). */
+        MatKhauHash   VARCHAR(255)  NULL,
 
         VaiTro        VARCHAR(20)   NOT NULL
             CONSTRAINT DF_TaiKhoanMaster_VaiTro DEFAULT ('ADMIN_MASTER'),
@@ -118,6 +119,13 @@ BEGIN
     PRINT '  [+] TaiKhoanMaster: bu 3 cot email';
 END
 ELSE PRINT '  [=] TaiKhoanMaster: du cot';
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.TaiKhoanMaster')
+             AND name = N'MatKhauHash' AND is_nullable = 0)
+BEGIN
+    ALTER TABLE dbo.TaiKhoanMaster ALTER COLUMN MatKhauHash VARCHAR(255) NULL;
+    PRINT '  [+] TaiKhoanMaster: MatKhauHash cho phep NULL';
+END
 GO
 
 /* =====================================================================

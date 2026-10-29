@@ -15,6 +15,11 @@
     khai gì cả.
 #>
 @{
+    # Tuỳ chọn: máy dựng demo riêng (cả topology trên một máy, ba named
+    # instance) ghi đè Servers/SnapshotFolder ở đây thay vì sửa config.ps1 chung.
+    # Servers = @{ MASTER = 'MAY\PTITONE'; HCM = 'MAY\PTITONE'; HN = 'MAY\SITE_HN'; DN = 'MAY\SITE_DN' }
+    # SnapshotFolder = '\\MAY\repldata'
+
     Logins = @{
         # Tài khoản do bạn giữ máy tạo theo hướng dẫn cài đặt:
         #     CREATE LOGIN ptitone_admin WITH PASSWORD = '...', CHECK_POLICY = OFF;

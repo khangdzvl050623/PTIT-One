@@ -137,6 +137,38 @@ END
 ELSE PRINT '  [=] IX_DanhBaNguoiDung_CoSo_Loai';
 GO
 
+/* ---------------------------------------------------------------------
+   OutboxSuKien tại Master — hộp thư đi của VÒNG ĐỜI NGƯỜI DÙNG (C2).
+   Cấp hồ sơ ghi danh bạ CHO_KICH_HOAT + sự kiện trong CÙNG giao dịch ở
+   đây; worker dựng SinhVien/GiangVien + TaiKhoan ở cơ sở nhà rồi mới mở
+   danh bạ. Cùng hình dạng với bảng ở site/10 — một worker đọc được cả hai.
+   KHÔNG nhân bản: hộp thư là của nút phát sinh sự kiện.
+   --------------------------------------------------------------------- */
+IF OBJECT_ID(N'dbo.OutboxSuKien', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.OutboxSuKien (
+        EventId uniqueidentifier NOT NULL,
+        LoaiSuKien varchar(50) NOT NULL,
+        KhoaThucThe varchar(200) NOT NULL,
+        NoiDung nvarchar(max) NOT NULL,
+        Version bigint NOT NULL,
+        TrangThai varchar(20) NOT NULL CONSTRAINT DF_OutboxSuKien_TrangThai DEFAULT ('PENDING'),
+        SoLanThu int NOT NULL CONSTRAINT DF_OutboxSuKien_SoLanThu DEFAULT (0),
+        ThoiDiemTao datetime2(0) NOT NULL CONSTRAINT DF_OutboxSuKien_Tao DEFAULT (SYSUTCDATETIME()),
+        ThoiDiemXuLy datetime2(0) NULL,
+        CONSTRAINT PK_OutboxSuKien PRIMARY KEY NONCLUSTERED (EventId),
+        CONSTRAINT CK_OutboxSuKien_TrangThai CHECK (TrangThai IN ('PENDING', 'SENT')),
+        CONSTRAINT CK_OutboxSuKien_Payload
+            CHECK (ISJSON(NoiDung) = 1 AND Version > 0 AND SoLanThu >= 0)
+    );
+    CREATE NONCLUSTERED INDEX IX_OutboxSuKien_ChoGui
+        ON dbo.OutboxSuKien (ThoiDiemTao)
+        INCLUDE (EventId, SoLanThu) WHERE TrangThai = 'PENDING';
+    PRINT '  [+] dbo.OutboxSuKien';
+END
+ELSE PRINT '  [=] dbo.OutboxSuKien';
+GO
+
 /* =====================================================================
    KIỂM CHỨNG
    ===================================================================== */

@@ -23,6 +23,10 @@ GO
 
 BEGIN TRANSACTION;
 GO
+-- Cung DEFAULT voi CENTRAL (V2): cau INSERT cap ho so khong ghi TrangThai.
+IF OBJECT_ID(N'dbo.DF_SinhVien_TrangThai', N'D') IS NULL
+    ALTER TABLE dbo.SinhVien ADD CONSTRAINT DF_SinhVien_TrangThai DEFAULT ('DANG_HOC') FOR TrangThai;
+GO
 IF OBJECT_ID(N'dbo.CK_SinhVien_BoDem', N'C') IS NULL
     ALTER TABLE dbo.SinhVien WITH CHECK ADD CONSTRAINT CK_SinhVien_BoDem
         CHECK (SoTinChiTichLuy >= 0 AND SoMonLienCoSo >= 0);
