@@ -51,6 +51,14 @@ if (-not (Test-Path $sqlPath)) { throw "Khong tim thay script: $sqlPath" }
 # config.local.example.psd1.
 $localCfgPath  = Join-Path $here 'config.local.psd1'
 $localCfgEarly = if (Test-Path $localCfgPath) { Import-PowerShellDataFile $localCfgPath } else { $null }
+# May dung demo rieng (vi du ca topology tren mot may) ghi de server/share o
+# day, khong sua config.ps1 chung cua nhom.
+if ($localCfgEarly -and $localCfgEarly.Servers) {
+    foreach ($k in @($localCfgEarly.Servers.Keys)) { $cfg.Servers[$k] = $localCfgEarly.Servers[$k] }
+}
+if ($localCfgEarly -and $localCfgEarly.SnapshotFolder) {
+    $cfg.Replication.SnapshotFolder = $localCfgEarly.SnapshotFolder
+}
 
 $server = $cfg.Servers[$On]
 if (-not $server) { throw "Khong co cau hinh server cho '$On' trong config.ps1" }

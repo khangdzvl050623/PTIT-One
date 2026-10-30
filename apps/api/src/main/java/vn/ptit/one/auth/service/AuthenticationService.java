@@ -161,6 +161,20 @@ public class AuthenticationService {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw invalidRefresh();
         }
+        LoginSiteResolver resolver = siteResolver.getIfAvailable();
+        if (resolver == null) {
+            return rotate(refreshToken);
+        }
+        /* Phần 2: phiên nằm ở nút của người dùng, mà lúc refresh access token đã
+           hết hạn — không còn gì cho biết nút nào. Giữ cơ sở cho phần còn lại của
+           request, cùng lý do với atUserSite. */
+        String site = resolver.siteOfRefreshToken(refreshToken);
+        LoginResult result = SiteContext.runAt(site, () -> rotate(refreshToken));
+        SiteContext.set(site);
+        return result;
+    }
+
+    private LoginResult rotate(String refreshToken) {
         // rotate() đã commit (kể cả việc thu hồi khi replay) trước khi ta ném lỗi ở đây.
         RefreshOutcome outcome = sessions.rotate(refreshToken);
         if (outcome instanceof RefreshOutcome.Rotated rotated) {
@@ -178,7 +192,13 @@ public class AuthenticationService {
      */
     public void logout(String refreshToken, String accessToken) {
         if (refreshToken != null && !refreshToken.isBlank()) {
-            sessions.revokeByRefreshToken(refreshToken);
+            LoginSiteResolver resolver = siteResolver.getIfAvailable();
+            if (resolver == null) {
+                sessions.revokeByRefreshToken(refreshToken);
+            } else {
+                SiteContext.runAt(resolver.siteOfRefreshToken(refreshToken),
+                        () -> sessions.revokeByRefreshToken(refreshToken));
+            }
             return;
         }
         sessionIdOf(accessToken).ifPresent(sessions::revokeSession);

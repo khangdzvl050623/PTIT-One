@@ -2,11 +2,13 @@ package vn.ptit.one.teacher.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.shared.routing.CrossSiteQuery;
 import vn.ptit.one.teacher.model.Teacher;
 import vn.ptit.one.teacher.repository.TeacherRepository;
 
@@ -21,12 +23,19 @@ import vn.ptit.one.teacher.repository.TeacherRepository;
 public class TeacherDirectory {
 
     private final TeacherRepository teachers;
+    private final ObjectProvider<CrossSiteQuery> crossSite;
 
-    public TeacherDirectory(TeacherRepository teachers) {
+    public TeacherDirectory(TeacherRepository teachers, ObjectProvider<CrossSiteQuery> crossSite) {
         this.teachers = teachers;
+        this.crossSite = crossSite;
     }
 
     public List<Teacher> search(String maCoSo, String maKhoa) {
+        CrossSiteQuery q = crossSite.getIfAvailable();
+        if (q != null && q.atMaster()) {
+            // Phần 2: Master không có GiangVien. maCoSo chỉ LỌC ở từng cơ sở, không chọn nút.
+            return q.collect(() -> teachers.search(maCoSo, maKhoa));
+        }
         return teachers.search(maCoSo, maKhoa);
     }
 

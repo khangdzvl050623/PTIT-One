@@ -82,6 +82,15 @@ public final class SiteContext {
         }
     }
 
+    /**
+     * Đọc dữ liệu thuộc một cơ sở đã biết (ví dụ lớp ở cơ sở mở lớp). Đứng ở
+     * Master — nút không có bảng vận hành — thì sang cơ sở đó; mọi nơi khác
+     * (Phần 1, hoặc đã ở đúng cơ sở) đọc tại chỗ.
+     */
+    public static <T> T readAt(String maCoSo, Supplier<T> body) {
+        return MASTER.equals(explicit()) ? runAt(maCoSo, body) : body.get();
+    }
+
     public static void runAt(String maCoSo, Runnable body) {
         runAt(maCoSo, () -> {
             body.run();

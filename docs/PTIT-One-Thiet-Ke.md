@@ -104,7 +104,7 @@
 |---|---|---|---|---|
 | 1 | **1 phương pháp phân mảnh** | **Phân mảnh ngang** theo cơ sở — `SinhVien`, `GiangVien`, `TaiKhoan`, `DotDangKy`, `LopHocPhan` (C3) *(có thêm dẫn xuất bậc 1 và bậc 2 — phần dư)* | F7b-1, F7b-2 | ✅ |
 | 2 | **1 phương pháp replication** | **Transactional Replication** một chiều `PTITONE_MASTER` → mọi Subscriber (D1) | F7b-3, F7b-4 | ✅ |
-| 3 | **1 distributed transaction** | **2PC / MS DTC cho nghiệp vụ chuyển cơ sở sinh viên** (D8) — ba CSDL trong một giao dịch nguyên tử | F7e | ⚠️ **PHẢI LÀM** |
+| 3 | **1 distributed transaction** | **2PC / MS DTC cho nghiệp vụ chuyển cơ sở sinh viên** (D8) — ba CSDL trong một giao dịch nguyên tử | F7e | ✅ `db/master/06` · `tests/91` |
 | 4 | **1 tình huống concurrency** | **100 luồng tranh 30 chỗ** khi đăng ký học phần — `UPDATE` có điều kiện + 4 lớp ràng buộc (D4) | G3 | ✅ |
 | 5 | **1 distributed query** | **`OPENQUERY` thống kê toàn hệ thống** qua Linked Server (D2) | F7c, B1 | ✅ |
 

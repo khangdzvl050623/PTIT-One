@@ -209,6 +209,49 @@ COMMIT TRANSACTION;
 GO
 
 /* =====================================================================
+   CHỜ NHÂN BẢN DANH MỤC
+   A0 vừa thêm dòng ở Master; Phần B chèn ngay thì site chưa có dòng đó và
+   vướng FK (FK_DotDangKy_HocKy). Máy dựng mới lần đầu luôn gặp, chạy lại
+   lần hai thì qua — nên lỗi trông như ngẫu nhiên.
+   ===================================================================== */
+DECLARE @site VARCHAR(10), @lnk SYSNAME, @db SYSNAME, @pre NVARCHAR(300),
+        @sql NVARCHAR(MAX), @lech INT, @lan INT;
+
+DECLARE cs CURSOR LOCAL FAST_FORWARD FOR
+    SELECT MaCoSo, TenLinkedServer, TenDatabase FROM dbo.CoSo WHERE DangHoatDong = 1;
+OPEN cs;
+FETCH NEXT FROM cs INTO @site, @lnk, @db;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @pre = CASE WHEN @lnk IS NULL THEN QUOTENAME(@db) + N'.'
+                    ELSE QUOTENAME(@lnk) + N'.' + QUOTENAME(@db) + N'.' END;
+    SELECT @sql = N'SELECT @n = 0' + STRING_AGG(CONVERT(NVARCHAR(MAX),
+                    N' + ABS((SELECT COUNT(*) FROM dbo.' + t + N') - (SELECT COUNT(*) FROM '
+                    + @pre + N'dbo.' + t + N'))'), N'')
+      FROM (VALUES ('Khoa'), ('ChuongTrinhDaoTao'), ('MonHoc'), ('CTDT_MonHoc'),
+                   ('MonHocTienQuyet'), ('HocKy'), ('KhungGioTiet')) v(t);
+    SET @lan = 0;
+    BEGIN TRY
+        WHILE 1 = 1
+        BEGIN
+            EXEC sp_executesql @sql, N'@n INT OUTPUT', @n = @lech OUTPUT;
+            IF @lech = 0 BREAK;
+            SET @lan += 1;
+            IF @lan >= 60 BEGIN PRINT '  [!] ' + @site + ': danh muc chua nhan ban xong sau 2 phut'; BREAK; END
+            WAITFOR DELAY '00:00:02';
+        END
+        IF @lech = 0 PRINT '  [=] ' + @site + ': danh muc da nhan ban du';
+    END TRY
+    BEGIN CATCH
+        /* Site tắt: Phần B sẽ báo BO QUA cho site này. */
+        PRINT '  [!] ' + @site + ': khong kiem duoc danh muc - ' + ERROR_MESSAGE();
+    END CATCH
+    FETCH NEXT FROM cs INTO @site, @lnk, @db;
+END
+CLOSE cs; DEALLOCATE cs;
+GO
+
+/* =====================================================================
    PHẦN B — MẢNH VẬN HÀNH VỀ TỪNG CƠ SỞ
 
    Danh sách cột lấy bằng cách GIAO tập cột của CENTRAL với tập cột của

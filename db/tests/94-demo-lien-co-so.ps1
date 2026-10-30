@@ -3,7 +3,8 @@
    CHAY:  powershell -NoProfile -File db\tests\94-demo-lien-co-so.ps1
    CAN:   API dang chay voi profile `central,distributed` (scripts\dev-api.ps1)
 
-   Bon pha, moi pha tu khang dinh. In PASS/FAIL, khong tuong thuat. #>
+   Moi pha tu khang dinh. In PASS/FAIL, khong tuong thuat. Pha 1b-1e va 3
+   tam DENY login ung dung de mo phong hong giua chung; finally gỡ lai. #>
 [CmdletBinding()]
 param(
     [string] $Base = 'http://localhost:8080/api',
@@ -145,6 +146,80 @@ Kiem 'retry sau khi da co ket luan' $maRetry 'CROSS_CAMPUS_ALREADY_CLOSED'
 Kiem 'si so KHONG tang them' (So $SrvHN 'PTITONE_HN' "SELECT SoLuongDaDangKy FROM dbo.LopHocPhan WHERE MaLopHP = '$Lop';") 1
 Kiem 'chi MOT dong ket qua xu ly' (So $SrvHN 'PTITONE_HN' "SELECT COUNT(*) FROM dbo.KetQuaXuLyYeuCau WHERE MaLopHP = '$Lop';") 1
 
+# --- Pha 1b-1e: huy va hong giua chung --------------------------------------
+# Hong duoc mo phong bang DENY tam thoi tren login ung dung: buoc do nem loi
+# va giao dich cua no rollback, dung nhu mat mang/chet tien trinh tai buoc ay.
+$tc = So $SrvHN 'PTITONE_HN' "SELECT SoTinChi FROM dbo.MonHoc WHERE MaMonHoc = '$Mon';"
+function SiSo { So $SrvHN 'PTITONE_HN' "SELECT SoLuongDaDangKy FROM dbo.LopHocPhan WHERE MaLopHP = '$Lop';" }
+# "da dung them/dang giu"
+function TinChi { Sql $SrvHCM 'PTITONE_HCM' "SELECT CONCAT(SoTinChiDaDangKy - $tinChiTruoc, '/', SoTinChiDangGiuCho) FROM dbo.SinhVienHocKy WHERE MaSinhVien = '$SvHCM' AND MaHocKy = '$HocKy';" }
+function KetQua($ma) { Sql $SrvHN 'PTITONE_HN' "SELECT ISNULL((SELECT KetQua FROM dbo.KetQuaXuLyYeuCau WHERE MaYeuCau = '$ma'), 'KHONG_CO');" }
+function TrangThaiHome($ma) { Sql $SrvHCM 'PTITONE_HCM' "SELECT TrangThai FROM dbo.YeuCauHocLienCoSo WHERE MaYeuCau = '$ma';" }
+function YeuCauTreo { Sql $SrvHCM 'PTITONE_HCM' "SELECT MaYeuCau FROM dbo.YeuCauHocLienCoSo WHERE MaLopHP = '$Lop' AND TrangThai IN ('DANG_XU_LY', 'DANG_HUY');" }
+function MaLoi([scriptblock] $f) {
+    try { $null = & $f; return 'OK' }
+    catch { if ("$_" -match '"code":"([A-Z_]+)"') { return $Matches[1] } return 'LOI' }
+}
+function DangKy { Goi $sv 'Post' '/me/cross-campus' @{ maCoSoHost = 'HN'; maLopHP = $Lop } }
+$chanHost = 'DENY INSERT ON dbo.KetQuaXuLyYeuCau TO ptitone_api'
+$chanHome = 'DENY UPDATE ON dbo.YeuCauHocLienCoSo TO ptitone_api'
+function MoHet {
+    $null = Sql $SrvHN 'PTITONE_HN' 'REVOKE INSERT ON dbo.KetQuaXuLyYeuCau TO ptitone_api; SELECT 0;'
+    $null = Sql $SrvHCM 'PTITONE_HCM' 'REVOKE UPDATE ON dbo.YeuCauHocLienCoSo TO ptitone_api; REVOKE INSERT, UPDATE ON dbo.BangDiemMirror TO ptitone_api; SELECT 0;'
+}
+
+try {
+    Write-Host "`n=== Pha 1b: huy thuong va gui lap ==="
+    $huy = Goi $sv 'Post' "/me/cross-campus/$($yc.maYeuCau)/cancel" $null
+    Kiem 'huy: trang thai' $huy.trangThai 'DA_HUY'
+    Kiem 'huy: HOST tra cho' (SiSo) 0
+    Kiem 'huy: HOST ghi danh -> DA_HUY' (So $SrvHN 'PTITONE_HN' "SELECT COUNT(*) FROM dbo.DangKyHocPhan WHERE MaYeuCau = '$($yc.maYeuCau)' AND TrangThai = 'DA_HUY';") 1
+    Kiem 'huy: HOME tra tin chi (dung/giu)' (TinChi) '0/0'
+    Kiem 'huy: HOME xoa lich mirror' (So $SrvHCM 'PTITONE_HCM' "SELECT COUNT(*) FROM dbo.LichHocMirror WHERE MaSinhVien = '$SvHCM' AND MaMonHoc = '$Mon';") 0
+    Kiem 'gui lap: huy lan hai' (MaLoi { Goi $sv 'Post' "/me/cross-campus/$($yc.maYeuCau)/cancel" $null }) 'CROSS_CAMPUS_ALREADY_CLOSED'
+    Kiem 'gui lap: si so khong doi' (SiSo) 0
+
+    Write-Host "`n=== Pha 1c: huy den Host truoc dang ky (bia mo) ==="
+    $null = Sql $SrvHN 'PTITONE_HN' "$chanHost; SELECT 0;"
+    Kiem 'Host hong: dang ky loi' ((MaLoi { DangKy }) -ne 'OK') $true
+    $ma = YeuCauTreo
+    Kiem 'HOME: giu cho khi chua co ket luan' (TinChi) "0/$tc"
+    Kiem 'Host hong: huy loi' ((MaLoi { Goi $sv 'Post' "/me/cross-campus/$ma/cancel" $null }) -ne 'OK') $true
+    Kiem 'HOME: DANG_HUY, chua tra tin chi' "$(TrangThaiHome $ma) $(TinChi)" "DANG_HUY 0/$tc"
+    MoHet
+    $r = Goi $sv 'Post' "/me/cross-campus/$ma/retry" $null
+    Kiem 'retry DANG_HUY -> gui lai lenh HUY' $r.trangThai 'DA_HUY'
+    Kiem 'HOST: bia mo' (KetQua $ma) 'DA_HUY'
+    Kiem 'HOST: khong ghi danh mo coi' (So $SrvHN 'PTITONE_HN' "SELECT COUNT(*) FROM dbo.DangKyHocPhan WHERE MaYeuCau = '$ma';") 0
+    Kiem 'HOST: si so' (SiSo) 0
+    Kiem 'HOME: tra tin chi sau xac nhan' (TinChi) '0/0'
+
+    Write-Host "`n=== Pha 1d: phan hoi Host den muon ==="
+    $null = Sql $SrvHCM 'PTITONE_HCM' "$chanHome; SELECT 0;"
+    Kiem 'Home hong: dang ky loi' ((MaLoi { DangKy }) -ne 'OK') $true
+    $ma = YeuCauTreo
+    Kiem 'HOST da duyet, HOME chua biet' "$(KetQua $ma) $(TrangThaiHome $ma)" 'DA_DANG_KY DANG_XU_LY'
+    Kiem 'HOST: si so' (SiSo) 1
+    MoHet
+    $huy = Goi $sv 'Post' "/me/cross-campus/$ma/cancel" $null
+    Kiem 'huy yeu cau treo' $huy.trangThai 'DA_HUY'
+    Kiem 'HOST: tra cho + ket qua DA_HUY' "$(SiSo) $(KetQua $ma)" '0 DA_HUY'
+    Kiem 'phan hoi muon bi tu choi' (MaLoi { Goi $sv 'Post' "/me/cross-campus/$ma/retry" $null }) 'CROSS_CAMPUS_ALREADY_CLOSED'
+    Kiem 'HOME: van DA_HUY, tin chi ve 0' "$(TrangThaiHome $ma) $(TinChi)" 'DA_HUY 0/0'
+
+    Write-Host "`n=== Pha 1e: tien trinh chet giua chung roi retry ==="
+    $null = Sql $SrvHN 'PTITONE_HN' "$chanHost; SELECT 0;"
+    Kiem 'Host hong: dang ky loi' ((MaLoi { DangKy }) -ne 'OK') $true
+    $ma = YeuCauTreo
+    Kiem 'HOME: DANG_XU_LY, dang giu' "$(TrangThaiHome $ma) $(TinChi)" "DANG_XU_LY 0/$tc"
+    Kiem 'HOST: rollback, khong chiem cho' (SiSo) 0
+    MoHet
+    $r = Goi $sv 'Post' "/me/cross-campus/$ma/retry" $null
+    Kiem 'retry -> DA_DANG_KY' $r.trangThai 'DA_DANG_KY'
+    Kiem 'HOST: si so + mot ket qua' "$(SiSo) $(So $SrvHN 'PTITONE_HN' "SELECT COUNT(*) FROM dbo.KetQuaXuLyYeuCau WHERE MaYeuCau = '$ma';")" '1 1'
+    Kiem 'HOME: giu cho -> da dung' (TinChi) "$tc/0"
+} finally { MoHet }
+
 # --- Pha 2: giang vien HN nhap va cong bo diem -----------------------------
 Write-Host "`n=== Pha 2: nhap va cong bo diem tai HN ==="
 $gv = DangNhap $GvHN
@@ -152,6 +227,8 @@ $bang = Goi $gv 'Get' "/classes/$Lop/grades" $null
 $dong = @($bang.diem | Where-Object { $_.maSinhVien -eq $SvHCM })[0]
 $null = Goi $gv 'Put' "/classes/$Lop/grades" @{ diem = @(@{
     maSinhVien = $SvHCM; diemChuyenCan = 9; diemGiuaKy = 8; diemCuoiKy = 8.5; version = $dong.version }) }
+# Home tu choi ghi mirror: worker phai ghi nhan lan thu hong, KHONG danh dau SENT.
+$null = Sql $SrvHCM 'PTITONE_HCM' 'DENY INSERT, UPDATE ON dbo.BangDiemMirror TO ptitone_api; SELECT 0;'
 $null = Goi $gv 'Post' "/classes/$Lop/grades/publish" $null
 
 $tongKet = (Sql $SrvHN 'PTITONE_HN' "SELECT CONVERT(varchar(10), DiemTongKet) FROM dbo.Diem WHERE MaLopHP = '$Lop' AND MaSinhVien = '$SvHCM';")
@@ -160,6 +237,12 @@ Kiem 'HOST: su kien Outbox' (So $SrvHN 'PTITONE_HN' "SELECT COUNT(*) FROM dbo.Ou
 
 # --- Pha 3: worker day diem ve HCM -----------------------------------------
 Write-Host "`n=== Pha 3: Outbox tra diem ve co so nha ==="
+$suKien = "SELECT CONCAT(TrangThai, ' ', CASE WHEN SoLanThu > 0 THEN 'da-thu' ELSE 'chua-thu' END) FROM dbo.OutboxSuKien WHERE KhoaThucThe = '$Lop`:$SvHCM';"
+try {
+    $het = (Get-Date).AddSeconds($ChoOutboxGiay)
+    do { Start-Sleep -Seconds 3; $tt = Sql $SrvHN 'PTITONE_HN' $suKien } while ($tt -ne 'PENDING da-thu' -and (Get-Date) -lt $het)
+    Kiem 'gui hong: van PENDING, da ghi lan thu' $tt 'PENDING da-thu'
+} finally { MoHet }
 $het = (Get-Date).AddSeconds($ChoOutboxGiay)
 do {
     Start-Sleep -Seconds 3
@@ -211,7 +294,7 @@ SELECT SoTinChiDaDangKy FROM dbo.SinhVienHocKy
 # --- Ket luan ---------------------------------------------------------------
 Write-Host ''
 if ($loi.Count -eq 0) {
-    Write-Host '  LIEN CO SO: PASS - saga ghi hai site, Outbox tra diem ve co so nha.'
+    Write-Host '  LIEN CO SO: PASS - saga, 4 tinh huong huy/hong, Outbox thu lai sau loi.'
     exit 0
 }
 Write-Host ("  LIEN CO SO: FAIL - {0} muc lech: {1}" -f $loi.Count, ($loi -join ', '))

@@ -2,7 +2,9 @@ package vn.ptit.one.auth.service;
 
 import java.time.Duration;
 import java.util.Locale;
+import java.util.function.Supplier;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,7 @@ import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.PasswordPolicy;
 import vn.ptit.one.auth.repository.AccountRepository;
 import vn.ptit.one.auth.security.AttemptLimiter;
+import vn.ptit.one.auth.security.LoginSiteResolver;
 import vn.ptit.one.auth.service.CredentialWriter.Outcome;
 import vn.ptit.one.shared.exception.ApiException;
 import vn.ptit.one.shared.mail.Mailer;
@@ -51,14 +54,16 @@ public class CredentialService {
     private final PasswordEncoder passwordEncoder;
     private final AttemptLimiter limiter;
     private final Mailer mailer;
+    private final ObjectProvider<LoginSiteResolver> siteResolver;
 
     public CredentialService(AccountRepository accounts, CredentialWriter writer, PasswordEncoder passwordEncoder,
-            AttemptLimiter limiter, Mailer mailer) {
+            AttemptLimiter limiter, Mailer mailer, ObjectProvider<LoginSiteResolver> siteResolver) {
         this.accounts = accounts;
         this.writer = writer;
         this.passwordEncoder = passwordEncoder;
         this.limiter = limiter;
         this.mailer = mailer;
+        this.siteResolver = siteResolver;
     }
 
     public AccountEmail currentEmail(AuthenticatedUser user) {
@@ -146,10 +151,19 @@ public class CredentialService {
                         WINDOW)) {
             throw tooManyAttempts();
         }
-        accounts.findContact(tenDangNhap)
-                .filter(contact -> AccountRecord.ACTIVE.equals(contact.status()) && contact.hasPassword())
-                .filter(contact -> contact.verifiedEmailMatches(email))
-                .ifPresent(contact -> writer.issueRecovery(contact.username(), contact.email()));
+        atUserSite(tenDangNhap, () -> {
+            accounts.findContact(tenDangNhap)
+                    .filter(contact -> AccountRecord.ACTIVE.equals(contact.status()) && contact.hasPassword())
+                    .filter(contact -> contact.verifiedEmailMatches(email))
+                    .ifPresent(contact -> writer.issueRecovery(contact.username(), contact.email()));
+            return null;
+        }, null);
+    }
+
+    /** Phần 2: chưa đăng nhập nên tra danh bạ để định tuyến; Phần 1 gọi thẳng. */
+    private <T> T atUserSite(String username, Supplier<T> body, T ifNoSite) {
+        LoginSiteResolver resolver = siteResolver.getIfAvailable();
+        return resolver == null ? body.get() : resolver.atUserSite(username, body, ifNoSite);
     }
 
     public void resetPassword(String username, String code, String newPassword, String clientIp) {
@@ -159,7 +173,8 @@ public class CredentialService {
         }
         String tenDangNhap = username.trim();
         requireAcceptable(tenDangNhap, newPassword);
-        if (writer.resetPassword(tenDangNhap, code, passwordEncoder.encode(newPassword)) != Outcome.OK) {
+        String hash = passwordEncoder.encode(newPassword);
+        if (atUserSite(tenDangNhap, () -> writer.resetPassword(tenDangNhap, code, hash), null) != Outcome.OK) {
             limiter.record(ipKey, WINDOW);
             throw new ApiException(HttpStatus.BAD_REQUEST, "RESET_CODE_INVALID",
                     "Mã khôi phục không đúng, đã hết hạn hoặc đã được dùng.");

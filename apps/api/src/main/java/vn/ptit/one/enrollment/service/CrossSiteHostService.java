@@ -90,8 +90,9 @@ public class CrossSiteHostService {
            trả chỗ nữa — chỗ đó mất vĩnh viễn. */
         if (requests.moveDecision(maYeuCau, EnrollmentStatus.DA_DANG_KY,
                 EnrollmentStatus.DA_HUY, maThaoTacHuy) == 1) {
-            requests.cancelEnrollment(maYeuCau);
+            // LopHocPhan trước DangKyHocPhan — cùng thứ tự với mọi luồng khác, đảo là deadlock.
             classes.releaseSeat(maLopHP);
+            requests.cancelEnrollment(maYeuCau);
         } else {
             requests.moveDecision(maYeuCau, EnrollmentStatus.TU_CHOI,
                     EnrollmentStatus.DA_HUY, maThaoTacHuy);

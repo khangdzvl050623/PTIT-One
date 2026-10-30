@@ -28,6 +28,8 @@ $scripts = @(
     @{ Path = 'master/06-sp-chuyen-co-so.sql'; Sites = @('MASTER') }
     @{ Path = 'master/07-bao-cao-phan-tan.sql'; Sites = @('MASTER') }
     @{ Path = 'master/08-thong-ke-hoc-vu.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/09-thong-bao.sql'; Sites = @('MASTER') }
+    @{ Path = 'master/10-vai-tro.sql'; Sites = @('MASTER') }
     @{ Path = 'migrate/50-tach-du-lieu.sql'; Sites = @('MASTER') }
     @{ Path = 'migrate/51-doi-soat.sql'; Sites = @('MASTER') }
     @{ Path = 'replication/20-linked-server.sql'; Sites = @('MASTER') }
@@ -42,6 +44,7 @@ $scripts = @(
     @{ Path = 'site/11-rangbuoc.sql'; Sites = @('HCM','HN','DN') }
     @{ Path = 'site/12-chimuc.sql'; Sites = @('HCM','HN','DN') }
     @{ Path = 'site/13-bao-ve-subscriber.sql'; Sites = @('HCM','HN','DN') }
+    @{ Path = 'site/14-vai-tro-va-toan-ven.sql'; Sites = @('HCM','HN','DN') }
     # Demo doc trong SSMS, khong phai buoc cai dat. Van phai bien dich duoc.
     # File nay CO CHU Y ghi thang ten database thay vi dung bien SQLCMD:
     # SSMS khong giu :setvar giua hai lan F5, con qua sqlcmd thi :setvar de
@@ -50,6 +53,7 @@ $scripts = @(
     @{ Path = 'tests/91-demo-chuyen-co-so.sql'; Sites = @('MASTER') }
     @{ Path = 'tests/92-do-truy-van-phan-tan.sql'; Sites = @('MASTER') }
     @{ Path = 'tests/93-do-tre-nhan-ban.sql'; Sites = @('MASTER') }
+    @{ Path = 'tests/97-demo-phan-quyen.sql'; Sites = @('HCM') }
     # Spike DTC: chay TAI HCM, goi sang HN qua Linked Server. Dung LnkHN/DbHN
     # ma runner da cap san — khong tu dat ten bien moi.
     @{ Path = 'spike/01-kiem-dtc.sql'; Sites = @('HCM') }

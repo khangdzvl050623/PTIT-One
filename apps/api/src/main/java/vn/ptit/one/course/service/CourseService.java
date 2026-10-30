@@ -3,12 +3,16 @@ package vn.ptit.one.course.service;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import vn.ptit.one.course.model.CourseDetail;
 import vn.ptit.one.course.model.CourseRelation;
@@ -19,6 +23,7 @@ import vn.ptit.one.course.model.StudyProgram;
 import vn.ptit.one.course.model.Term;
 import vn.ptit.one.course.repository.CourseRepository;
 import vn.ptit.one.shared.exception.ApiException;
+import vn.ptit.one.shared.routing.CrossSiteQuery;
 
 /** Danh mục môn học và quan hệ tiên quyết. Đọc mở cho mọi vai trò; ghi chỉ Admin Master (B3). */
 @Service
@@ -30,10 +35,30 @@ public class CourseService {
 
     private final CourseRepository courses;
     private final RegistrationWindow registration;
+    private final ObjectProvider<CrossSiteQuery> crossSite;
+    private final TransactionTemplate tx;
 
-    public CourseService(CourseRepository courses, RegistrationWindow registration) {
+    public CourseService(CourseRepository courses, RegistrationWindow registration,
+            ObjectProvider<CrossSiteQuery> crossSite, PlatformTransactionManager txManager) {
         this.courses = courses;
         this.registration = registration;
+        this.crossSite = crossSite;
+        this.tx = new TransactionTemplate(txManager);
+    }
+
+    /**
+     * Phần 2, Admin Master: lớp và đợt đăng ký nằm ở các cơ sở, không ở Master.
+     * Hỏi chúng TRƯỚC giao dịch ghi danh mục — không được đổi nút trong giao dịch.
+     *
+     * <p>shortcut: một cơ sở có thể mở lớp cho môn này giữa lúc kiểm và lúc xoá;
+     * khi ấy lệnh xoá nhân bản xuống vướng FK và chặn Distribution Agent. Chấp
+     * nhận cho đồ án (xoá môn hiếm, cửa sổ vài mili giây); làm thật thì xoá mềm.
+     *
+     * @return {@code null} khi không ở Master Phần 2 — kiểm tại chỗ như Phần 1
+     */
+    private Boolean atAnySite(Supplier<Boolean> check) {
+        CrossSiteQuery q = crossSite.getIfAvailable();
+        return q != null && q.atMaster() ? q.anySite(check) : null;
     }
 
     public List<CourseSummary> search(String maKhoa, String tuKhoa) {
@@ -62,8 +87,12 @@ public class CourseService {
      * không, một request khác có thể vừa thêm tiên quyết trỏ vào môn này trong
      * lúc ta đang xoá.
      */
-    @Transactional
     public void delete(String maMonHoc) {
+        Boolean coLopOCoSo = atAnySite(() -> courses.hasAnyClass(maMonHoc));
+        tx.executeWithoutResult(s -> deleteInTx(maMonHoc, coLopOCoSo));
+    }
+
+    private void deleteInTx(String maMonHoc, Boolean coLopOCoSo) {
         if (!courses.exists(maMonHoc)) {
             throw notFound(maMonHoc);
         }
@@ -77,7 +106,7 @@ public class CourseService {
                     ("Môn %s đang là môn tiên quyết của môn khác. Gỡ nó khỏi các môn đó "
                             + "trước khi xoá.").formatted(maMonHoc));
         }
-        if (courses.hasAnyClass(maMonHoc)) {
+        if (coLopOCoSo != null ? coLopOCoSo : courses.hasAnyClass(maMonHoc)) {
             throw new ApiException(HttpStatus.CONFLICT, "COURSE_HAS_CLASSES",
                     ("Môn %s đã được dùng trong lớp học phần hoặc dữ liệu học tập, "
                             + "không xoá được.").formatted(maMonHoc));
@@ -173,8 +202,13 @@ public class CourseService {
      * mới ghi thì chu trình vẫn hình thành. Lỗi ở bất kỳ bước nào cũng rollback,
      * nên tập cũ được giữ nguyên.
      */
-    @Transactional
     public CourseDetail replacePrerequisites(String maMonHoc, List<String> tienQuyet) {
+        // Mỗi cơ sở xét theo đợt đang mở CỦA CHÍNH NÓ.
+        Boolean dangMoOCoSo = atAnySite(() -> courses.hasClassInTerms(maMonHoc, registration.openTerms()));
+        return tx.execute(s -> replacePrerequisitesInTx(maMonHoc, tienQuyet, dangMoOCoSo));
+    }
+
+    private CourseDetail replacePrerequisitesInTx(String maMonHoc, List<String> tienQuyet, Boolean dangMoOCoSo) {
         if (!courses.exists(maMonHoc)) {
             throw notFound(maMonHoc);
         }
@@ -185,7 +219,7 @@ public class CourseService {
 
         /* Khoá đồ thị không che được việc sinh viên đang đăng ký: đổi tiên quyết
            giữa đợt khiến hai người nộp cùng lúc bị xét theo hai bộ quy tắc. */
-        if (courses.hasClassInTerms(maMonHoc, registration.openTerms())) {
+        if (dangMoOCoSo != null ? dangMoOCoSo : courses.hasClassInTerms(maMonHoc, registration.openTerms())) {
             throw new ApiException(HttpStatus.CONFLICT, "COURSE_REGISTRATION_OPEN",
                     "Môn %s đang có đợt đăng ký mở. Đóng đợt trước khi đổi môn tiên quyết."
                             .formatted(maMonHoc));

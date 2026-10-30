@@ -71,6 +71,12 @@ public class ActivationCodeRepository {
                 emailNhan, nguoiCap);
     }
 
+    public boolean exists(UUID codeId) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.MaKichHoat WHERE MaKichHoat = ?",
+                Integer.class, codeId.toString());
+        return count != null && count > 0;
+    }
+
     public int revokeLive(String username, Instant now) {
         return jdbc.update(REVOKE_LIVE, SqlTime.toDb(now), username);
     }

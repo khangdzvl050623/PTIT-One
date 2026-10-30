@@ -203,7 +203,17 @@ public class AccountRepository {
     }
 
     /** Làm mọi JWT đang lưu hành của tài khoản mất hiệu lực ở request kế tiếp. */
+    /**
+     * Phần 2, tại CƠ SỞ: danh bạ ở đây là bản nhân bản chỉ đọc ({@code DENY}),
+     * nên bỏ qua. Không mất gì: người gọi luôn thu hồi mọi phiên trong CÙNG giao
+     * dịch, và mỗi request đều kiểm {@code ThoiDiemThuHoi}. Phiên bản thuộc Master
+     * — đổi khi chuyển cơ sở (2PC) hoặc khi Admin Master khoá tài khoản.
+     */
     public int bumpVersion(String username) {
+        String site = SiteContext.explicit();
+        if (site != null && !SiteContext.MASTER.equals(site)) {
+            return 0;
+        }
         return jdbc.update(BUMP_VERSION, username);
     }
 
@@ -246,6 +256,20 @@ public class AccountRepository {
     /** @param email chưa xác minh; {@code null} nếu Admin không nhập */
     public void insertSiteAccount(String username, Role role, String entityId, String campus, String email) {
         jdbc.update(INSERT_SITE_ACCOUNT, username, role.name(), entityId, campus, email);
+    }
+
+    /** Chỉ bảng {@code TaiKhoan} của nút đang đứng — dùng ở cơ sở nhà, nơi không có {@code TaiKhoanMaster}. */
+    public boolean siteAccountExists(String username) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dbo.TaiKhoan WHERE TenDangNhap = ?",
+                Integer.class, username);
+        return count != null && count > 0;
+    }
+
+    public int activateDirectory(String username, String from, String to) {
+        return jdbc.update("""
+                UPDATE dbo.DanhBaNguoiDung SET TrangThai = ?, NgayCapNhat = SYSUTCDATETIME()
+                 WHERE TenDangNhap = ? AND TrangThai = ?
+                """, to, username, from);
     }
 
     public Optional<AccountContact> findContact(String username) {

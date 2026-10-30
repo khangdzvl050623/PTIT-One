@@ -15,8 +15,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import vn.ptit.one.enrollment.repository.OutboxRepository;
 import vn.ptit.one.enrollment.repository.OutboxRepository.GradeEvent;
-import vn.ptit.one.enrollment.repository.OutboxRepository.PendingEvent;
 import vn.ptit.one.grade.service.GradeRecords;
+import vn.ptit.one.shared.outbox.OutboxStore;
+import vn.ptit.one.shared.outbox.OutboxStore.PendingEvent;
 import vn.ptit.one.shared.routing.SiteContext;
 import vn.ptit.one.shared.routing.SiteProperties;
 
@@ -41,13 +42,13 @@ public class OutboxWorker {
     /** Thôi thử lại sau ngần này lần; để lại PENDING cho người xem. */
     private static final int MAX_RETRY = 10;
 
-    private final OutboxRepository outbox;
+    private final OutboxStore outbox;
     private final GradeRecords grades;
     private final SiteProperties sites;
     private final ObjectMapper json;
     private final Clock clock;
 
-    public OutboxWorker(OutboxRepository outbox, GradeRecords grades, SiteProperties sites,
+    public OutboxWorker(OutboxStore outbox, GradeRecords grades, SiteProperties sites,
             ObjectMapper json, Clock clock) {
         this.outbox = outbox;
         this.grades = grades;
@@ -69,7 +70,7 @@ public class OutboxWorker {
     }
 
     private void drainSite(String site) {
-        List<PendingEvent> cho = SiteContext.runAt(site, () -> outbox.pending(BATCH));
+        List<PendingEvent> cho = SiteContext.runAt(site, () -> outbox.pending(OutboxRepository.DIEM_DA_CHOT, BATCH));
         for (PendingEvent e : cho) {
             GradeEvent g = parse(e);
             if (g == null || e.soLanThu() >= MAX_RETRY) {

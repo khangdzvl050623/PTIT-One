@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import vn.ptit.one.notification.model.AutoNotification;
 import vn.ptit.one.notification.model.InboxItem;
+import vn.ptit.one.notification.model.NotificationSent;
 import vn.ptit.one.notification.model.NotificationTerms;
 import vn.ptit.one.notification.model.Recipient;
 import vn.ptit.one.notification.model.RecipientCount;
@@ -118,6 +119,53 @@ public class NotificationRepository {
     public Optional<String> findCampus(String maCoSo) {
         return jdbc.queryForList("SELECT MaCoSo FROM dbo.CoSo WHERE MaCoSo = ?", String.class, maCoSo.trim())
                 .stream().findFirst();
+    }
+
+    // --- Thông báo của Admin Master, đưa về cơ sở (Phần 2) ---------------
+
+    /**
+     * Bản ở cơ sở của thông báo Master đã gửi. Theo lớp thì chỉ cơ sở MỞ lớp
+     * nhận — FK {@code MaLopHP} và {@code CK_ThongBao_PhamVi} cùng đòi lớp có
+     * mặt tại đây. Idempotent theo mã thông báo.
+     */
+    public int insertDelivered(NotificationSent ev) {
+        LocalDateTime gui = toDb(ev.ngayGui());
+        return jdbc.update("""
+                INSERT INTO dbo.ThongBao (MaThongBao, Loai, TrangThai, MucDo, TieuDe, NoiDung, LienKet,
+                                          PhamVi, MaCoSo, MaLopHP, DoiTuong, NguoiTao, VaiTroNguoiTao,
+                                          NgayTao, NgayGui)
+                SELECT ?, 'SOAN', 'DA_GUI', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ADMIN_MASTER', ?, ?
+                 WHERE NOT EXISTS (SELECT 1 FROM dbo.ThongBao WHERE MaThongBao = ?)
+                   AND (? IS NULL OR EXISTS (SELECT 1 FROM dbo.LopHocPhan WHERE MaLopHP = ?))
+                """, ev.maThongBao().toString(), ev.mucDo(), ev.tieuDe(), ev.noiDung(), ev.lienKet(),
+                ev.phamVi(), ev.maCoSo(), ev.maLopHP(), ev.doiTuong(), ev.nguoiTao(), gui, gui,
+                ev.maThongBao().toString(), ev.maLopHP(), ev.maLopHP());
+    }
+
+    /** Chỉ người có hồ sơ ở cơ sở này, chỉ khi thông báo có mặt ở đây, không ghi trùng. */
+    public void insertRecipientsHere(UUID id, List<Recipient> recipients) {
+        jdbc.batchUpdate("""
+                INSERT INTO dbo.ThongBaoNguoiNhan (LoaiNguoiNhan, MaNguoiNhan, MaThongBao)
+                SELECT ?, ?, ?
+                 WHERE EXISTS (SELECT 1 FROM dbo.ThongBao WHERE MaThongBao = ?)
+                   AND NOT EXISTS (SELECT 1 FROM dbo.ThongBaoNguoiNhan
+                                    WHERE LoaiNguoiNhan = ? AND MaNguoiNhan = ? AND MaThongBao = ?)
+                   AND ((? = 'SINH_VIEN' AND EXISTS (SELECT 1 FROM dbo.SinhVien WHERE MaSinhVien = ?))
+                     OR (? = 'GIANG_VIEN' AND EXISTS (SELECT 1 FROM dbo.GiangVien WHERE MaGiangVien = ?)))
+                """, recipients, 500, (ps, r) -> {
+                    String ma = id.toString();
+                    ps.setString(1, r.loai());
+                    ps.setString(2, r.ma());
+                    ps.setString(3, ma);
+                    ps.setString(4, ma);
+                    ps.setString(5, r.loai());
+                    ps.setString(6, r.ma());
+                    ps.setString(7, ma);
+                    ps.setString(8, r.loai());
+                    ps.setString(9, r.ma());
+                    ps.setString(10, r.loai());
+                    ps.setString(11, r.ma());
+                });
     }
 
     // --- Người nhận -------------------------------------------------------

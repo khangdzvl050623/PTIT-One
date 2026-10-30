@@ -11,6 +11,7 @@ import vn.ptit.one.auth.model.AuthenticatedUser;
 import vn.ptit.one.auth.model.Role;
 import vn.ptit.one.course.model.ClassSection;
 import vn.ptit.one.enrollment.model.CrossSiteRequest;
+import vn.ptit.one.enrollment.model.EnrollmentStatus;
 import vn.ptit.one.enrollment.model.HostDecision;
 import vn.ptit.one.enrollment.service.CrossSiteHomeService.Pending;
 import vn.ptit.one.shared.exception.ApiException;
@@ -75,11 +76,7 @@ public class CrossSiteEnrollmentService {
         String maSinhVien = requireStudent(user);
         CrossSiteRequest yc = home.read(maYeuCau);
         Pending cho = home.openCancel(maSinhVien, maYeuCau);
-
-        String maThaoTacHuy = UUID.randomUUID().toString();
-        SiteContext.runAt(yc.maCoSoHost(),
-                () -> host.confirmCancel(maYeuCau, cho.maLopHP(), cho.maSinhVien(), maThaoTacHuy));
-        home.applyCancel(maYeuCau);
+        confirmCancel(yc.maCoSoHost(), cho);
         return home.read(maYeuCau);
     }
 
@@ -89,15 +86,34 @@ public class CrossSiteEnrollmentService {
      * <p>Mất mạng ở bước 3 để lại yêu cầu ở {@code DANG_XU_LY} và tín chỉ bị
      * giữ. Gọi lại với cùng {@code MaYeuCau} là tất định: Host trả nguyên kết
      * quả đã ghi, không đánh giá lại.
+     *
+     * <p>⚠️ {@code DANG_HUY} thì gửi lại lệnh HUỶ, không phải lệnh đăng ký: Host
+     * có thể chưa từng thấy yêu cầu, gửi đăng ký là Host ghi danh và chiếm chỗ
+     * trong khi Home bỏ qua kết quả vì không còn {@code DANG_XU_LY} — chỗ mồ côi.
      */
     public CrossSiteRequest retry(AuthenticatedUser user, String maYeuCau) {
-        requireStudent(user);
+        String maSinhVien = requireStudent(user);
         CrossSiteRequest yc = home.pending(maYeuCau)
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT,
                         "CROSS_CAMPUS_ALREADY_CLOSED", "Yêu cầu đã có kết luận."));
-        apply(yc.maCoSoHost(), new Pending(maYeuCau, yc.maLopHP(), yc.maSinhVien(), null, null,
-                yc.phienBanLich()));
+        if (!yc.maSinhVien().equals(maSinhVien)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "CROSS_CAMPUS_REQUEST_NOT_FOUND",
+                    "Không tìm thấy yêu cầu %s.".formatted(maYeuCau));
+        }
+        Pending cho = home.resume(yc);
+        if (EnrollmentStatus.DANG_HUY.equals(yc.trangThai())) {
+            confirmCancel(yc.maCoSoHost(), cho);
+        } else {
+            apply(yc.maCoSoHost(), cho);
+        }
         return home.read(maYeuCau);
+    }
+
+    private void confirmCancel(String maCoSoHost, Pending cho) {
+        String maThaoTacHuy = UUID.randomUUID().toString();
+        SiteContext.runAt(maCoSoHost,
+                () -> host.confirmCancel(cho.maYeuCau(), cho.maLopHP(), cho.maSinhVien(), maThaoTacHuy));
+        home.applyCancel(cho.maYeuCau());
     }
 
     public List<CrossSiteRequest> list(AuthenticatedUser user, String maHocKy) {
